@@ -28,7 +28,18 @@
     "lint": "npm run lint:sol",
     "lint:sol": "solhint \"contracts/**/*.sol\"",
     "docs": "hardhat dodoc",
-    "prepare": "husky install"
+    "prepare": "husky install",
+    "deploy:factory": "node scripts/deploy_factory.js",
+    "deploy:token": "node scripts/deploy_token.js",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:backend": "cd backend && npm run dev",
+    "start": "concurrently \"npm run start:backend\" \"npm run start:frontend\"",
+    "start:frontend": "cd frontend && npm run start",
+    "start:backend": "cd backend && npm run start",
+    "install:all": "npm install && cd frontend && npm install && cd ../backend && npm install",
+    "setup": "node scripts/setup.js",
+    "clean": "node scripts/clean-addresses.js"
   },
   "repository": {
     "type": "git",
@@ -69,7 +80,8 @@
     "@typescript-eslint/parser": "^6.7.4",
     "@typescript-eslint/eslint-plugin": "^6.7.4",
     "eslint-import-resolver-typescript": "^3.6.1",
-    "eth-gas-reporter": "^0.2.27"
+    "eth-gas-reporter": "^0.2.27",
+    "concurrently": "^8.2.2"
   },
   "lint-staged": {
     "*.js": [
