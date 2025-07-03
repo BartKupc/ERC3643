@@ -19,6 +19,7 @@ const Dashboard = () => {
   const [factories, setFactories] = useState([]);
   const [selectedFactory, setSelectedFactory] = useState(null);
   const [deploymentDetails, setDeploymentDetails] = useState(null);
+  const [selectedToken, setSelectedToken] = useState(null);
 
   // Contract instances
   const trexFactory = new Contract(addresses.TREXFactory, abis.TREXFactory);
@@ -79,6 +80,11 @@ const Dashboard = () => {
     localStorage.setItem("trexDeployedAddresses", JSON.stringify(updated));
   };
 
+  // Reset selectedToken when deploymentDetails changes
+  useEffect(() => {
+    setSelectedToken(null);
+  }, [deploymentDetails]);
+
   // Deploy Factory
   const handleDeployFactory = async () => {
     if (!account) {
@@ -136,6 +142,10 @@ const Dashboard = () => {
       if (response.data.success) {
         setMessage("Token deployed successfully! Refreshing...");
         await loadFactories(); // Reload to get updated token list
+        // Also reload deployment details for the selected factory
+        if (selectedFactory) {
+          await loadDeploymentDetails(selectedFactory.deploymentId);
+        }
       } else {
         setMessage("Token deployment failed: " + response.data.error);
       }
@@ -256,6 +266,38 @@ const Dashboard = () => {
                   <div style={{ color: '#111' }}>{new Date(deploymentDetails.timestamp).toLocaleString()}</div>
                 </div>
               </div>
+
+              {/* Token Dropdown and Details */}
+              {deploymentDetails.tokens && deploymentDetails.tokens.length > 0 && (
+                <div style={{ margin: "1rem 0" }}>
+                  <label><strong style={{ color: '#1a237e' }}>Select Token:</strong></label>
+                  <select
+                    value={selectedToken ? selectedToken.deploymentId : ""}
+                    onChange={e => {
+                      const token = deploymentDetails.tokens.find(t => t.deploymentId === e.target.value);
+                      setSelectedToken(token);
+                    }}
+                    style={{ width: "100%", padding: "0.5rem", marginTop: "0.25rem", fontSize: "0.9rem" }}
+                  >
+                    <option value="">-- Select a token --</option>
+                    {deploymentDetails.tokens.map(token => (
+                      <option key={token.deploymentId} value={token.deploymentId}>
+                        {token.token.name} ({token.token.symbol}) - {token.token.address}
+                      </option>
+                    ))}
+                  </select>
+                  {selectedToken && (
+                    <div style={{ marginTop: "1rem", background: "#f5f5f5", padding: "1rem", borderRadius: "6px" }}>
+                      <div><strong style={{ color: '#1a237e' }}>Name:</strong> <span style={{ color: '#111' }}>{selectedToken.token.name}</span></div>
+                      <div><strong style={{ color: '#1a237e' }}>Symbol:</strong> <span style={{ color: '#111' }}>{selectedToken.token.symbol}</span></div>
+                      <div><strong style={{ color: '#1a237e' }}>Address:</strong> <span style={{ color: '#111' }}>{selectedToken.token.address}</span></div>
+                      <div><strong style={{ color: '#1a237e' }}>Deployed:</strong> <span style={{ color: '#111' }}>{new Date(selectedToken.timestamp).toLocaleString()}</span></div>
+                      <div><strong style={{ color: '#1a237e' }}>Identity Registry:</strong> <span style={{ color: '#111' }}>{selectedToken.suite.identityRegistry}</span></div>
+                      <div><strong style={{ color: '#1a237e' }}>Compliance:</strong> <span style={{ color: '#111' }}>{selectedToken.suite.compliance}</span></div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Implementation Contracts */}
               <div style={{ marginTop: "1rem" }}>

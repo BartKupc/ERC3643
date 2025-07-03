@@ -3,6 +3,32 @@ const { ethers } = hre;
 const fs = require('fs');
 const path = require('path');
 
+let tokenDetails = {
+  owner: undefined,
+  name: "MySecurityToken",
+  symbol: "MST",
+  decimals: 18,
+  irs: undefined,
+  ONCHAINID: undefined,
+  irAgents: [],
+  tokenAgents: [],
+  complianceModules: [],
+  complianceSettings: [],
+  totalSupply: "1000000"
+};
+
+if (process.env.TOKEN_CONFIG_PATH && fs.existsSync(process.env.TOKEN_CONFIG_PATH)) {
+  try {
+    const config = JSON.parse(fs.readFileSync(process.env.TOKEN_CONFIG_PATH, 'utf8'));
+    if (config.name) tokenDetails.name = config.name;
+    if (config.symbol) tokenDetails.symbol = config.symbol;
+    if (config.decimals) tokenDetails.decimals = config.decimals;
+    if (config.totalSupply) tokenDetails.totalSupply = config.totalSupply;
+  } catch (e) {
+    console.error("Failed to read token config:", e);
+  }
+}
+
 async function main() {
   const [deployer] = await ethers.getSigners();
   console.log("🎯 Enhanced Token Deployment");
@@ -48,20 +74,6 @@ async function main() {
     }
     
     // Token metadata
-    const tokenDetails = {
-      owner: deployer.address,
-      name: "MySecurityToken",
-      symbol: "MST",
-      decimals: 18,
-      irs: ethers.constants.AddressZero,
-      ONCHAINID: ethers.constants.AddressZero,
-      irAgents: [],
-      tokenAgents: [],
-      complianceModules: [],
-      complianceSettings: []
-    };
-
-    // Claim requirements
     const claimDetails = {
       claimTopics: [],
       issuers: [],
@@ -77,6 +89,10 @@ async function main() {
     console.log("Salt:", salt);
     
     console.log("\n🚀 Deploying token suite...");
+    
+    tokenDetails.owner = deployer.address;
+    tokenDetails.irs = ethers.constants.AddressZero;
+    tokenDetails.ONCHAINID = ethers.constants.AddressZero;
     
     const tx = await TREXFactory.connect(deployer).deployTREXSuite(
       salt,

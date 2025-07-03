@@ -27,6 +27,104 @@
       "identityFactory": "0x36C02dA8a0983159322a80FFE9F24b1acfF8B570",
       "trexFactory": "0x1291Be112d480055DaFd8a610b7d1e203891C274"
     },
-    "tokens": []
+    "tokens": [
+      {
+        "deploymentId": "token-1751515584414",
+        "timestamp": "2025-07-03T04:06:24.414Z",
+        "network": "localhost",
+        "deployer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+        "factoryAddress": "0x1291Be112d480055DaFd8a610b7d1e203891C274",
+        "salt": "token-1751515583805",
+        "token": {
+          "address": "0xC4ceDe830563826685907cB14573CaF1DcCD94e0",
+          "name": "MySecurityToken",
+          "symbol": "MST",
+          "decimals": "18"
+        },
+        "suite": {
+          "identityRegistry": "0xA5E0665C9DcC5E27ff1Fa62769EDe07269175A0d",
+          "compliance": "0x0F4937Fdc68aEAa412a595A4B96F1EC82d837dC0"
+        },
+        "transaction": {
+          "hash": "0xc353d14d2e0831ebd472d46ea48147095c403c1cbcf24d105f2a0107d2d03f5a",
+          "gasUsed": "3485151"
+        }
+      },
+      {
+        "deploymentId": "token-1751515615586",
+        "timestamp": "2025-07-03T04:06:55.587Z",
+        "network": "localhost",
+        "deployer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+        "factoryAddress": "0x1291Be112d480055DaFd8a610b7d1e203891C274",
+        "salt": "token-1751515615006",
+        "token": {
+          "address": "0x265452d1C42F818155305098383D82C7b80F04b0",
+          "name": "MySecurityToken",
+          "symbol": "MST",
+          "decimals": "18"
+        },
+        "suite": {
+          "identityRegistry": "0xA43D0fdb183e2ac4965ED8eBbED0Ccc871eB96D7",
+          "compliance": "0xBfF1d6766E17FF11725111aA71A76Bf99D2e86E1"
+        },
+        "transaction": {
+          "hash": "0xc88cd3bd56b5e9ccfdbdfab79b7c239609faba5be148f38cc47ba0db1c1639b9",
+          "gasUsed": "3485151"
+        }
+      }
+    ]
+  },
+  {
+    "deploymentId": "factory-1751515636427",
+    "timestamp": "2025-07-03T04:07:16.427Z",
+    "network": "localhost",
+    "deployer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+    "factory": {
+      "address": "0x5081a39b8A5f0E35a8D959395a630b68B74Dd30f",
+      "owner": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+      "implementationAuthority": "0x162A433068F51e18b7d13932F27e66a3f99E6890",
+      "idFactory": "0xB0D4afd8879eD9F52b28595d31B441D079B2Ca07"
+    },
+    "implementations": {
+      "claimTopicsRegistry": "0x82e01223d51Eb87e16A03E24687EDF0F294da6f1",
+      "trustedIssuersRegistry": "0x2bdCC0de6bE1f7D2ee689a0342D76F52E8EFABa3",
+      "identityRegistryStorage": "0x7969c5eD335650692Bc04293B07F5BF2e7A673C0",
+      "identityRegistry": "0x7bc06c482DEAd17c0e297aFbC32f6e63d3846650",
+      "modularCompliance": "0xc351628EB244ec633d5f21fBD6621e1a683B1181",
+      "token": "0xFD471836031dc5108809D173A067e8486B9047A3",
+      "identity": "0xcbEAF3BDe82155F56486Fb5a1072cb8baAf547cc"
+    },
+    "authorities": {
+      "identityImplementationAuthority": "0x1429859428C0aBc9C2C47C8Ee9FBaf82cFA0F20f",
+      "trexImplementationAuthority": "0x162A433068F51e18b7d13932F27e66a3f99E6890"
+    },
+    "factories": {
+      "identityFactory": "0xB0D4afd8879eD9F52b28595d31B441D079B2Ca07",
+      "trexFactory": "0x5081a39b8A5f0E35a8D959395a630b68B74Dd30f"
+    },
+    "tokens": [
+      {
+        "deploymentId": "token-1751516018484",
+        "timestamp": "2025-07-03T04:13:38.484Z",
+        "network": "localhost",
+        "deployer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+        "factoryAddress": "0x5081a39b8A5f0E35a8D959395a630b68B74Dd30f",
+        "salt": "token-1751516017899",
+        "token": {
+          "address": "0x086f0f3eB356753cFb0869DE989Ad39ABDB50c75",
+          "name": "Bart",
+          "symbol": "BB",
+          "decimals": "18"
+        },
+        "suite": {
+          "identityRegistry": "0xdB03Ea2211E324B374443185f0699eEeF87bB6c2",
+          "compliance": "0xBc75Ea139E358aB34c85edBB85dABe92061Ecd3D"
+        },
+        "transaction": {
+          "hash": "0x2fa68de7b686d19e5cf6a71399edd6f67435b05cc2d0a8eb831b87f24fe37a0b",
+          "gasUsed": "3485007"
+        }
+      }
+    ]
   }
 ]

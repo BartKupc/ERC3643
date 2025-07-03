@@ -5,6 +5,7 @@ const path = require('path');
 const fs = require('fs');
 const { exec } = require('child_process');
 const { promisify } = require('util');
+const os = require('os');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -123,12 +124,16 @@ app.post('/api/deploy/token', async (req, res) => {
     const { factoryAddress, tokenDetails } = req.body;
     const execAsync = promisify(exec);
     
+    // Write tokenDetails to a temp file
+    const tokenConfigPath = path.join(os.tmpdir(), 'trex_token_config.json');
+    fs.writeFileSync(tokenConfigPath, JSON.stringify(tokenDetails));
+    
     console.log('🚀 Starting token deployment...');
     console.log('Factory address:', factoryAddress);
     console.log('Token details:', tokenDetails);
     
-    // Run the token deployment script
-    const { stdout, stderr } = await execAsync('npm run deploy:token', {
+    // Run the token deployment script with TOKEN_CONFIG_PATH env
+    const { stdout, stderr } = await execAsync('TOKEN_CONFIG_PATH="' + tokenConfigPath + '" npm run deploy:token', {
       cwd: '/mnt/ethnode/T-REX',
       timeout: 300000 // 5 minutes timeout
     });
