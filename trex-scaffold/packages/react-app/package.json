@@ -52,5 +52,6 @@
     "test": "react-scripts test",
     "server": "node server.js",
     "dev:server": "nodemon server.js"
-  }
+  },
+  "proxy": "http://localhost:3001"
 }

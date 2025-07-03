@@ -1,9 +1,9 @@
 // T-REX Contract Addresses
-// These will be populated after deployment
+// Auto-updated from deployment
 const addresses = {
   ceaErc20: "0xa6dF0C88916f3e2831A329CE46566dDfBe9E74b7",
-  // T-REX Addresses (to be filled after deployment)
-  TREXFactory: "0x0000000000000000000000000000000000000000",
+  // T-REX Addresses
+  TREXFactory: "0x1291Be112d480055DaFd8a610b7d1e203891C274",
   Token: "0x0000000000000000000000000000000000000000",
   ModularCompliance: "0x0000000000000000000000000000000000000000",
   IdentityRegistry: "0x0000000000000000000000000000000000000000",

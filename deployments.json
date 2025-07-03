@@ -1,0 +1,32 @@
+[
+  {
+    "deploymentId": "factory-1751515251354",
+    "timestamp": "2025-07-03T04:00:51.354Z",
+    "network": "localhost",
+    "deployer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+    "factory": {
+      "address": "0x1291Be112d480055DaFd8a610b7d1e203891C274",
+      "owner": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+      "implementationAuthority": "0x809d550fca64d94Bd9F66E60752A544199cfAC3D",
+      "idFactory": "0x36C02dA8a0983159322a80FFE9F24b1acfF8B570"
+    },
+    "implementations": {
+      "claimTopicsRegistry": "0x998abeb3E57409262aE5b751f60747921B33613E",
+      "trustedIssuersRegistry": "0x70e0bA845a1A0F2DA3359C97E0285013525FFC49",
+      "identityRegistryStorage": "0x4826533B4897376654Bb4d4AD88B7faFD0C98528",
+      "identityRegistry": "0x99bbA657f2BbC93c02D617f8bA121cB8Fc104Acf",
+      "modularCompliance": "0x0E801D84Fa97b50751Dbf25036d067dCf18858bF",
+      "token": "0x8f86403A4DE0BB5791fa46B8e795C547942fE4Cf",
+      "identity": "0x9d4454B023096f34B160D6B654540c56A1F81688"
+    },
+    "authorities": {
+      "identityImplementationAuthority": "0x5eb3Bc0a489C5A8288765d2336659EbCA68FCd00",
+      "trexImplementationAuthority": "0x809d550fca64d94Bd9F66E60752A544199cfAC3D"
+    },
+    "factories": {
+      "identityFactory": "0x36C02dA8a0983159322a80FFE9F24b1acfF8B570",
+      "trexFactory": "0x1291Be112d480055DaFd8a610b7d1e203891C274"
+    },
+    "tokens": []
+  }
+]

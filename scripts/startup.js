@@ -52,72 +52,33 @@ export default addresses;
 // Function to start server
 function startServer() {
   console.log('🔧 Starting backend server...');
-  
-  const serverProcess = spawn('npm', ['run', 'dev:server'], {
-    cwd: path.join(projectRoot, 'trex-scaffold/packages/react-app'),
-    stdio: 'pipe',
-    shell: true
+  const backendProcess = spawn('npm', ['start'], {
+    cwd: path.join(__dirname, '../backend'),
+    stdio: 'inherit',
+    shell: true,
   });
-
-  serverProcess.stdout.on('data', (data) => {
-    console.log(`[Server] ${data.toString().trim()}`);
-  });
-
-  serverProcess.stderr.on('data', (data) => {
-    console.log(`[Server Error] ${data.toString().trim()}`);
-  });
-
-  serverProcess.on('close', (code) => {
-    console.log(`[Server] Process exited with code ${code}`);
-  });
-
-  return serverProcess;
+  return backendProcess;
 }
 
 // Function to start frontend
 function startFrontend() {
   console.log('🌐 Starting frontend...');
-  
-  // Wait a bit for server to start
-  setTimeout(() => {
-    const frontendProcess = spawn('npm', ['start'], {
-      cwd: path.join(projectRoot, 'trex-scaffold/packages/react-app'),
-      stdio: 'pipe',
-      shell: true
-    });
-
-    frontendProcess.stdout.on('data', (data) => {
-      console.log(`[Frontend] ${data.toString().trim()}`);
-    });
-
-    frontendProcess.stderr.on('data', (data) => {
-      console.log(`[Frontend Error] ${data.toString().trim()}`);
-    });
-
-    frontendProcess.on('close', (code) => {
-      console.log(`[Frontend] Process exited with code ${code}`);
-    });
-
-    return frontendProcess;
-  }, 3000); // Wait 3 seconds for server to start
+  const frontendProcess = spawn('npm', ['start'], {
+    cwd: path.join(__dirname, '../trex-scaffold/packages/react-app'),
+    stdio: 'inherit',
+    shell: true
+  });
+  return frontendProcess;
 }
 
 // Function to handle graceful shutdown
 function handleShutdown(serverProcess, frontendProcess) {
   const shutdown = () => {
     console.log('\n🛑 Shutting down T-REX Development Environment...');
-    
-    if (serverProcess) {
-      serverProcess.kill('SIGTERM');
-    }
-    
-    if (frontendProcess) {
-      frontendProcess.kill('SIGTERM');
-    }
-    
+    if (serverProcess) serverProcess.kill('SIGTERM');
+    if (frontendProcess) frontendProcess.kill('SIGTERM');
     process.exit(0);
   };
-
   process.on('SIGINT', shutdown);
   process.on('SIGTERM', shutdown);
 }
@@ -125,32 +86,25 @@ function handleShutdown(serverProcess, frontendProcess) {
 // Main execution
 async function main() {
   try {
-    // Step 1: Kill existing processes
     await killExistingProcesses();
-    
-    // Step 2: Clear addresses
     clearAddresses();
-    
-    // Step 3: Start server
+
+    // Start backend and wait a bit for it to initialize
     const serverProcess = startServer();
-    
-    // Step 4: Start frontend
-    const frontendProcess = startFrontend();
-    
-    // Step 5: Setup graceful shutdown
-    handleShutdown(serverProcess, frontendProcess);
-    
+    setTimeout(() => {
+      const frontendProcess = startFrontend();
+      handleShutdown(serverProcess, frontendProcess);
+    }, 3000);
+
     console.log('\n🎉 T-REX Development Environment is starting...');
     console.log('📊 Backend API: http://localhost:3001');
     console.log('🌐 Frontend: http://localhost:3000');
     console.log('📋 Health Check: http://localhost:3001/api/health');
     console.log('\nPress Ctrl+C to stop all services\n');
-    
   } catch (error) {
     console.error('❌ Error starting development environment:', error.message);
     process.exit(1);
   }
 }
 
-// Run the startup script
 main(); 

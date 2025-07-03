@@ -24,36 +24,57 @@ implementing the [ERC-3643 standard](https://eips.ethereum.org/EIPS/eip-3643) an
 tokens in 
 compliance with regulations. It ensures secure and compliant transactions for all parties involved in the token exchange.
 
-## Getting Started
+## Prerequisites
 
-1. **Clone the repository**
+- Node.js >= 18
+- npm >= 8
+- (Optional, for cross-origin setups) Install CORS in backend:
+  cd T-REX/trex-scaffold/packages/react-app
+  npm install cors
+
+## Setup Instructions
+
+1. **Install dependencies:**
    ```bash
-   git clone <your-repository-url>
    cd T-REX
+   npm install
+   cd trex-scaffold
+   npm install
+   cd ../backend
+   npm install
    ```
 
-2. **Install dependencies**
+2. **Start a local Hardhat node (required for contract deployment/testing):**
+   Open a new terminal and run:
    ```bash
-   npm ci
+   cd T-REX
+   npx hardhat node --hostname 0.0.0.0
    ```
+   This will start a local Ethereum blockchain at http://localhost:8545 (accessible from all interfaces).
 
-3. **Compile the contracts**
+3. **Start the development environment (backend and frontend):**
+   In a separate terminal, run:
    ```bash
-   cd trex-scaffold/packages/contracts
-   npx hardhat compile
-   ```
-
-4. **Start the development environment**
-   ```bash
-   cd ../..
+   cd T-REX
    npm run dev
    ```
-   
-   This will:
-   - Kill any existing processes
-   - Clear deployed addresses
-   - Start the backend API server (port 3001)
-   - Start the frontend React app (port 3000)
+
+4. **Access the dashboard:**
+   - Frontend: http://localhost:3000
+   - Backend API: http://localhost:3001
+
+5. **Deploy contracts:**
+   - Use the dashboard's Deploy Factory and Deploy Token buttons.
+   - Or run deployment scripts manually:
+     ```bash
+     npm run deploy:factory
+     npm run deploy:token
+     ```
+
+## Notes
+- The Hardhat node must be running for contract deployment and interaction.
+- If you restart your Hardhat node, you may need to redeploy contracts.
+- For troubleshooting, check backend logs and ensure all services are running in the correct directories.
 
 ## 🛠️ Available Scripts
 

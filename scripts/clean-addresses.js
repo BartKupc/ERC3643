@@ -24,6 +24,12 @@ try {
   fs.writeFileSync(addressesPath, defaultAddresses);
   console.log('✅ Addresses cleared successfully!');
   console.log('📁 File updated: trex-scaffold/packages/contracts/src/addresses.js');
+  
+  // Clear deployments
+  const deploymentsPath = path.join(__dirname, '../deployments.json');
+  fs.writeFileSync(deploymentsPath, '[]');
+  console.log('✅ Deployments cleared successfully!');
+  console.log('📁 File updated: deployments.json');
 } catch (error) {
   console.error('❌ Error clearing addresses:', error.message);
   process.exit(1);

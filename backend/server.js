@@ -2,6 +2,9 @@ const express = require('express');
 const cors = require('cors');
 const { ethers } = require('ethers');
 const path = require('path');
+const fs = require('fs');
+const { exec } = require('child_process');
+const { promisify } = require('util');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -31,10 +34,126 @@ app.post('/api/addresses', (req, res) => {
   res.json({ success: true, addresses: deployedAddresses });
 });
 
+// Get all deployments
+app.get('/api/deployments', (req, res) => {
+  try {
+    const deploymentsPath = path.join(__dirname, '../deployments.json');
+    if (fs.existsSync(deploymentsPath)) {
+      const deployments = JSON.parse(fs.readFileSync(deploymentsPath, 'utf8'));
+      res.json(deployments);
+    } else {
+      res.json([]);
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get specific deployment
+app.get('/api/deployments/:deploymentId', (req, res) => {
+  try {
+    const { deploymentId } = req.params;
+    const deploymentsPath = path.join(__dirname, '../deployments.json');
+    
+    if (fs.existsSync(deploymentsPath)) {
+      const deployments = JSON.parse(fs.readFileSync(deploymentsPath, 'utf8'));
+      const deployment = deployments.find(d => d.deploymentId === deploymentId);
+      
+      if (deployment) {
+        res.json(deployment);
+      } else {
+        res.status(404).json({ error: 'Deployment not found' });
+      }
+    } else {
+      res.status(404).json({ error: 'No deployments found' });
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get factories for dropdown
+app.get('/api/factories', (req, res) => {
+  try {
+    const deploymentsPath = path.join(__dirname, '../deployments.json');
+    if (fs.existsSync(deploymentsPath)) {
+      const deployments = JSON.parse(fs.readFileSync(deploymentsPath, 'utf8'));
+      const factories = deployments.map(d => ({
+        deploymentId: d.deploymentId,
+        address: d.factory.address,
+        timestamp: d.timestamp,
+        network: d.network,
+        tokenCount: d.tokens ? d.tokens.length : 0
+      }));
+      res.json(factories);
+    } else {
+      res.json([]);
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Deploy factory
+app.post('/api/deploy/factory', async (req, res) => {
+  try {
+    const execAsync = promisify(exec);
+    
+    console.log('🚀 Starting factory deployment...');
+    
+    // Run the factory deployment script
+    const { stdout, stderr } = await execAsync('npm run deploy:factory', {
+      cwd: '/mnt/ethnode/T-REX',
+      timeout: 300000 // 5 minutes timeout
+    });
+    
+    console.log('Factory deployment output:', stdout);
+    if (stderr) console.error('Factory deployment stderr:', stderr);
+    
+    res.json({ success: true, message: 'Factory deployed successfully', output: stdout });
+  } catch (error) {
+    console.error('Factory deployment error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Deploy token
+app.post('/api/deploy/token', async (req, res) => {
+  try {
+    const { factoryAddress, tokenDetails } = req.body;
+    const execAsync = promisify(exec);
+    
+    console.log('🚀 Starting token deployment...');
+    console.log('Factory address:', factoryAddress);
+    console.log('Token details:', tokenDetails);
+    
+    // Run the token deployment script
+    const { stdout, stderr } = await execAsync('npm run deploy:token', {
+      cwd: '/mnt/ethnode/T-REX',
+      timeout: 300000 // 5 minutes timeout
+    });
+    
+    console.log('Token deployment output:', stdout);
+    if (stderr) console.error('Token deployment stderr:', stderr);
+    
+    res.json({ success: true, message: 'Token deployed successfully', output: stdout });
+  } catch (error) {
+    console.error('Token deployment error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // Clear deployed addresses
 app.delete('/api/addresses', (req, res) => {
   deployedAddresses = {};
-  res.json({ success: true, message: 'Addresses cleared' });
+  // Clear deployments.json as well
+  const deploymentsPath = path.join(__dirname, '../deployments.json');
+  try {
+    fs.writeFileSync(deploymentsPath, '[]');
+    res.json({ success: true, message: 'Addresses and deployments cleared' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to clear deployments: ' + error.message });
+  }
 });
 
 // Get token information
