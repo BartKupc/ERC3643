@@ -1,130 +1,95 @@
 [
   {
-    "deploymentId": "factory-1751515251354",
-    "timestamp": "2025-07-03T04:00:51.354Z",
+    "deploymentId": "factory-1751523265060",
+    "timestamp": "2025-07-03T06:14:25.060Z",
     "network": "localhost",
     "deployer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
     "factory": {
-      "address": "0x1291Be112d480055DaFd8a610b7d1e203891C274",
+      "address": "0xB7f8BC63BbcaD18155201308C8f3540b07f84F5e",
       "owner": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-      "implementationAuthority": "0x809d550fca64d94Bd9F66E60752A544199cfAC3D",
-      "idFactory": "0x36C02dA8a0983159322a80FFE9F24b1acfF8B570"
+      "implementationAuthority": "0x8A791620dd6260079BF849Dc5567aDC3F2FdC318",
+      "idFactory": "0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6"
     },
     "implementations": {
-      "claimTopicsRegistry": "0x998abeb3E57409262aE5b751f60747921B33613E",
-      "trustedIssuersRegistry": "0x70e0bA845a1A0F2DA3359C97E0285013525FFC49",
-      "identityRegistryStorage": "0x4826533B4897376654Bb4d4AD88B7faFD0C98528",
-      "identityRegistry": "0x99bbA657f2BbC93c02D617f8bA121cB8Fc104Acf",
-      "modularCompliance": "0x0E801D84Fa97b50751Dbf25036d067dCf18858bF",
-      "token": "0x8f86403A4DE0BB5791fa46B8e795C547942fE4Cf",
-      "identity": "0x9d4454B023096f34B160D6B654540c56A1F81688"
+      "claimTopicsRegistry": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+      "trustedIssuersRegistry": "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512",
+      "identityRegistryStorage": "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
+      "identityRegistry": "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9",
+      "modularCompliance": "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9",
+      "token": "0x5FC8d32690cc91D4c39d9d3abcBD16989F875707",
+      "identity": "0x0165878A594ca255338adfa4d48449f69242Eb8F"
     },
     "authorities": {
-      "identityImplementationAuthority": "0x5eb3Bc0a489C5A8288765d2336659EbCA68FCd00",
-      "trexImplementationAuthority": "0x809d550fca64d94Bd9F66E60752A544199cfAC3D"
+      "identityImplementationAuthority": "0xa513E6E4b8f2a923D98304ec87F64353C4D5C853",
+      "trexImplementationAuthority": "0x8A791620dd6260079BF849Dc5567aDC3F2FdC318"
     },
     "factories": {
-      "identityFactory": "0x36C02dA8a0983159322a80FFE9F24b1acfF8B570",
-      "trexFactory": "0x1291Be112d480055DaFd8a610b7d1e203891C274"
+      "identityFactory": "0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6",
+      "trexFactory": "0xB7f8BC63BbcaD18155201308C8f3540b07f84F5e"
     },
     "tokens": [
       {
-        "deploymentId": "token-1751515584414",
-        "timestamp": "2025-07-03T04:06:24.414Z",
+        "deploymentId": "token-1751523279468",
+        "timestamp": "2025-07-03T06:14:39.468Z",
         "network": "localhost",
         "deployer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-        "factoryAddress": "0x1291Be112d480055DaFd8a610b7d1e203891C274",
-        "salt": "token-1751515583805",
+        "factoryAddress": "0xB7f8BC63BbcaD18155201308C8f3540b07f84F5e",
+        "salt": "token-1751523278827",
         "token": {
-          "address": "0xC4ceDe830563826685907cB14573CaF1DcCD94e0",
-          "name": "MySecurityToken",
-          "symbol": "MST",
+          "address": "0x16CcBb16C1eD948Be8993d21DBA6f36E37C35629",
+          "name": "B",
+          "symbol": "B",
           "decimals": "18"
         },
         "suite": {
-          "identityRegistry": "0xA5E0665C9DcC5E27ff1Fa62769EDe07269175A0d",
-          "compliance": "0x0F4937Fdc68aEAa412a595A4B96F1EC82d837dC0"
+          "identityRegistry": "0x936639f1D04650001Fbd0bdbddD8d6A548E3CD71",
+          "compliance": "0x142963d510e4e2387897350fACE4aFC942AFA05b"
         },
         "transaction": {
-          "hash": "0xc353d14d2e0831ebd472d46ea48147095c403c1cbcf24d105f2a0107d2d03f5a",
-          "gasUsed": "3485151"
-        }
-      },
-      {
-        "deploymentId": "token-1751515615586",
-        "timestamp": "2025-07-03T04:06:55.587Z",
-        "network": "localhost",
-        "deployer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-        "factoryAddress": "0x1291Be112d480055DaFd8a610b7d1e203891C274",
-        "salt": "token-1751515615006",
-        "token": {
-          "address": "0x265452d1C42F818155305098383D82C7b80F04b0",
-          "name": "MySecurityToken",
-          "symbol": "MST",
-          "decimals": "18"
-        },
-        "suite": {
-          "identityRegistry": "0xA43D0fdb183e2ac4965ED8eBbED0Ccc871eB96D7",
-          "compliance": "0xBfF1d6766E17FF11725111aA71A76Bf99D2e86E1"
-        },
-        "transaction": {
-          "hash": "0xc88cd3bd56b5e9ccfdbdfab79b7c239609faba5be148f38cc47ba0db1c1639b9",
-          "gasUsed": "3485151"
+          "hash": "0xfca97e51b8309a8889ea2b4a7b82e3f2795121f8b2d38a363a871511cc499092",
+          "gasUsed": "3484959"
         }
       }
     ]
   },
   {
-    "deploymentId": "factory-1751515636427",
-    "timestamp": "2025-07-03T04:07:16.427Z",
-    "network": "localhost",
+    "deploymentId": "identity_registry_1751528786789",
+    "component": "IdentityRegistry",
+    "address": "0x9A9f2CCfdE556A7E9Ff0848998Aa4a0CFD8863AE",
     "deployer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-    "factory": {
-      "address": "0x5081a39b8A5f0E35a8D959395a630b68B74Dd30f",
-      "owner": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-      "implementationAuthority": "0x162A433068F51e18b7d13932F27e66a3f99E6890",
-      "idFactory": "0xB0D4afd8879eD9F52b28595d31B441D079B2Ca07"
-    },
-    "implementations": {
-      "claimTopicsRegistry": "0x82e01223d51Eb87e16A03E24687EDF0F294da6f1",
-      "trustedIssuersRegistry": "0x2bdCC0de6bE1f7D2ee689a0342D76F52E8EFABa3",
-      "identityRegistryStorage": "0x7969c5eD335650692Bc04293B07F5BF2e7A673C0",
-      "identityRegistry": "0x7bc06c482DEAd17c0e297aFbC32f6e63d3846650",
-      "modularCompliance": "0xc351628EB244ec633d5f21fBD6621e1a683B1181",
-      "token": "0xFD471836031dc5108809D173A067e8486B9047A3",
-      "identity": "0xcbEAF3BDe82155F56486Fb5a1072cb8baAf547cc"
-    },
-    "authorities": {
-      "identityImplementationAuthority": "0x1429859428C0aBc9C2C47C8Ee9FBaf82cFA0F20f",
-      "trexImplementationAuthority": "0x162A433068F51e18b7d13932F27e66a3f99E6890"
-    },
-    "factories": {
-      "identityFactory": "0xB0D4afd8879eD9F52b28595d31B441D079B2Ca07",
-      "trexFactory": "0x5081a39b8A5f0E35a8D959395a630b68B74Dd30f"
-    },
-    "tokens": [
-      {
-        "deploymentId": "token-1751516018484",
-        "timestamp": "2025-07-03T04:13:38.484Z",
-        "network": "localhost",
-        "deployer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-        "factoryAddress": "0x5081a39b8A5f0E35a8D959395a630b68B74Dd30f",
-        "salt": "token-1751516017899",
-        "token": {
-          "address": "0x086f0f3eB356753cFb0869DE989Ad39ABDB50c75",
-          "name": "Bart",
-          "symbol": "BB",
-          "decimals": "18"
-        },
-        "suite": {
-          "identityRegistry": "0xdB03Ea2211E324B374443185f0699eEeF87bB6c2",
-          "compliance": "0xBc75Ea139E358aB34c85edBB85dABe92061Ecd3D"
-        },
-        "transaction": {
-          "hash": "0x2fa68de7b686d19e5cf6a71399edd6f67435b05cc2d0a8eb831b87f24fe37a0b",
-          "gasUsed": "3485007"
-        }
-      }
-    ]
+    "timestamp": "2025-07-03T07:46:26.789Z",
+    "network": "localhost"
+  },
+  {
+    "deploymentId": "claim_topics_registry_1751528825309",
+    "component": "ClaimTopicsRegistry",
+    "address": "0x3Aa5ebB10DC797CAC828524e59A333d0A371443c",
+    "deployer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+    "timestamp": "2025-07-03T07:47:05.309Z",
+    "network": "localhost"
+  },
+  {
+    "deploymentId": "trusted_issuers_registry_1751528831297",
+    "component": "TrustedIssuersRegistry",
+    "address": "0xc6e7DF5E7b4f2A278906862b61205850344D4e7d",
+    "deployer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+    "timestamp": "2025-07-03T07:47:11.297Z",
+    "network": "localhost"
+  },
+  {
+    "deploymentId": "modular_compliance_1751528835969",
+    "component": "ModularCompliance",
+    "address": "0x59b670e9fA9D0A427751Af201D676719a970857b",
+    "deployer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+    "timestamp": "2025-07-03T07:47:15.969Z",
+    "network": "localhost"
+  },
+  {
+    "deploymentId": "identity_registry_storage_1751528871198",
+    "component": "IdentityRegistryStorage",
+    "address": "0x4ed7c70F96B99c776995fB64377f0d4aB3B0e1C1",
+    "deployer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+    "timestamp": "2025-07-03T07:47:51.198Z",
+    "network": "localhost"
   }
 ]

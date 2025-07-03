@@ -155,7 +155,7 @@ app.delete('/api/addresses', (req, res) => {
   const deploymentsPath = path.join(__dirname, '../deployments.json');
   try {
     fs.writeFileSync(deploymentsPath, '[]');
-    res.json({ success: true, message: 'Addresses and deployments cleared' });
+    res.json({ success: true, message: 'Addresses, deployments, and components cleared' });
   } catch (error) {
     res.status(500).json({ error: 'Failed to clear deployments: ' + error.message });
   }
@@ -217,6 +217,77 @@ app.post('/api/deploy/factory', async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+});
+
+// Deploy individual component
+app.post('/api/deploy/component', async (req, res) => {
+  try {
+    const { component, deployer } = req.body;
+    const execAsync = promisify(exec);
+    
+    console.log(`🚀 Starting ${component} deployment...`);
+    console.log('Deployer:', deployer);
+    
+    // Map component names to script names
+    const scriptMap = {
+      'IdentityRegistry': 'deploy_identity_registry.js',
+      'IdentityRegistryStorage': 'deploy_identity_registry_storage.js',
+      'ClaimTopicsRegistry': 'deploy_claim_topics_registry.js',
+      'TrustedIssuersRegistry': 'deploy_trusted_issuers_registry.js',
+      'ModularCompliance': 'deploy_modular_compliance.js'
+    };
+    
+    const scriptName = scriptMap[component];
+    if (!scriptName) {
+      throw new Error(`Unknown component: ${component}`);
+    }
+    
+    // Run the specific component deployment script
+    const { stdout, stderr } = await execAsync(`npx hardhat run scripts/${scriptName} --network localhost`, {
+      cwd: '/mnt/ethnode/T-REX',
+      timeout: 300000 // 5 minutes timeout
+    });
+    
+    console.log(`${component} deployment output:`, stdout);
+    if (stderr) console.error(`${component} deployment stderr:`, stderr);
+    
+    // Extract the deployed address from output
+    const addressMatch = stdout.match(/DEPLOYED_ADDRESS:(0x[a-fA-F0-9]{40})/);
+    if (addressMatch) {
+      const deployedAddress = addressMatch[1];
+      
+      res.json({ 
+        success: true, 
+        message: `${component} deployed successfully`,
+        address: deployedAddress
+      });
+    } else {
+      throw new Error('Could not extract deployed address from output');
+    }
+    
+  } catch (error) {
+    console.error(`Component deployment error:`, error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Verify component deployment
+app.get('/api/verify/component', async (req, res) => {
+  try {
+    const { component, address } = req.query;
+    const provider = new ethers.providers.JsonRpcProvider(process.env.RPC_URL || 'http://localhost:8545');
+    
+    // Basic verification - check if the address has code
+    const code = await provider.getCode(address);
+    
+    if (code === '0x') {
+      res.json({ verified: false, error: 'No contract code found at address' });
+    } else {
+      res.json({ verified: true, message: `${component} contract verified at ${address}` });
+    }
+  } catch (error) {
+    res.status(500).json({ verified: false, error: error.message });
   }
 });
 
