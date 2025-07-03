@@ -1,0 +1,10 @@
+{
+  "_format": "hh-sol-artifact-1",
+  "contractName": "TokenStorageLegacy",
+  "sourceName": "contracts/_testContracts/v_3_5_2/LegacyToken_3_5_2.sol",
+  "abi": [],
+  "bytecode": "0x60806040526008805460ff19169055348015601957600080fd5b50603f8060276000396000f3fe6080604052600080fdfea2646970667358221220307be0bd81a3dc3a5e3e6e07a1a157447e8b4fd531fddb0074526768007a2ff664736f6c63430008110033",
+  "deployedBytecode": "0x6080604052600080fdfea2646970667358221220307be0bd81a3dc3a5e3e6e07a1a157447e8b4fd531fddb0074526768007a2ff664736f6c63430008110033",
+  "linkReferences": {},
+  "deployedLinkReferences": {}
+}

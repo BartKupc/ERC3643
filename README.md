@@ -43,6 +43,25 @@ compliance with regulations. It ensures secure and compliant transactions for al
    npx hardhat compile
    ```
 
+4. **Start the development environment**
+   ```bash
+   cd ../..
+   npm run dev
+   ```
+   
+   This will:
+   - Kill any existing processes
+   - Clear deployed addresses
+   - Start the backend API server (port 3001)
+   - Start the frontend React app (port 3000)
+
+## 🛠️ Available Scripts
+
+- `npm run dev` - Start everything (kill existing + start fresh)
+- `npm run stop` - Stop all T-REX processes
+- `npm run restart` - Stop and restart everything
+- `npm run clean` - Clear deployed addresses only
+
 ----
 
 <div style="padding: 16px;">

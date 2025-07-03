@@ -1,0 +1,10 @@
+{
+  "_format": "hh-sol-artifact-1",
+  "contractName": "OIDImports",
+  "sourceName": "contracts/_testContracts/OIDImports.sol",
+  "abi": [],
+  "bytecode": "0x6080604052348015600f57600080fd5b50603f80601d6000396000f3fe6080604052600080fdfea26469706673582212203e16b5e7fe006f043c0338f37c9847679d825ef1ca45511bda7782aac639a32564736f6c63430008110033",
+  "deployedBytecode": "0x6080604052600080fdfea26469706673582212203e16b5e7fe006f043c0338f37c9847679d825ef1ca45511bda7782aac639a32564736f6c63430008110033",
+  "linkReferences": {},
+  "deployedLinkReferences": {}
+}

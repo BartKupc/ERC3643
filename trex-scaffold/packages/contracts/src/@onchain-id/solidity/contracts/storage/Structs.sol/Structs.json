@@ -1,0 +1,10 @@
+{
+  "_format": "hh-sol-artifact-1",
+  "contractName": "Structs",
+  "sourceName": "@onchain-id/solidity/contracts/storage/Structs.sol",
+  "abi": [],
+  "bytecode": "0x6080604052348015600f57600080fd5b50603f80601d6000396000f3fe6080604052600080fdfea2646970667358221220ee3f813d4fb3f5856986dd07c5584921143010ea4cab4230fc3c301339f3108064736f6c63430008110033",
+  "deployedBytecode": "0x6080604052600080fdfea2646970667358221220ee3f813d4fb3f5856986dd07c5584921143010ea4cab4230fc3c301339f3108064736f6c63430008110033",
+  "linkReferences": {},
+  "deployedLinkReferences": {}
+}

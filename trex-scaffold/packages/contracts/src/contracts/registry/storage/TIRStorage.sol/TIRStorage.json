@@ -1,0 +1,10 @@
+{
+  "_format": "hh-sol-artifact-1",
+  "contractName": "TIRStorage",
+  "sourceName": "contracts/registry/storage/TIRStorage.sol",
+  "abi": [],
+  "bytecode": "0x6080604052348015600f57600080fd5b50603f80601d6000396000f3fe6080604052600080fdfea2646970667358221220873e25f315e4863ae420bbcf10aeffbed755365177264e4af997a4310b3f538d64736f6c63430008110033",
+  "deployedBytecode": "0x6080604052600080fdfea2646970667358221220873e25f315e4863ae420bbcf10aeffbed755365177264e4af997a4310b3f538d64736f6c63430008110033",
+  "linkReferences": {},
+  "deployedLinkReferences": {}
+}
