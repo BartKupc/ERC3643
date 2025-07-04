@@ -4,6 +4,223 @@ import { Button, Container } from "./components";
 import axios from "axios";
 import AdvancedDashboard from "./AdvancedDashboard";
 
+// Easy Deploy Component - moved outside Dashboard function
+const EasyDeploy = ({ 
+  deployedAddresses, 
+  tokenDetails, 
+  setTokenDetails, 
+  message, 
+  factories, 
+  selectedFactory, 
+  deploymentDetails, 
+  selectedToken, 
+  setSelectedToken, 
+  handleClearAddresses, 
+  handleDeployFactory, 
+  handleDeployToken, 
+  handleFactoryChange, 
+  loadDeploymentDetails, 
+  deployingFactory, 
+  deployingToken 
+}) => (
+  <div style={{ padding: "2rem", marginLeft: "250px" }}>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: "2rem" }}>
+      <h2 style={{ color: '#1a237e', margin: 0 }}>Easy Deploy Dashboard</h2>
+      <Button 
+        onClick={handleClearAddresses}
+        style={{ backgroundColor: "#dc3545", color: "white" }}
+      >
+        Clear Addresses
+      </Button>
+    </div>
+    
+
+    {/* Status Messages */}
+    {message && (
+      <div style={{ 
+        padding: "1rem", 
+        margin: "1rem 0", 
+        backgroundColor: /fail|error|not found/i.test(message) ? "#d32f2f" : "#c8e6c9",
+        color: /fail|error|not found/i.test(message) ? "#fff" : "#222",
+        border: `1px solid ${/fail|error|not found/i.test(message) ? "#b71c1c" : "#388e3c"}`,
+        borderRadius: "4px"
+      }}>
+        {message}
+      </div>
+    )}
+
+    {/* Factory Management */}
+    <div style={{ margin: "2rem 0" }}>
+      <h3 style={{ color: '#1a237e', marginBottom: "1rem" }}>Factory Management</h3>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+        <div style={{ flex: 1 }}>
+          <label style={{ color: '#1a237e', fontWeight: 'bold' }}>Select Factory:</label>
+          <select
+            value={selectedFactory?.deploymentId || ""}
+            onChange={(e) => {
+              const factory = factories.find(f => f.deploymentId === e.target.value);
+              handleFactoryChange(factory);
+            }}
+            style={{ 
+              width: "100%", 
+              padding: "0.5rem", 
+              marginTop: "0.25rem",
+              fontSize: "0.9rem"
+            }}
+          >
+            {factories.map((factory) => (
+              <option key={factory.deploymentId} value={factory.deploymentId}>
+                {factory.address} - {factory.network} - {factory.tokenCount} tokens - {new Date(factory.timestamp).toLocaleDateString()}
+              </option>
+            ))}
+          </select>
+        </div>
+        <Button
+          onClick={handleDeployFactory}
+          disabled={deployingFactory}
+          style={{ backgroundColor: "#007bff", color: "white", minWidth: 160 }}
+        >
+          {deployingFactory ? "Deploying..." : "Deploy New Factory"}
+        </Button>
+      </div>
+    </div>
+
+    {/* Deployment Details */}
+    {deploymentDetails && (
+      <div style={{ margin: "2rem 0" }}>
+        <h3 style={{ color: '#1a237e', marginBottom: "1rem" }}>Deployment Details</h3>
+              <div style={{ 
+      backgroundColor: "#f0f8ff", 
+      padding: "1rem", 
+      borderRadius: "8px",
+      border: "1px solid #b3d9ff"
+    }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>
+            <div>
+              <strong style={{ color: '#1a237e' }}>Factory Address:</strong>
+              <div style={{ fontFamily: "monospace", fontSize: "0.9rem", wordBreak: "break-all", color: '#111' }}>
+                {deploymentDetails.factory.address}
+              </div>
+            </div>
+            <div>
+              <strong style={{ color: '#1a237e' }}>Deployment ID:</strong>
+              <div style={{ color: '#111' }}>{deploymentDetails.deploymentId}</div>
+            </div>
+            <div>
+              <strong style={{ color: '#1a237e' }}>Network:</strong>
+              <div style={{ color: '#111' }}>{deploymentDetails.network}</div>
+            </div>
+            <div>
+              <strong style={{ color: '#1a237e' }}>Deployed:</strong>
+              <div style={{ color: '#111' }}>{new Date(deploymentDetails.timestamp).toLocaleString()}</div>
+            </div>
+          </div>
+
+          {/* Token Dropdown and Details */}
+          {deploymentDetails.tokens && deploymentDetails.tokens.length > 0 && (
+            <div style={{ margin: "1rem 0" }}>
+              <label><strong style={{ color: '#1a237e' }}>Select Token:</strong></label>
+              <select
+                value={selectedToken ? selectedToken.deploymentId : ""}
+                onChange={e => {
+                  const token = deploymentDetails.tokens.find(t => t.deploymentId === e.target.value);
+                  setSelectedToken(token);
+                }}
+                style={{ width: "100%", padding: "0.5rem", marginTop: "0.25rem", fontSize: "0.9rem" }}
+              >
+                <option value="">-- Select a token --</option>
+                {deploymentDetails.tokens.map(token => (
+                  <option key={token.deploymentId} value={token.deploymentId}>
+                    {token.token.name} ({token.token.symbol}) - {token.token.address}
+                  </option>
+                ))}
+              </select>
+              {selectedToken && (
+                <div style={{ marginTop: "1rem", background: "#f0f8ff", padding: "1rem", borderRadius: "6px", border: "1px solid #b3d9ff" }}>
+                  <div><strong style={{ color: '#1a237e' }}>Name:</strong> <span style={{ color: '#111' }}>{selectedToken.token.name}</span></div>
+                  <div><strong style={{ color: '#1a237e' }}>Symbol:</strong> <span style={{ color: '#111' }}>{selectedToken.token.symbol}</span></div>
+                  <div><strong style={{ color: '#1a237e' }}>Address:</strong> <span style={{ color: '#111' }}>{selectedToken.token.address}</span></div>
+                  <div><strong style={{ color: '#1a237e' }}>Deployed:</strong> <span style={{ color: '#111' }}>{new Date(selectedToken.timestamp).toLocaleString()}</span></div>
+                  <div><strong style={{ color: '#1a237e' }}>Identity Registry:</strong> <span style={{ color: '#111' }}>{selectedToken.suite.identityRegistry}</span></div>
+                  <div><strong style={{ color: '#1a237e' }}>Compliance:</strong> <span style={{ color: '#111' }}>{selectedToken.suite.compliance}</span></div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Implementation Contracts */}
+          <div style={{ marginTop: "1rem" }}>
+            <h4 style={{ color: '#1a237e' }}>Implementation Contracts</h4>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem", fontSize: "0.85rem", color: '#111' }}>
+              <div><strong style={{ color: '#1a237e' }}>Token:</strong> <span style={{ fontFamily: "monospace" }}>{deploymentDetails.implementations.token}</span></div>
+              <div><strong style={{ color: '#1a237e' }}>Identity Registry:</strong> <span style={{ fontFamily: "monospace" }}>{deploymentDetails.implementations.identityRegistry}</span></div>
+              <div><strong style={{ color: '#1a237e' }}>Modular Compliance:</strong> <span style={{ fontFamily: "monospace" }}>{deploymentDetails.implementations.modularCompliance}</span></div>
+              <div><strong style={{ color: '#1a237e' }}>Claim Topics Registry:</strong> <span style={{ fontFamily: "monospace" }}>{deploymentDetails.implementations.claimTopicsRegistry}</span></div>
+              <div><strong style={{ color: '#1a237e' }}>Trusted Issuers Registry:</strong> <span style={{ fontFamily: "monospace" }}>{deploymentDetails.implementations.trustedIssuersRegistry}</span></div>
+              <div><strong style={{ color: '#1a237e' }}>Identity Registry Storage:</strong> <span style={{ fontFamily: "monospace" }}>{deploymentDetails.implementations.identityRegistryStorage}</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Token Configuration */}
+    <div style={{ margin: "2rem 0" }}>
+      <h3 style={{ color: '#1a237e', marginBottom: "1rem" }}>Token Configuration</h3>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+        <div>
+          <label style={{ color: '#1a237e', fontWeight: 'bold' }}>Token Name:</label>
+          <input
+            type="text"
+            value={tokenDetails.name}
+            onChange={(e) => setTokenDetails({...tokenDetails, name: e.target.value})}
+            placeholder="My Security Token"
+            style={{ width: "100%", padding: "0.5rem", marginTop: "0.25rem" }}
+          />
+        </div>
+        <div>
+          <label style={{ color: '#1a237e', fontWeight: 'bold' }}>Token Symbol:</label>
+          <input
+            type="text"
+            value={tokenDetails.symbol}
+            onChange={(e) => setTokenDetails({...tokenDetails, symbol: e.target.value})}
+            placeholder="MST"
+            style={{ width: "100%", padding: "0.5rem", marginTop: "0.25rem" }}
+          />
+        </div>
+        <div>
+          <label style={{ color: '#1a237e', fontWeight: 'bold' }}>Decimals:</label>
+          <input
+            type="number"
+            value={tokenDetails.decimals}
+            onChange={(e) => setTokenDetails({...tokenDetails, decimals: parseInt(e.target.value)})}
+            min="0"
+            max="18"
+            style={{ width: "100%", padding: "0.5rem", marginTop: "0.25rem" }}
+          />
+        </div>
+        <div>
+          <label style={{ color: '#1a237e', fontWeight: 'bold' }}>Total Supply:</label>
+          <input
+            type="text"
+            value={tokenDetails.totalSupply}
+            onChange={(e) => setTokenDetails({...tokenDetails, totalSupply: e.target.value})}
+            placeholder="1000000"
+            style={{ width: "100%", padding: "0.5rem", marginTop: "0.25rem" }}
+          />
+        </div>
+      </div>
+      <Button
+        onClick={handleDeployToken}
+        disabled={deployingToken}
+        style={{ backgroundColor: "#007bff", color: "white", marginTop: 16, minWidth: 160 }}
+      >
+        {deployingToken ? "Deploying..." : "Deploy Token"}
+      </Button>
+    </div>
+  </div>
+);
+
 const Dashboard = () => {
   const { account } = useEthers();
   const [deployedAddresses, setDeployedAddresses] = useState({});
@@ -20,6 +237,8 @@ const Dashboard = () => {
   const [deploymentDetails, setDeploymentDetails] = useState(null);
   const [selectedToken, setSelectedToken] = useState(null);
   const [activeMode, setActiveMode] = useState("easy"); // "easy" or "advanced"
+  const [deployingFactory, setDeployingFactory] = useState(false);
+  const [deployingToken, setDeployingToken] = useState(false);
 
   // Load factories from API
   useEffect(() => {
@@ -68,6 +287,49 @@ const Dashboard = () => {
         setMessage("Failed to clear addresses: " + (error.response?.data?.error || error.message));
       }
     }
+  };
+
+  // Deploy Factory
+  const handleDeployFactory = async () => {
+    setDeployingFactory(true);
+    setMessage("");
+    try {
+      await axios.post('/api/deploy/factory');
+      // Wait a moment for backend to update deployments.json
+      await new Promise(res => setTimeout(res, 1500));
+      const response = await axios.get('/api/factories');
+      setFactories(response.data);
+      if (response.data.length > 0) {
+        const latestFactory = response.data[response.data.length - 1];
+        setSelectedFactory(latestFactory);
+        loadDeploymentDetails(latestFactory.deploymentId);
+      }
+      setMessage("Factory deployed successfully!");
+    } catch (error) {
+      setMessage("Failed to deploy factory: " + (error.response?.data?.error || error.message));
+    }
+    setDeployingFactory(false);
+  };
+
+  // Deploy Token
+  const handleDeployToken = async () => {
+    if (!selectedFactory) {
+      setMessage("Please select a factory first.");
+      return;
+    }
+    setDeployingToken(true);
+    setMessage("");
+    try {
+      await axios.post('/api/deploy/token', {
+        factoryAddress: selectedFactory.address,
+        tokenDetails
+      });
+      await loadFactories();
+      setMessage("Token deployed successfully!");
+    } catch (error) {
+      setMessage("Failed to deploy token: " + (error.response?.data?.error || error.message));
+    }
+    setDeployingToken(false);
   };
 
   // Sidebar Component
@@ -121,198 +383,32 @@ const Dashboard = () => {
     </div>
   );
 
-  // Easy Deploy Component
-  const EasyDeploy = () => (
-    <div style={{ padding: "2rem", marginLeft: "250px" }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: "2rem" }}>
-        <h2 style={{ color: '#1a237e', margin: 0 }}>Easy Deploy Dashboard</h2>
-        <Button 
-          onClick={handleClearAddresses}
-          style={{ backgroundColor: "#dc3545", color: "white" }}
-        >
-          Clear Addresses
-        </Button>
-      </div>
-      
-      <p style={{ color: '#666', marginBottom: "2rem" }}>Connected: {account}</p>
-
-      {/* Status Messages */}
-      {message && (
-        <div style={{ 
-          padding: "1rem", 
-          margin: "1rem 0", 
-          backgroundColor: /fail|error|not found/i.test(message) ? "#d32f2f" : "#c8e6c9",
-          color: /fail|error|not found/i.test(message) ? "#fff" : "#222",
-          border: `1px solid ${/fail|error|not found/i.test(message) ? "#b71c1c" : "#388e3c"}`,
-          borderRadius: "4px"
-        }}>
-          {message}
-        </div>
-      )}
-
-      {/* Factory Management */}
-      <div style={{ margin: "2rem 0" }}>
-        <h3 style={{ color: '#1a237e', marginBottom: "1rem" }}>Factory Management</h3>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <div style={{ flex: 1 }}>
-            <label style={{ color: '#1a237e', fontWeight: 'bold' }}>Select Factory:</label>
-            <select
-              value={selectedFactory?.deploymentId || ""}
-              onChange={(e) => {
-                const factory = factories.find(f => f.deploymentId === e.target.value);
-                handleFactoryChange(factory);
-              }}
-              style={{ 
-                width: "100%", 
-                padding: "0.5rem", 
-                marginTop: "0.25rem",
-                fontSize: "0.9rem"
-              }}
-            >
-              {factories.map((factory) => (
-                <option key={factory.deploymentId} value={factory.deploymentId}>
-                  {factory.address} - {factory.network} - {factory.tokenCount} tokens - {new Date(factory.timestamp).toLocaleDateString()}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-      </div>
-
-      {/* Deployment Details */}
-      {deploymentDetails && (
-        <div style={{ margin: "2rem 0" }}>
-          <h3 style={{ color: '#1a237e', marginBottom: "1rem" }}>Deployment Details</h3>
-                <div style={{ 
-        backgroundColor: "#f0f8ff", 
-        padding: "1rem", 
-        borderRadius: "8px",
-        border: "1px solid #b3d9ff"
-      }}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>
-              <div>
-                <strong style={{ color: '#1a237e' }}>Factory Address:</strong>
-                <div style={{ fontFamily: "monospace", fontSize: "0.9rem", wordBreak: "break-all", color: '#111' }}>
-                  {deploymentDetails.factory.address}
-                </div>
-              </div>
-              <div>
-                <strong style={{ color: '#1a237e' }}>Deployment ID:</strong>
-                <div style={{ color: '#111' }}>{deploymentDetails.deploymentId}</div>
-              </div>
-              <div>
-                <strong style={{ color: '#1a237e' }}>Network:</strong>
-                <div style={{ color: '#111' }}>{deploymentDetails.network}</div>
-              </div>
-              <div>
-                <strong style={{ color: '#1a237e' }}>Deployed:</strong>
-                <div style={{ color: '#111' }}>{new Date(deploymentDetails.timestamp).toLocaleString()}</div>
-              </div>
-            </div>
-
-            {/* Token Dropdown and Details */}
-            {deploymentDetails.tokens && deploymentDetails.tokens.length > 0 && (
-              <div style={{ margin: "1rem 0" }}>
-                <label><strong style={{ color: '#1a237e' }}>Select Token:</strong></label>
-                <select
-                  value={selectedToken ? selectedToken.deploymentId : ""}
-                  onChange={e => {
-                    const token = deploymentDetails.tokens.find(t => t.deploymentId === e.target.value);
-                    setSelectedToken(token);
-                  }}
-                  style={{ width: "100%", padding: "0.5rem", marginTop: "0.25rem", fontSize: "0.9rem" }}
-                >
-                  <option value="">-- Select a token --</option>
-                  {deploymentDetails.tokens.map(token => (
-                    <option key={token.deploymentId} value={token.deploymentId}>
-                      {token.token.name} ({token.token.symbol}) - {token.token.address}
-                    </option>
-                  ))}
-                </select>
-                {selectedToken && (
-                  <div style={{ marginTop: "1rem", background: "#f0f8ff", padding: "1rem", borderRadius: "6px", border: "1px solid #b3d9ff" }}>
-                    <div><strong style={{ color: '#1a237e' }}>Name:</strong> <span style={{ color: '#111' }}>{selectedToken.token.name}</span></div>
-                    <div><strong style={{ color: '#1a237e' }}>Symbol:</strong> <span style={{ color: '#111' }}>{selectedToken.token.symbol}</span></div>
-                    <div><strong style={{ color: '#1a237e' }}>Address:</strong> <span style={{ color: '#111' }}>{selectedToken.token.address}</span></div>
-                    <div><strong style={{ color: '#1a237e' }}>Deployed:</strong> <span style={{ color: '#111' }}>{new Date(selectedToken.timestamp).toLocaleString()}</span></div>
-                    <div><strong style={{ color: '#1a237e' }}>Identity Registry:</strong> <span style={{ color: '#111' }}>{selectedToken.suite.identityRegistry}</span></div>
-                    <div><strong style={{ color: '#1a237e' }}>Compliance:</strong> <span style={{ color: '#111' }}>{selectedToken.suite.compliance}</span></div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Implementation Contracts */}
-            <div style={{ marginTop: "1rem" }}>
-              <h4 style={{ color: '#1a237e' }}>Implementation Contracts</h4>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem", fontSize: "0.85rem", color: '#111' }}>
-                <div><strong style={{ color: '#1a237e' }}>Token:</strong> <span style={{ fontFamily: "monospace" }}>{deploymentDetails.implementations.token}</span></div>
-                <div><strong style={{ color: '#1a237e' }}>Identity Registry:</strong> <span style={{ fontFamily: "monospace" }}>{deploymentDetails.implementations.identityRegistry}</span></div>
-                <div><strong style={{ color: '#1a237e' }}>Modular Compliance:</strong> <span style={{ fontFamily: "monospace" }}>{deploymentDetails.implementations.modularCompliance}</span></div>
-                <div><strong style={{ color: '#1a237e' }}>Claim Topics Registry:</strong> <span style={{ fontFamily: "monospace" }}>{deploymentDetails.implementations.claimTopicsRegistry}</span></div>
-                <div><strong style={{ color: '#1a237e' }}>Trusted Issuers Registry:</strong> <span style={{ fontFamily: "monospace" }}>{deploymentDetails.implementations.trustedIssuersRegistry}</span></div>
-                <div><strong style={{ color: '#1a237e' }}>Identity Registry Storage:</strong> <span style={{ fontFamily: "monospace" }}>{deploymentDetails.implementations.identityRegistryStorage}</span></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Token Configuration */}
-      <div style={{ margin: "2rem 0" }}>
-        <h3 style={{ color: '#1a237e', marginBottom: "1rem" }}>Token Configuration</h3>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
-          <div>
-            <label style={{ color: '#1a237e', fontWeight: 'bold' }}>Token Name:</label>
-            <input
-              type="text"
-              value={tokenDetails.name}
-              onChange={(e) => setTokenDetails({...tokenDetails, name: e.target.value})}
-              placeholder="My Security Token"
-              style={{ width: "100%", padding: "0.5rem", marginTop: "0.25rem" }}
-            />
-          </div>
-          <div>
-            <label style={{ color: '#1a237e', fontWeight: 'bold' }}>Token Symbol:</label>
-            <input
-              type="text"
-              value={tokenDetails.symbol}
-              onChange={(e) => setTokenDetails({...tokenDetails, symbol: e.target.value})}
-              placeholder="MST"
-              style={{ width: "100%", padding: "0.5rem", marginTop: "0.25rem" }}
-            />
-          </div>
-          <div>
-            <label style={{ color: '#1a237e', fontWeight: 'bold' }}>Decimals:</label>
-            <input
-              type="number"
-              value={tokenDetails.decimals}
-              onChange={(e) => setTokenDetails({...tokenDetails, decimals: parseInt(e.target.value)})}
-              min="0"
-              max="18"
-              style={{ width: "100%", padding: "0.5rem", marginTop: "0.25rem" }}
-            />
-          </div>
-          <div>
-            <label style={{ color: '#1a237e', fontWeight: 'bold' }}>Total Supply:</label>
-            <input
-              type="text"
-              value={tokenDetails.totalSupply}
-              onChange={(e) => setTokenDetails({...tokenDetails, totalSupply: e.target.value})}
-              placeholder="1000000"
-              style={{ width: "100%", padding: "0.5rem", marginTop: "0.25rem" }}
-            />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
   return (
     <div style={{ background: "#f4f8fb", minHeight: "100vh", width: "100vw" }}>
       <Container style={{ background: "#f4f8fb", minHeight: "100vh" }}>
         <Sidebar />
-        {activeMode === "easy" ? <EasyDeploy /> : <AdvancedDashboard account={account} handleClearAddresses={handleClearAddresses} />}
+        {activeMode === "easy" ? (
+          <EasyDeploy 
+            deployedAddresses={deployedAddresses}
+            tokenDetails={tokenDetails}
+            setTokenDetails={setTokenDetails}
+            message={message}
+            factories={factories}
+            selectedFactory={selectedFactory}
+            deploymentDetails={deploymentDetails}
+            selectedToken={selectedToken}
+            setSelectedToken={setSelectedToken}
+            handleClearAddresses={handleClearAddresses}
+            handleDeployFactory={handleDeployFactory}
+            handleDeployToken={handleDeployToken}
+            handleFactoryChange={handleFactoryChange}
+            loadDeploymentDetails={loadDeploymentDetails}
+            deployingFactory={deployingFactory}
+            deployingToken={deployingToken}
+          />
+        ) : (
+          <AdvancedDashboard account={account} handleClearAddresses={handleClearAddresses} />
+        )}
       </Container>
     </div>
   );

@@ -42,7 +42,9 @@ async function main() {
   }
 
   const deployments = JSON.parse(fs.readFileSync(deploymentsPath, 'utf8'));
-  const latestFactory = deployments[deployments.length - 1];
+  // Filter for factory deployments and get the latest one
+  const factoryDeployments = deployments.filter(d => d.factory && d.factory.address);
+  const latestFactory = factoryDeployments[factoryDeployments.length - 1];
   
   if (!latestFactory || !latestFactory.factory) {
     console.error("❌ No factory deployment found. Please deploy factory first: npm run deploy:factory");

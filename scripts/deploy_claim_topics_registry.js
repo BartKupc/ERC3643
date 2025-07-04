@@ -13,6 +13,12 @@ async function main() {
     await claimTopicsRegistry.deployed();
     const address = claimTopicsRegistry.address;
     
+    // Initialize the contract to set the owner
+    console.log("🔧 Initializing ClaimTopicsRegistry...");
+    const initTx = await claimTopicsRegistry.init();
+    await initTx.wait();
+    console.log("✅ ClaimTopicsRegistry initialized");
+    
     console.log("✅ ClaimTopicsRegistry deployed successfully at:", address);
     console.log("DEPLOYED_ADDRESS:" + address);
     

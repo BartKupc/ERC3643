@@ -53,3 +53,15 @@ export const Link = styled.a.attrs({
   color: #61dafb;
   margin-top: 8px;
 `;
+
+// Advanced Dashboard Components
+export { default as AdvancedNav } from './AdvancedNav';
+export { default as StatusMessage } from './StatusMessage';
+
+// Phase Components
+export { default as ComponentsPhase } from './phases/ComponentsPhase';
+export { default as ClaimTopicsPhase } from './phases/ClaimTopicsPhase';
+export { default as TrustedIssuersPhase } from './phases/TrustedIssuersPhase';
+export { default as UsersPhase } from './phases/UsersPhase';
+export { default as TokenPhase } from './phases/TokenPhase';
+export { default as LogsPhase } from './phases/LogsPhase';
