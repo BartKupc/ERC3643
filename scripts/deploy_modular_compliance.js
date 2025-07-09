@@ -2,13 +2,18 @@ const hre = require("hardhat");
 const { ethers } = hre;
 
 async function main() {
-  const [deployer] = await ethers.getSigners();
-  
   console.log("🎯 ModularCompliance Component Deployment");
-  console.log("Deployer:", deployer.address);
+  
+  // Get MetaMask provider and signer
+  const provider = new ethers.providers.Web3Provider(window.ethereum);
+  await provider.send("eth_requestAccounts", []); // Request account access
+  const signer = provider.getSigner();
+  const deployerAddress = await signer.getAddress();
+  
+  console.log("Deployer:", deployerAddress);
 
   try {
-    const ModularCompliance = await ethers.getContractFactory('ModularCompliance');
+    const ModularCompliance = await ethers.getContractFactory('ModularCompliance', signer);
     const modularCompliance = await ModularCompliance.deploy();
     await modularCompliance.deployed();
     const address = modularCompliance.address;
@@ -31,7 +36,7 @@ async function main() {
       deploymentId,
       component: 'ModularCompliance',
       address: address,
-      deployer: deployer.address,
+      deployer: deployerAddress,
       timestamp: new Date().toISOString(),
       network: 'localhost'
     });

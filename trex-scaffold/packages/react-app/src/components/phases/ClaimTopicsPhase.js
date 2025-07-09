@@ -106,8 +106,8 @@ const ClaimTopicsPhase = ({
             <div style={{ color: '#666', fontStyle: 'italic' }}>Loading...</div>
           ) : (
             <ul>
-              {claimTopics.map(topic => (
-                <li key={topic.id} style={{ marginBottom: 8, padding: "0.5rem", backgroundColor: "white", borderRadius: "4px", border: "1px solid #dee2e6" }}>
+              {claimTopics.map((topic, index) => (
+                <li key={`${topic.id}-${index}`} style={{ marginBottom: 8, padding: "0.5rem", backgroundColor: "white", borderRadius: "4px", border: "1px solid #dee2e6" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontWeight: "bold", color: '#1a237e' }}>{topic.name}</div>

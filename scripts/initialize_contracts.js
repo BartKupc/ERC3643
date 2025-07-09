@@ -4,10 +4,15 @@ const fs = require('fs');
 const path = require('path');
 
 async function main() {
-  const [deployer] = await ethers.getSigners();
-  
   console.log("🔧 Initializing Deployed Contracts");
-  console.log("Deployer:", deployer.address);
+  
+  // Get MetaMask provider and signer
+  const provider = new ethers.providers.Web3Provider(window.ethereum);
+  await provider.send("eth_requestAccounts", []); // Request account access
+  const signer = provider.getSigner();
+  const deployerAddress = await signer.getAddress();
+  
+  console.log("Deployer:", deployerAddress);
 
   try {
     // Load deployments
@@ -38,7 +43,7 @@ async function main() {
 
     // Initialize ClaimTopicsRegistry
     console.log("\n🔧 Initializing ClaimTopicsRegistry...");
-    const claimTopicsRegistryContract = await ethers.getContractAt('ClaimTopicsRegistry', claimTopicsRegistry.address);
+    const claimTopicsRegistryContract = await ethers.getContractAt('ClaimTopicsRegistry', claimTopicsRegistry.address, signer);
     
     try {
       const owner = await claimTopicsRegistryContract.owner();
@@ -61,7 +66,7 @@ async function main() {
     // Initialize TrustedIssuersRegistry
     if (trustedIssuersRegistry) {
       console.log("\n🔧 Initializing TrustedIssuersRegistry...");
-      const trustedIssuersRegistryContract = await ethers.getContractAt('TrustedIssuersRegistry', trustedIssuersRegistry.address);
+      const trustedIssuersRegistryContract = await ethers.getContractAt('TrustedIssuersRegistry', trustedIssuersRegistry.address, signer);
       
       try {
         const owner = await trustedIssuersRegistryContract.owner();
@@ -85,7 +90,7 @@ async function main() {
     // Initialize IdentityRegistryStorage
     if (identityRegistryStorage) {
       console.log("\n🔧 Initializing IdentityRegistryStorage...");
-      const identityRegistryStorageContract = await ethers.getContractAt('IdentityRegistryStorage', identityRegistryStorage.address);
+      const identityRegistryStorageContract = await ethers.getContractAt('IdentityRegistryStorage', identityRegistryStorage.address, signer);
       
       try {
         const owner = await identityRegistryStorageContract.owner();
@@ -109,7 +114,7 @@ async function main() {
     // Initialize IdentityRegistry (requires other contracts)
     if (identityRegistry && trustedIssuersRegistry && claimTopicsRegistry && identityRegistryStorage) {
       console.log("\n🔧 Initializing IdentityRegistry...");
-      const identityRegistryContract = await ethers.getContractAt('IdentityRegistry', identityRegistry.address);
+      const identityRegistryContract = await ethers.getContractAt('IdentityRegistry', identityRegistry.address, signer);
       
       try {
         const owner = await identityRegistryContract.owner();

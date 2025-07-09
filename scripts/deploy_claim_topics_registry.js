@@ -2,13 +2,18 @@ const hre = require("hardhat");
 const { ethers } = hre;
 
 async function main() {
-  const [deployer] = await ethers.getSigners();
-  
   console.log("🎯 ClaimTopicsRegistry Component Deployment");
-  console.log("Deployer:", deployer.address);
+  
+  // Get MetaMask provider and signer
+  const provider = new ethers.providers.Web3Provider(window.ethereum);
+  await provider.send("eth_requestAccounts", []); // Request account access
+  const signer = provider.getSigner();
+  const deployerAddress = await signer.getAddress();
+  
+  console.log("Deployer:", deployerAddress);
 
   try {
-    const ClaimTopicsRegistry = await ethers.getContractFactory('ClaimTopicsRegistry');
+    const ClaimTopicsRegistry = await ethers.getContractFactory('ClaimTopicsRegistry', signer);
     const claimTopicsRegistry = await ClaimTopicsRegistry.deploy();
     await claimTopicsRegistry.deployed();
     const address = claimTopicsRegistry.address;
@@ -37,7 +42,7 @@ async function main() {
       deploymentId,
       component: 'ClaimTopicsRegistry',
       address: address,
-      deployer: deployer.address,
+      deployer: deployerAddress,
       timestamp: new Date().toISOString(),
       network: 'localhost'
     });

@@ -90,7 +90,7 @@ const TrustedIssuersPhase = ({
                               Address: <span style={{ fontFamily: "monospace" }}>{issuer.address}</span>
                             </div>
                             <div style={{ fontSize: "0.8rem", color: '#999', marginTop: "0.25rem" }}>
-                              Topics: {issuer.topics.join(", ")}
+                              Topics: {issuer.topicNames ? issuer.topicNames.join(", ") : issuer.topics.join(", ")}
                             </div>
                           </div>
                           <Button

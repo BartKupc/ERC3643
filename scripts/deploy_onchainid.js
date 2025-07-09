@@ -1,8 +1,9 @@
 const hre = require("hardhat");
 const { ethers } = hre;
+const OnchainID = require('@onchain-id/solidity');
 
 async function main() {
-  console.log("🎯 TrustedIssuersRegistry Component Deployment");
+  console.log("🎯 OnchainID Component Deployment");
   
   // Get MetaMask provider and signer
   const provider = new ethers.providers.Web3Provider(window.ethereum);
@@ -13,18 +14,17 @@ async function main() {
   console.log("Deployer:", deployerAddress);
 
   try {
-    const TrustedIssuersRegistry = await ethers.getContractFactory('TrustedIssuersRegistry', signer);
-    const trustedIssuersRegistry = await TrustedIssuersRegistry.deploy();
-    await trustedIssuersRegistry.deployed();
-    const address = trustedIssuersRegistry.address;
+    // Deploy OnchainID contract
+    const identityImplementation = await new ethers.ContractFactory(
+      OnchainID.contracts.Identity.abi,
+      OnchainID.contracts.Identity.bytecode,
+      signer
+    ).deploy(deployerAddress, false); // Use 'false' for regular OnchainID (not library)
     
-    // Initialize the contract to set the owner
-    console.log("🔧 Initializing TrustedIssuersRegistry...");
-    const initTx = await trustedIssuersRegistry.init();
-    await initTx.wait();
-    console.log("✅ TrustedIssuersRegistry initialized");
+    await identityImplementation.deployed();
+    const address = identityImplementation.address;
     
-    console.log("✅ TrustedIssuersRegistry deployed successfully at:", address);
+    console.log("✅ OnchainID deployed successfully at:", address);
     console.log("DEPLOYED_ADDRESS:" + address);
     
     // Save to deployments.json
@@ -37,10 +37,10 @@ async function main() {
       deployments = JSON.parse(fs.readFileSync(deploymentsPath, 'utf8'));
     }
     
-    const deploymentId = `trusted_issuers_registry_${Date.now()}`;
+    const deploymentId = `onchainid_${Date.now()}`;
     deployments.push({
       deploymentId,
-      component: 'TrustedIssuersRegistry',
+      component: 'OnchainID',
       address: address,
       deployer: deployerAddress,
       timestamp: new Date().toISOString(),
@@ -51,12 +51,14 @@ async function main() {
     console.log("📝 Deployment saved to deployments.json");
     
   } catch (error) {
-    console.error("❌ TrustedIssuersRegistry deployment failed:", error.message);
+    console.error("❌ OnchainID deployment failed:", error.message);
     process.exit(1);
   }
 }
 
-main().catch((err) => {
-  console.error("❌ Script failed:", err);
-  process.exit(1);
-});
+main()
+  .then(() => process.exit(0))
+  .catch((error) => {
+    console.error(error);
+    process.exit(1);
+  }); 

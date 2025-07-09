@@ -1,24 +1,15 @@
-import React from "react";
-import { useEthers } from "@usedapp/core";
+import React, { useState, useEffect } from "react";
 import { Body, Button, Container, Header } from "./components";
 import Dashboard from "./Dashboard";
 
-function WalletButton() {
-  const { account, activateBrowserWallet, deactivate, error } = useEthers();
-
-  React.useEffect(() => {
-    if (error) {
-      console.error("Error while connecting wallet:", error.message);
-    }
-  }, [error]);
-
+function WalletButton({ account, onConnect, onDisconnect }) {
   return (
     <Button
       onClick={() => {
         if (!account) {
-          activateBrowserWallet();
+          onConnect();
         } else {
-          deactivate();
+          onDisconnect();
         }
       }}
     >
@@ -28,13 +19,39 @@ function WalletButton() {
 }
 
 function App() {
-  const { account } = useEthers();
+  const [account, setAccount] = useState(null);
+
+  // Clear any existing connection on mount
+  useEffect(() => {
+    setAccount(null);
+  }, []);
+
+  const connectWallet = async () => {
+    try {
+      if (typeof window.ethereum !== 'undefined') {
+        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+        setAccount(accounts[0]);
+      } else {
+        alert('Please install MetaMask!');
+      }
+    } catch (error) {
+      console.error('Error connecting wallet:', error);
+    }
+  };
+
+  const disconnectWallet = () => {
+    setAccount(null);
+  };
 
   return (
     <Container>
       <Header>
         <h1>T-REX Token Dashboard</h1>
-        <WalletButton />
+        <WalletButton 
+          account={account} 
+          onConnect={connectWallet} 
+          onDisconnect={disconnectWallet} 
+        />
       </Header>
       <Body>
         {!account ? (
@@ -43,7 +60,7 @@ function App() {
             <p>Connect your wallet to access the dashboard</p>
           </div>
         ) : (
-          <Dashboard />
+          <Dashboard account={account} />
         )}
       </Body>
     </Container>

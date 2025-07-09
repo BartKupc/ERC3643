@@ -2,9 +2,15 @@ const hre = require("hardhat");
 const { ethers } = hre;
 
 async function main() {
-  const [deployer] = await ethers.getSigners();
   console.log("🎯 Token Deployment Using Test Pattern");
-  console.log("Deployer:", deployer.address);
+  
+  // Get MetaMask provider and signer
+  const provider = new ethers.providers.Web3Provider(window.ethereum);
+  await provider.send("eth_requestAccounts", []); // Request account access
+  const signer = provider.getSigner();
+  const deployerAddress = await signer.getAddress();
+  
+  console.log("Deployer:", deployerAddress);
 
   // Use the TREXFactory address from your latest deployment
   const TREX_FACTORY_ADDRESS = "0xB7f8BC63BbcaD18155201308C8f3540b07f84F5e";
@@ -26,7 +32,7 @@ async function main() {
     console.log("Implementation Authority:", implementationAuthority);
     console.log("ID Factory:", idFactory);
     
-    if (owner !== deployer.address) {
+    if (owner !== deployerAddress) {
       console.log("❌ You are not the owner of the TREXFactory");
       console.log("💡 Only the owner can call deployTREXSuite");
       return;
@@ -34,7 +40,7 @@ async function main() {
     
     // Token metadata - following the exact pattern from the test
     const tokenDetails = {
-      owner: deployer.address,                    // address of the owner of all contracts
+      owner: deployerAddress,                    // address of the owner of all contracts
       name: "TestPatternToken",                   // name of the token
       symbol: "TPT",                              // symbol / ticker of the token
       decimals: 18,                               // decimals of the token (can be between 0 and 18)
@@ -75,8 +81,8 @@ async function main() {
     console.log("\n🚀 Deploying token suite using test pattern...");
     console.log("Salt:", salt);
     
-    // Use the exact pattern from the test: trexFactory.connect(deployer).deployTREXSuite()
-    const tx = await TREXFactory.connect(deployer).deployTREXSuite(
+    // Use the exact pattern from the test: trexFactory.connect(signer).deployTREXSuite()
+    const tx = await TREXFactory.connect(signer).deployTREXSuite(
       salt,
       tokenDetails,
       claimDetails,

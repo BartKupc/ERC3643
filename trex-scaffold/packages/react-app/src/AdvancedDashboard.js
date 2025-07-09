@@ -1,13 +1,19 @@
 import React, { useState, useEffect } from "react";
 import { Button, AdvancedNav, StatusMessage, ComponentsPhase, ClaimTopicsPhase, TrustedIssuersPhase, UsersPhase, TokenPhase, LogsPhase } from "./components";
+import InitializationPhase from "./components/phases/InitializationPhase";
+import AgentManagementPhase from "./components/phases/AgentManagementPhase";
+import MainWalletSetupPhase from "./components/phases/MainWalletSetupPhase";
+import ClaimIssuerPhase from "./components/phases/ClaimIssuerPhase";
 import { useDeployedComponents } from "./hooks/useDeployedComponents";
 import { useDeployedRegistries } from "./hooks/useDeployedRegistries";
 import axios from "axios";
+import { ethers } from "ethers";
 
 const AdvancedDashboard = ({ account, handleClearAddresses }) => {
   // Core state
-  const [advancedPhase, setAdvancedPhase] = useState("components");
-  const [phaseComplete, setPhaseComplete] = useState({ components: false, users: false, token: false, logs: false });
+  const [advancedPhase, setAdvancedPhase] = useState("mainWalletSetup");
+  const [phaseComplete, setPhaseComplete] = useState({ mainWalletSetup: false, components: false, initialization: false, agentManagement: false, users: false, token: false, logs: false });
+  const [mainWalletOnchainId, setMainWalletOnchainId] = useState(null);
   
   // Custom hooks for state management
   const {
@@ -50,6 +56,9 @@ const AdvancedDashboard = ({ account, handleClearAddresses }) => {
     ].every((c) => deployedComponents[c]);
     setPhaseComplete((prev) => ({ ...prev, components: allDeployed }));
   }, [deployedComponents]);
+
+  // Update initialization phase completion (for now, we'll set it manually when user completes initialization)
+  // This could be enhanced to check actual initialization status on contracts
 
   // Load registries when component mounts or when advanced phase changes (only initial load)
   useEffect(() => {
@@ -98,18 +107,60 @@ const AdvancedDashboard = ({ account, handleClearAddresses }) => {
     }
     setClaimTopicsLoading(true);
     try {
+      // Step 1: Get transaction data from backend
       const response = await axios.post('/api/claim-topics', { 
         topic: newClaimTopic, 
         registryAddress: selectedClaimTopicsRegistry,
         deployerAddress: account
       });
-      setClaimTopics([...claimTopics, response.data.topic]);
-      setNewClaimTopic("");
-    } catch (e) { 
-      if (e.response?.data?.error) {
-        setMessage(e.response.data.error);
+      
+      if (!response.data.success) {
+        throw new Error(response.data.error || "Failed to prepare claim topic addition");
+      }
+      
+      // Step 2: Sign transaction with MetaMask
+      const { transactionData } = response.data;
+      
+      // Request MetaMask to sign the transaction
+      const signerAccounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+      const signerAddress = signerAccounts[0];
+      
+      if (signerAddress.toLowerCase() !== transactionData.from.toLowerCase()) {
+        setMessage(`Please sign with the contract owner address: ${transactionData.from}`);
+        return;
+      }
+      
+      // Send the transaction
+      const tx = await window.ethereum.request({
+        method: 'eth_sendTransaction',
+        params: [transactionData]
+      });
+      
+      setMessage(`Claim topic addition transaction sent! Hash: ${tx}`);
+      
+      // Wait for transaction confirmation
+      const provider = new ethers.providers.Web3Provider(window.ethereum);
+      const receipt = await provider.waitForTransaction(tx);
+      
+      if (receipt.status === 1) {
+        setMessage(`Claim topic added successfully! Transaction: ${tx}`);
+        setClaimTopics([...claimTopics, response.data.topic]);
+        setNewClaimTopic("");
       } else {
-        setMessage("Failed to add claim topic");
+        setMessage(`Transaction failed! Hash: ${tx}`);
+      }
+    } catch (e) { 
+      console.error('Error adding claim topic:', e);
+      if (e.code === 4001) {
+        setMessage("Transaction was rejected by user");
+      } else if (e.code === -32603) {
+        setMessage("Transaction failed on blockchain: " + (e.data?.message || e.message));
+      } else if (e.response?.data?.error) {
+        setMessage(e.response.data.error);
+      } else if (e.message) {
+        setMessage("Failed to add claim topic: " + e.message);
+      } else {
+        setMessage("Failed to add claim topic: Unknown error occurred");
       }
     }
     setClaimTopicsLoading(false);
@@ -143,19 +194,62 @@ const AdvancedDashboard = ({ account, handleClearAddresses }) => {
     setTrustedIssuersLoading(true);
     try {
       const topics = newIssuer.topics.split(",").map(t => Number(t.trim())).filter(Boolean);
+      
+      // Step 1: Get transaction data from backend
       const response = await axios.post('/api/trusted-issuers', { 
         address: newIssuer.address, 
         topics,
         registryAddress: selectedTrustedIssuersRegistry,
         deployerAddress: account
       });
-      setTrustedIssuers([...trustedIssuers, response.data.issuer]);
-      setNewIssuer({ address: "", topics: "" });
-    } catch (e) { 
-      if (e.response?.data?.error) {
-        setMessage(e.response.data.error);
+      
+      if (!response.data.success) {
+        throw new Error(response.data.error || "Failed to prepare trusted issuer addition");
+      }
+      
+      // Step 2: Sign transaction with MetaMask
+      const { transactionData } = response.data;
+      
+      // Request MetaMask to sign the transaction
+      const signerAccounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+      const signerAddress = signerAccounts[0];
+      
+      if (signerAddress.toLowerCase() !== transactionData.from.toLowerCase()) {
+        setMessage(`Please sign with the contract owner address: ${transactionData.from}`);
+        return;
+      }
+      
+      // Send the transaction
+      const tx = await window.ethereum.request({
+        method: 'eth_sendTransaction',
+        params: [transactionData]
+      });
+      
+      setMessage(`Trusted issuer addition transaction sent! Hash: ${tx}`);
+      
+      // Wait for transaction confirmation
+      const provider = new ethers.providers.Web3Provider(window.ethereum);
+      const receipt = await provider.waitForTransaction(tx);
+      
+      if (receipt.status === 1) {
+        setMessage(`Trusted issuer added successfully! Transaction: ${tx}`);
+        setTrustedIssuers([...trustedIssuers, response.data.issuer]);
+        setNewIssuer({ address: "", topics: "" });
       } else {
-        setMessage("Failed to add trusted issuer");
+        setMessage(`Transaction failed! Hash: ${tx}`);
+      }
+    } catch (e) { 
+      console.error('Error adding trusted issuer:', e);
+      if (e.code === 4001) {
+        setMessage("Transaction was rejected by user");
+      } else if (e.code === -32603) {
+        setMessage("Transaction failed on blockchain: " + (e.data?.message || e.message));
+      } else if (e.response?.data?.error) {
+        setMessage(e.response.data.error);
+      } else if (e.message) {
+        setMessage("Failed to add trusted issuer: " + e.message);
+      } else {
+        setMessage("Failed to add trusted issuer: Unknown error occurred");
       }
     }
     setTrustedIssuersLoading(false);
@@ -180,12 +274,40 @@ const AdvancedDashboard = ({ account, handleClearAddresses }) => {
     setTrustedIssuersLoading(false);
   };
 
+  // Clear addresses function
+  const handleClearAddressesLocal = async () => {
+    if (window.confirm("Are you sure you want to clear all deployed addresses?")) {
+      try {
+        console.log('Clearing addresses...');
+        const response = await axios.delete('/api/addresses');
+        console.log('Clear addresses response:', response.data);
+        
+        // Clear local state
+        setClaimTopics([]);
+        setTrustedIssuers([]);
+        setMainWalletOnchainId(null);
+        setPhaseComplete({ mainWalletSetup: false, components: false, initialization: false, agentManagement: false, users: false, token: false, logs: false });
+        
+        // Clear localStorage
+        localStorage.removeItem("trexDeployedComponents");
+        
+        setMessage(response.data.message || "Addresses cleared successfully!");
+        
+        // Reload the page to reset everything
+        window.location.reload();
+      } catch (error) {
+        console.error('Error clearing addresses:', error);
+        setMessage("Failed to clear addresses: " + (error.response?.data?.error || error.message));
+      }
+    }
+  };
+
   return (
     <div style={{ padding: "2rem", marginLeft: "250px" }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: "2rem" }}>
         <h2 style={{ color: '#1a237e', margin: 0 }}>Advanced Workflow</h2>
         <Button 
-          onClick={handleClearAddresses}
+          onClick={handleClearAddressesLocal}
           style={{ backgroundColor: "#dc3545", color: "white" }}
         >
           Clear All
@@ -198,6 +320,17 @@ const AdvancedDashboard = ({ account, handleClearAddresses }) => {
         setAdvancedPhase={setAdvancedPhase} 
         phaseComplete={phaseComplete} 
       />
+      
+      {advancedPhase === "mainWalletSetup" && (
+        <MainWalletSetupPhase 
+          account={account}
+          onMainWalletSetupComplete={(onchainIdAddress) => {
+            setMainWalletOnchainId(onchainIdAddress);
+            setPhaseComplete(prev => ({ ...prev, mainWalletSetup: true }));
+            setAdvancedPhase("components"); // Auto-advance to next phase
+          }}
+        />
+      )}
       
       {advancedPhase === "components" && (
         <ComponentsPhase 
@@ -236,7 +369,31 @@ const AdvancedDashboard = ({ account, handleClearAddresses }) => {
         />
       )}
       
-      {advancedPhase === "users" && <UsersPhase />}
+      {advancedPhase === "claimIssuers" && (
+        <ClaimIssuerPhase
+          deployedComponents={deployedComponents}
+          account={account}
+        />
+      )}
+      
+      {advancedPhase === "initialization" && (
+        <>
+          {console.log('🔍 AdvancedDashboard - deployedComponents:', deployedComponents)}
+          <InitializationPhase 
+            deployedComponents={deployedComponents} 
+            account={account} 
+            setMessage={setMessage}
+            onComplete={() => setPhaseComplete(prev => ({ ...prev, initialization: true }))}
+          />
+        </>
+      )}
+      {advancedPhase === "agentManagement" && (
+        <AgentManagementPhase
+          deployedComponents={deployedComponents}
+          setMessage={setMessage}
+        />
+      )}
+      {advancedPhase === "users" && <UsersPhase deployedComponents={deployedComponents} />}
       {advancedPhase === "token" && <TokenPhase />}
       {advancedPhase === "logs" && <LogsPhase />}
     </div>

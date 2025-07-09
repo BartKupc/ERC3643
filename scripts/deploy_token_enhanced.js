@@ -30,9 +30,15 @@ if (process.env.TOKEN_CONFIG_PATH && fs.existsSync(process.env.TOKEN_CONFIG_PATH
 }
 
 async function main() {
-  const [deployer] = await ethers.getSigners();
   console.log("🎯 Enhanced Token Deployment");
-  console.log("Deployer:", deployer.address);
+  
+  // Get MetaMask provider and signer
+  const provider = new ethers.providers.Web3Provider(window.ethereum);
+  await provider.send("eth_requestAccounts", []); // Request account access
+  const signer = provider.getSigner();
+  const deployerAddress = await signer.getAddress();
+  
+  console.log("Deployer:", deployerAddress);
 
   // Load deployments to get the latest factory
   const deploymentsPath = path.join(__dirname, '../deployments.json');
@@ -69,7 +75,7 @@ async function main() {
     console.log("Implementation Authority:", implementationAuthority);
     console.log("ID Factory:", idFactory);
     
-    if (owner !== deployer.address) {
+    if (owner !== deployerAddress) {
       console.log("❌ You are not the owner of the TREXFactory");
       console.log("💡 Only the owner can call deployTREXSuite");
       return;
@@ -92,11 +98,11 @@ async function main() {
     
     console.log("\n🚀 Deploying token suite...");
     
-    tokenDetails.owner = deployer.address;
+    tokenDetails.owner = deployerAddress;
     tokenDetails.irs = ethers.constants.AddressZero;
     tokenDetails.ONCHAINID = ethers.constants.AddressZero;
     
-    const tx = await TREXFactory.connect(deployer).deployTREXSuite(
+    const tx = await TREXFactory.connect(signer).deployTREXSuite(
       salt,
       tokenDetails,
       claimDetails,
@@ -147,7 +153,7 @@ async function main() {
       deploymentId: `token-${Date.now()}`,
       timestamp: new Date().toISOString(),
       network: hre.network.name,
-      deployer: deployer.address,
+      deployer: deployerAddress,
       factoryAddress: TREX_FACTORY_ADDRESS,
       salt: salt,
       token: {

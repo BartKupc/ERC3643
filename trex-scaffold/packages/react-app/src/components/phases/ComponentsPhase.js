@@ -11,6 +11,25 @@ const ComponentsPhase = ({
     <div>
       <h3 style={{ color: '#1a237e', marginBottom: "1rem" }}>Deploy Components</h3>
       
+      <div style={{ 
+        backgroundColor: "#e8f5e8", 
+        padding: "1rem", 
+        borderRadius: "8px", 
+        border: "1px solid #4caf50",
+        marginBottom: "1rem"
+      }}>
+        <h4 style={{ color: '#2e7d32', marginBottom: "0.5rem" }}>🔐 MetaMask Deployment</h4>
+        <p style={{ margin: "0.25rem 0", color: '#2e7d32' }}>
+          <strong>Important:</strong> All contracts are now deployed using your MetaMask wallet, ensuring you own all deployed contracts.
+        </p>
+        <p style={{ margin: "0.25rem 0", color: '#2e7d32', fontSize: "0.9rem" }}>
+          This means you'll be the owner of all contracts and can add agents, manage users, and control the entire system.
+        </p>
+        <p style={{ margin: "0.25rem 0", color: '#d32f2f', fontSize: "0.9rem", fontWeight: "bold" }}>
+          ⚠️ Note: If you have existing deployments from before, they are owned by the backend wallet. You may need to redeploy them with MetaMask.
+        </p>
+      </div>
+      
       {/* Deployment Status grid updates live */}
       <div style={{ 
         backgroundColor: "#f0f8ff", 
@@ -26,7 +45,8 @@ const ComponentsPhase = ({
             "Identity Registry Storage", 
             "Claim Topics Registry",
             "Trusted Issuers Registry",
-            "Modular Compliance"
+            "Modular Compliance",
+            "OnchainID"
           ].map(component => {
             // Count deployed instances of this exact component type
             const deployedInstances = Object.entries(deployedComponents)
@@ -37,7 +57,8 @@ const ComponentsPhase = ({
                   "Identity Registry Storage": "IdentityRegistryStorage",
                   "Claim Topics Registry": "ClaimTopicsRegistry",
                   "Trusted Issuers Registry": "TrustedIssuersRegistry",
-                  "Modular Compliance": "ModularCompliance"
+                  "Modular Compliance": "ModularCompliance",
+                  "OnchainID": "OnchainID"
                 };
                 const actualComponentName = componentMap[component];
                 
@@ -103,6 +124,12 @@ const ComponentsPhase = ({
             name: "ModularCompliance",
             displayName: "Modular Compliance",
             description: "Handles compliance rules and transfer restrictions",
+            dependencies: []
+          },
+          {
+            name: "OnchainID",
+            displayName: "OnchainID",
+            description: "Identity contract for user verification and claims management",
             dependencies: []
           }
         ].map(component => {

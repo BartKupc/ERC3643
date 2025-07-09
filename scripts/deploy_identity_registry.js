@@ -2,16 +2,30 @@ const hre = require("hardhat");
 const { ethers } = hre;
 
 async function main() {
-  const [deployer] = await ethers.getSigners();
-  
   console.log("🎯 IdentityRegistry Component Deployment");
-  console.log("Deployer:", deployer.address);
+  
+  // Get MetaMask provider and signer
+  const provider = new ethers.providers.Web3Provider(window.ethereum);
+  await provider.send("eth_requestAccounts", []); // Request account access
+  const signer = provider.getSigner();
+  const deployerAddress = await signer.getAddress();
+  
+  console.log("Deployer:", deployerAddress);
 
   try {
-    const IdentityRegistry = await ethers.getContractFactory('IdentityRegistry');
+    const IdentityRegistry = await ethers.getContractFactory('IdentityRegistry', signer);
     const identityRegistry = await IdentityRegistry.deploy();
     await identityRegistry.deployed();
     const address = identityRegistry.address;
+    
+    // Note: IdentityRegistry requires initialization with other registry addresses
+    // For individual component deployment, we'll skip initialization for now
+    // The contract will need to be initialized later with proper registry addresses
+    console.log("⚠️  Note: IdentityRegistry requires initialization with registry addresses");
+    console.log("   This contract will need to be initialized later with:");
+    console.log("   - TrustedIssuersRegistry address");
+    console.log("   - ClaimTopicsRegistry address"); 
+    console.log("   - IdentityRegistryStorage address");
     
     console.log("✅ IdentityRegistry deployed successfully at:", address);
     console.log("DEPLOYED_ADDRESS:" + address);
@@ -31,7 +45,7 @@ async function main() {
       deploymentId,
       component: 'IdentityRegistry',
       address: address,
-      deployer: deployer.address,
+      deployer: deployerAddress,
       timestamp: new Date().toISOString(),
       network: 'localhost'
     });

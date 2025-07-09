@@ -1,197 +1,77 @@
 [
   {
-    "deploymentId": "factory-1751602127122",
-    "timestamp": "2025-07-04T04:08:47.122Z",
-    "network": "localhost",
-    "deployer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-    "factory": {
-      "address": "0x0E801D84Fa97b50751Dbf25036d067dCf18858bF",
-      "owner": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-      "implementationAuthority": "0x4826533B4897376654Bb4d4AD88B7faFD0C98528",
-      "idFactory": "0x70e0bA845a1A0F2DA3359C97E0285013525FFC49"
-    },
-    "implementations": {
-      "claimTopicsRegistry": "0x84eA74d481Ee0A5332c457a4d796187F6Ba67fEB",
-      "trustedIssuersRegistry": "0x9E545E3C0baAB3E08CdfD552C960A1050f373042",
-      "identityRegistryStorage": "0xa82fF9aFd8f496c3d6ac40E2a0F282E47488CFc9",
-      "identityRegistry": "0x1613beB3B2C4f22Ee086B2b38C1476A3cE7f78E8",
-      "modularCompliance": "0x851356ae760d987E095750cCeb3bC6014560891C",
-      "token": "0xf5059a5D33d5853360D16C683c16e67980206f36",
-      "identity": "0x95401dc811bb5740090279Ba06cfA8fcF6113778"
-    },
-    "authorities": {
-      "identityImplementationAuthority": "0x998abeb3E57409262aE5b751f60747921B33613E",
-      "trexImplementationAuthority": "0x4826533B4897376654Bb4d4AD88B7faFD0C98528"
-    },
-    "factories": {
-      "identityFactory": "0x70e0bA845a1A0F2DA3359C97E0285013525FFC49",
-      "trexFactory": "0x0E801D84Fa97b50751Dbf25036d067dCf18858bF"
-    },
-    "tokens": []
-  },
-  {
-    "deploymentId": "factory-1751602135256",
-    "timestamp": "2025-07-04T04:08:55.256Z",
-    "network": "localhost",
-    "deployer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-    "factory": {
-      "address": "0x7969c5eD335650692Bc04293B07F5BF2e7A673C0",
-      "owner": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-      "implementationAuthority": "0x82e01223d51Eb87e16A03E24687EDF0F294da6f1",
-      "idFactory": "0xCD8a1C3ba11CF5ECfa6267617243239504a98d90"
-    },
-    "implementations": {
-      "claimTopicsRegistry": "0x9d4454B023096f34B160D6B654540c56A1F81688",
-      "trustedIssuersRegistry": "0x5eb3Bc0a489C5A8288765d2336659EbCA68FCd00",
-      "identityRegistryStorage": "0x36C02dA8a0983159322a80FFE9F24b1acfF8B570",
-      "identityRegistry": "0x809d550fca64d94Bd9F66E60752A544199cfAC3D",
-      "modularCompliance": "0x4c5859f0F772848b2D91F1D83E2Fe57935348029",
-      "token": "0x1291Be112d480055DaFd8a610b7d1e203891C274",
-      "identity": "0x5f3f1dBD7B74C6B46e8c44f98792A1dAf8d69154"
-    },
-    "authorities": {
-      "identityImplementationAuthority": "0xb7278A61aa25c888815aFC32Ad3cC52fF24fE575",
-      "trexImplementationAuthority": "0x82e01223d51Eb87e16A03E24687EDF0F294da6f1"
-    },
-    "factories": {
-      "identityFactory": "0xCD8a1C3ba11CF5ECfa6267617243239504a98d90",
-      "trexFactory": "0x7969c5eD335650692Bc04293B07F5BF2e7A673C0"
-    },
-    "tokens": [
-      {
-        "deploymentId": "token-1751602146604",
-        "timestamp": "2025-07-04T04:09:06.604Z",
-        "network": "localhost",
-        "deployer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-        "factoryAddress": "0x7969c5eD335650692Bc04293B07F5BF2e7A673C0",
-        "salt": "token-1751602145849",
-        "token": {
-          "address": "0x09C633Ccf47700b5fBE4c96364aB58BcD16d27B5",
-          "name": "1123",
-          "symbol": "12",
-          "decimals": "18"
-        },
-        "suite": {
-          "identityRegistry": "0x08dA0F8fC5b2e7C45b64bFBa7eE92479BAb11f47",
-          "compliance": "0x9D02C550aBE0b9a2396dB6A55bb934d8aac89f75"
-        },
-        "transaction": {
-          "hash": "0xba114ccdf80000d0518864865e6d11f66d16967228b84e629cb1f26151ddb323",
-          "gasUsed": "3485007"
-        }
-      }
-    ]
-  },
-  {
-    "deploymentId": "claim_topics_registry_1751602158123",
-    "component": "ClaimTopicsRegistry",
-    "address": "0xFD471836031dc5108809D173A067e8486B9047A3",
-    "deployer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-    "timestamp": "2025-07-04T04:09:18.123Z",
-    "network": "localhost"
-  },
-  {
-    "deploymentId": "claimtopicsregistry_1_1751602158154",
-    "component": "ClaimTopicsRegistry_1",
-    "address": "0xFD471836031dc5108809D173A067e8486B9047A3",
+    "deploymentId": "main_wallet_onchainid_1751973307265",
+    "component": "MainWalletOnchainID",
+    "address": "0x73511669fd4dE447feD18BB79bAFeAC93aB7F31f",
+    "walletAddress": "0x8626f6940E2eb28930eFb4CeF49B2d1F2C9C1199",
     "deployer": "0x8626f6940E2eb28930eFb4CeF49B2d1F2C9C1199",
-    "timestamp": "2025-07-04T04:09:18.154Z",
+    "timestamp": "2025-07-08T11:15:07.265Z",
     "network": "localhost"
   },
   {
-    "deploymentId": "identity_registry_storage_1751602164404",
-    "component": "IdentityRegistryStorage",
-    "address": "0x1429859428C0aBc9C2C47C8Ee9FBaf82cFA0F20f",
-    "deployer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-    "timestamp": "2025-07-04T04:09:24.404Z",
-    "network": "localhost"
-  },
-  {
-    "deploymentId": "identityregistrystorage_1_1751602164449",
-    "component": "IdentityRegistryStorage_1",
-    "address": "0x1429859428C0aBc9C2C47C8Ee9FBaf82cFA0F20f",
-    "deployer": "0x8626f6940E2eb28930eFb4CeF49B2d1F2C9C1199",
-    "timestamp": "2025-07-04T04:09:24.449Z",
-    "network": "localhost"
-  },
-  {
-    "deploymentId": "identity_registry_1751602168665",
+    "deploymentId": "identityregistry_1751973321175",
     "component": "IdentityRegistry",
-    "address": "0xB0D4afd8879eD9F52b28595d31B441D079B2Ca07",
-    "deployer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-    "timestamp": "2025-07-04T04:09:28.665Z",
+    "address": "0xB581C9264f59BF0289fA76D61B2D0746dCE3C30D",
+    "deployer": "0x8626f6940e2eb28930efb4cef49b2d1f2c9c1199",
+    "timestamp": "2025-07-08T11:15:21.175Z",
     "network": "localhost"
   },
   {
-    "deploymentId": "identityregistry_1_1751602168711",
-    "component": "IdentityRegistry_1",
-    "address": "0xB0D4afd8879eD9F52b28595d31B441D079B2Ca07",
-    "deployer": "0x8626f6940E2eb28930eFb4CeF49B2d1F2C9C1199",
-    "timestamp": "2025-07-04T04:09:28.711Z",
+    "deploymentId": "identityregistrystorage_1751973325551",
+    "component": "IdentityRegistryStorage",
+    "address": "0xC469e7aE4aD962c30c7111dc580B4adbc7E914DD",
+    "deployer": "0x8626f6940e2eb28930efb4cef49b2d1f2c9c1199",
+    "timestamp": "2025-07-08T11:15:25.551Z",
     "network": "localhost"
   },
   {
-    "deploymentId": "trusted_issuers_registry_1751602173154",
+    "deploymentId": "claimtopicsregistry_1751973330527",
+    "component": "ClaimTopicsRegistry",
+    "address": "0x43ca3D2C94be00692D207C6A1e60D8B325c6f12f",
+    "deployer": "0x8626f6940e2eb28930efb4cef49b2d1f2c9c1199",
+    "timestamp": "2025-07-08T11:15:30.527Z",
+    "network": "localhost"
+  },
+  {
+    "deploymentId": "trustedissuersregistry_1751973334975",
     "component": "TrustedIssuersRegistry",
-    "address": "0x162A433068F51e18b7d13932F27e66a3f99E6890",
-    "deployer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-    "timestamp": "2025-07-04T04:09:33.154Z",
+    "address": "0xb09da8a5B236fE0295A345035287e80bb0008290",
+    "deployer": "0x8626f6940e2eb28930efb4cef49b2d1f2c9c1199",
+    "timestamp": "2025-07-08T11:15:34.975Z",
     "network": "localhost"
   },
   {
-    "deploymentId": "trustedissuersregistry_1_1751602173187",
-    "component": "TrustedIssuersRegistry_1",
-    "address": "0x162A433068F51e18b7d13932F27e66a3f99E6890",
-    "deployer": "0x8626f6940E2eb28930eFb4CeF49B2d1F2C9C1199",
-    "timestamp": "2025-07-04T04:09:33.187Z",
-    "network": "localhost"
-  },
-  {
-    "deploymentId": "modular_compliance_1751602177234",
+    "deploymentId": "modularcompliance_1751973339604",
     "component": "ModularCompliance",
-    "address": "0x5081a39b8A5f0E35a8D959395a630b68B74Dd30f",
-    "deployer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-    "timestamp": "2025-07-04T04:09:37.234Z",
+    "address": "0x5095d3313C76E8d29163e40a0223A5816a8037D8",
+    "deployer": "0x8626f6940e2eb28930efb4cef49b2d1f2c9c1199",
+    "timestamp": "2025-07-08T11:15:39.604Z",
     "network": "localhost"
   },
   {
-    "deploymentId": "modularcompliance_1_1751602177264",
-    "component": "ModularCompliance_1",
-    "address": "0x5081a39b8A5f0E35a8D959395a630b68B74Dd30f",
+    "deploymentId": "onchainid_1751973344704",
+    "component": "OnchainID",
+    "address": "0x391342f5acAcaaC9DE1dC4eC3E03f2678f7c78F1",
+    "deployer": "0x8626f6940e2eb28930efb4cef49b2d1f2c9c1199",
+    "timestamp": "2025-07-08T11:15:44.704Z",
+    "network": "localhost"
+  },
+  {
+    "deploymentId": "user_onchainid_1751973488203",
+    "component": "UserOnchainID",
+    "address": "0x37dD26d18abeC2d311e82177f9fa58E9DC14b579",
+    "userAddress": "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC",
     "deployer": "0x8626f6940E2eb28930eFb4CeF49B2d1F2C9C1199",
-    "timestamp": "2025-07-04T04:09:37.264Z",
+    "timestamp": "2025-07-08T11:18:08.203Z",
     "network": "localhost"
   },
   {
-    "deploymentId": "claim_topics_registry_1751602181676",
-    "component": "ClaimTopicsRegistry",
-    "address": "0x1fA02b2d6A771842690194Cf62D91bdd92BfE28d",
-    "deployer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-    "timestamp": "2025-07-04T04:09:41.676Z",
-    "network": "localhost"
-  },
-  {
-    "deploymentId": "claimtopicsregistry_2_1751602181710",
-    "component": "ClaimTopicsRegistry_2",
-    "address": "0x1fA02b2d6A771842690194Cf62D91bdd92BfE28d",
+    "deploymentId": "user_onchainid_1751973966747",
+    "component": "UserOnchainID",
+    "address": "0xb2AA9bf762878462382A34eB4EC1f041E0071081",
+    "userAddress": "0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc",
     "deployer": "0x8626f6940E2eb28930eFb4CeF49B2d1F2C9C1199",
-    "timestamp": "2025-07-04T04:09:41.710Z",
-    "network": "localhost"
-  },
-  {
-    "deploymentId": "claim_topics_registry_1751602186850",
-    "component": "ClaimTopicsRegistry",
-    "address": "0x04C89607413713Ec9775E14b954286519d836FEf",
-    "deployer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-    "timestamp": "2025-07-04T04:09:46.850Z",
-    "network": "localhost"
-  },
-  {
-    "deploymentId": "claimtopicsregistry_3_1751602186879",
-    "component": "ClaimTopicsRegistry_3",
-    "address": "0x04C89607413713Ec9775E14b954286519d836FEf",
-    "deployer": "0x8626f6940E2eb28930eFb4CeF49B2d1F2C9C1199",
-    "timestamp": "2025-07-04T04:09:46.879Z",
+    "timestamp": "2025-07-08T11:26:06.747Z",
     "network": "localhost"
   }
 ]

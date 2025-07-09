@@ -36,6 +36,7 @@
     "deploy:claim-topics-registry": "hardhat run scripts/deploy_claim_topics_registry.js --network localhost",
     "deploy:trusted-issuers-registry": "hardhat run scripts/deploy_trusted_issuers_registry.js --network localhost",
     "deploy:modular-compliance": "hardhat run scripts/deploy_modular_compliance.js --network localhost",
+    "init:identity-registry": "hardhat run scripts/initialize_identity_registry.js --network localhost",
     "dev": "node scripts/startup.js",
     "dev:frontend": "cd trex-scaffold/packages/react-app && npm start",
     "dev:backend": "cd backend && npm start",
@@ -47,7 +48,10 @@
     "clean": "node scripts/clean-addresses.js",
     "startup": "node scripts/startup.js",
     "stop": "node scripts/stop.js",
-    "restart": "npm run stop && sleep 2 && npm run dev"
+    "restart": "npm run stop && sleep 2 && npm run dev",
+    "setup:production": "node scripts/setup-production-dapp.js localhost",
+    "test:claim-issuer": "node scripts/test-claim-issuer-flow.js localhost",
+    "deploy:claim-issuer": "hardhat run scripts/deploy_claim_issuer.js --network localhost"
   },
   "repository": {
     "type": "git",

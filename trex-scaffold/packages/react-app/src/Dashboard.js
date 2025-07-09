@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { useEthers } from "@usedapp/core";
 import { Button, Container } from "./components";
 import axios from "axios";
 import AdvancedDashboard from "./AdvancedDashboard";
@@ -221,8 +220,7 @@ const EasyDeploy = ({
   </div>
 );
 
-const Dashboard = () => {
-  const { account } = useEthers();
+const Dashboard = ({ account }) => {
   const [deployedAddresses, setDeployedAddresses] = useState({});
   const [tokenDetails, setTokenDetails] = useState({
     name: "",
