@@ -16,6 +16,7 @@ const UserManagementPhase = ({ deployedContracts = {}, selectedContracts = {}, s
   const [claimValue, setClaimValue] = useState('');
   const [issuerAddress, setIssuerAddress] = useState('');
   const [userCountry, setUserCountry] = useState(0);
+  const [currentSubStep, setCurrentSubStep] = useState('create');
   
   // Standard T-REX claim topics (Tokeny standard)
   const claimTopics = [
@@ -91,6 +92,19 @@ const UserManagementPhase = ({ deployedContracts = {}, selectedContracts = {}, s
     
     loadUserIdentities();
   }, []);
+
+  // Auto-select latest Identity Registry when deployedContracts changes
+  useEffect(() => {
+    if (
+      deployedContracts.IdentityRegistry &&
+      deployedContracts.IdentityRegistry.length > 0 &&
+      !selectedContracts.IdentityRegistry
+    ) {
+      const latestIdentityRegistry = deployedContracts.IdentityRegistry[0];
+      setSelectedContracts(prev => ({ ...prev, IdentityRegistry: latestIdentityRegistry }));
+      addLog(`Auto-selected latest Identity Registry: ${latestIdentityRegistry}`, "info");
+    }
+  }, [deployedContracts.IdentityRegistry, selectedContracts.IdentityRegistry, setSelectedContracts]);
 
   // Load trusted issuers when Identity Registry changes
   useEffect(() => {
@@ -603,19 +617,13 @@ const UserManagementPhase = ({ deployedContracts = {}, selectedContracts = {}, s
         throw new Error('Please enter claim topic and value');
       }
 
-      // Get a trusted issuer from the registry
+      // Use a proper ClaimIssuer as the issuer, not the OnchainID itself
       let finalIssuerAddress = '';
       
       // First check if user selected a trusted issuer from dropdown
       if (selectedTrustedIssuer) {
         finalIssuerAddress = selectedTrustedIssuer;
         addLog(`- Using selected trusted issuer: ${finalIssuerAddress}`, "info");
-      } else if (issuerAddress.trim()) {
-        // Fallback to manually entered address
-        finalIssuerAddress = issuerAddress.trim();
-        addLog(`- Using manually entered issuer address: ${finalIssuerAddress}`, "warning");
-        addLog(`- ⚠️ WARNING: Manual issuer addresses may not be trusted for compliance!`, "warning");
-        addLog(`- ⚠️ This could cause verification to fail even if the claim is added successfully.`, "warning");
       } else {
         // Try to get the first trusted issuer from the registry
         const trustedIssuer = await getFirstTrustedIssuer();
@@ -999,163 +1007,194 @@ const UserManagementPhase = ({ deployedContracts = {}, selectedContracts = {}, s
       <h2>User Management Phase</h2>
       <p>Create and manage user identities with OnchainID</p>
 
-      {/* Identity Management Section */}
-      <div style={{ marginBottom: '20px', padding: '15px', backgroundColor: '#f8f9fa', borderRadius: '8px', border: '1px solid #dee2e6' }}>
-        <h3 style={{ marginBottom: '15px', color: '#495057' }}>Identity Management</h3>
-        
-        {/* Current Identities Box */}
-        <div style={{ marginBottom: '20px', padding: '15px', backgroundColor: 'white', borderRadius: '8px', border: '1px solid #dee2e6' }}>
-          <h4 style={{ marginBottom: '10px', color: '#495057' }}>Current Identities ({userIdentities.length})</h4>
-          
-          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '15px' }}>
-            <Button
-              onClick={() => setShowIdentityList(!showIdentityList)}
-              style={{ backgroundColor: '#17a2b8', color: 'white' }}
-            >
-              {showIdentityList ? 'Hide' : 'Show'} All Identities
-            </Button>
-            {userIdentities.length > 0 && (
-              <Button
-                onClick={clearAllIdentities}
-                style={{ backgroundColor: '#dc3545', color: 'white' }}
-              >
-                Clear All Identities
-              </Button>
-            )}
-          </div>
+      {/* Sub-step Navigation */}
+      <div style={{ marginBottom: '2rem' }}>
+        <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+          <Button
+            onClick={() => setCurrentSubStep('create')}
+            style={{ 
+              backgroundColor: currentSubStep === 'create' ? '#007bff' : '#6c757d', 
+              color: 'white',
+              padding: '1rem 2rem',
+              fontSize: '1.1rem',
+              fontWeight: 'bold'
+            }}
+          >
+            OnchainID Creation
+          </Button>
+          <Button
+            onClick={() => setCurrentSubStep('manage')}
+            style={{ 
+              backgroundColor: currentSubStep === 'manage' ? '#007bff' : '#6c757d', 
+              color: 'white',
+              padding: '1rem 2rem',
+              fontSize: '1.1rem',
+              fontWeight: 'bold'
+            }}
+          >
+            OnchainID Management
+          </Button>
+        </div>
+      </div>
 
-          {/* Existing Identities List */}
-          {showIdentityList && (
+      {/* Sub-step 1: OnchainID Creation */}
+      {currentSubStep === 'create' && (
+        <div>
+          <h3>Section 1: OnchainID Creation</h3>
+          <p>Create new OnchainID identities for users.</p>
+
+          {/* Current Identities Box */}
+          <div style={{ marginBottom: '20px', padding: '15px', backgroundColor: '#f8f9fa', borderRadius: '8px', border: '1px solid #dee2e6' }}>
+            <h4 style={{ marginBottom: '10px', color: '#495057' }}>Current Identities ({userIdentities.length})</h4>
+            
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '15px' }}>
+              {userIdentities.length > 0 && (
+                <Button
+                  onClick={clearAllIdentities}
+                  style={{ backgroundColor: '#dc3545', color: 'white' }}
+                >
+                  Clear All Identities
+                </Button>
+              )}
+            </div>
+
+            {/* All Identities Display */}
             <div style={{ marginBottom: '15px' }}>
               {userIdentities.length === 0 ? (
                 <div style={{ color: '#6c757d', fontStyle: 'italic' }}>No identities created yet.</div>
               ) : (
-                <div style={{ maxHeight: '200px', overflowY: 'auto', border: '1px solid #dee2e6', borderRadius: '4px' }}>
+                <div style={{ maxHeight: '400px', overflowY: 'auto', border: '1px solid #dee2e6', borderRadius: '4px' }}>
                   {userIdentities.map((identity, index) => (
                     <div 
                       key={index} 
                       style={{ 
-                        padding: '10px', 
+                        padding: '15px', 
                         borderBottom: index < userIdentities.length - 1 ? '1px solid #dee2e6' : 'none',
-                        backgroundColor: selectedIdentity?.userAddress === identity.userAddress ? '#e3f2fd' : 'white',
-                        cursor: 'pointer'
+                        backgroundColor: 'white'
                       }}
-                      onClick={() => loadExistingIdentity(identity)}
                     >
-                      <div style={{ fontWeight: 'bold', color: '#495057' }}>
-                        {identity.userAddress.slice(0, 8)}...{identity.userAddress.slice(-6)}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
+                        <div>
+                          <div style={{ fontWeight: 'bold', color: '#495057', fontSize: '1.1rem' }}>
+                            User: {identity.userAddress}
+                          </div>
+                          <div style={{ fontSize: '0.9rem', color: '#6c757d', marginTop: '2px' }}>
+                            OnchainID: {identity.onchainIdAddress}
+                          </div>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ fontSize: '0.8rem', color: '#6c757d' }}>
+                            Country: {identity.country || 0}
+                          </div>
+                          <div style={{ fontSize: '0.8rem', color: '#28a745', fontWeight: 'bold' }}>
+                            Status: {identity.status || 'created'}
+                          </div>
+                        </div>
                       </div>
-                      <div style={{ fontSize: '0.9rem', color: '#6c757d' }}>
-                        OnchainID: {identity.onchainIdAddress.slice(0, 8)}...{identity.onchainIdAddress.slice(-6)}
-                      </div>
-                                          <div style={{ fontSize: '0.8rem', color: '#6c757d' }}>
-                      Country: {identity.country || 0}
-                    </div>
-                    <div style={{ fontSize: '0.8rem', color: '#28a745', fontWeight: 'bold' }}>
-                      Status: {identity.status || 'created'}
-                    </div>
-                    {identity.claims && identity.claims.length > 0 && (
-                      <div style={{ fontSize: '0.8rem', color: '#6c757d', marginTop: '2px' }}>
-                        Claims: {identity.claims.map((claim, idx) => (
-                          <span key={idx} style={{ marginRight: '8px' }}>
-                            {claim.topic}={claim.value}
-                          </span>
-                        ))}
-                      </div>
-                    )}
+                      
+                      {identity.claims && identity.claims.length > 0 && (
+                        <div style={{ marginTop: '10px', padding: '8px', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
+                          <div style={{ fontWeight: 'bold', color: '#495057', marginBottom: '5px' }}>Claims:</div>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                            {identity.claims.map((claim, idx) => (
+                              <div key={idx} style={{ 
+                                padding: '4px 8px', 
+                                backgroundColor: '#e3f2fd', 
+                                borderRadius: '3px',
+                                fontSize: '0.8rem',
+                                color: '#1976d2',
+                                border: '1px solid #2196f3'
+                              }}>
+                                {claim.topic}: {claim.value}
+                                <div style={{ fontSize: '0.7rem', color: '#6c757d', marginTop: '2px' }}>
+                                  by {claim.issuer.slice(0, 8)}...{claim.issuer.slice(-6)}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
               )}
             </div>
-          )}
+          </div>
 
-          {/* Selected Identity Display */}
-          {selectedIdentity && (
-            <div style={{ padding: '10px', backgroundColor: '#e3f2fd', borderRadius: '4px', border: '1px solid #2196f3' }}>
-              <h4 style={{ marginBottom: '8px', color: '#1976d2' }}>Selected Identity:</h4>
-              <div style={{ fontSize: '0.9rem' }}>
-                <div><strong>User:</strong> {selectedIdentity.userAddress}</div>
-                <div><strong>OnchainID:</strong> {selectedIdentity.onchainIdAddress}</div>
-                <div><strong>Country:</strong> {selectedIdentity.country || 0}</div>
-                <div><strong>Status:</strong> {selectedIdentity.status || 'created'}</div>
-                {selectedIdentity.claims && selectedIdentity.claims.length > 0 && (
-                  <div style={{ marginTop: '8px' }}>
-                    <strong>Claims:</strong>
-                    <div style={{ marginLeft: '10px', marginTop: '4px' }}>
-                      {selectedIdentity.claims.map((claim, index) => (
-                        <div key={index} style={{ fontSize: '0.8rem', color: '#1976d2', marginBottom: '2px' }}>
-                          • {claim.topic}: {claim.value} (by {claim.issuer.slice(0, 8)}...{claim.issuer.slice(-6)})
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-              <div style={{ marginTop: '8px', display: 'flex', gap: '0.5rem' }}>
-                <Button
-                  onClick={clearCurrentIdentity}
-                  style={{ backgroundColor: '#6c757d', color: 'white', fontSize: '0.8rem' }}
-                >
-                  Clear Selection
-                </Button>
-                <Button
-                  onClick={() => addClaimIssuerKeysToOnchainID(selectedIdentity.onchainIdAddress)}
-                  disabled={deploying}
-                  style={{ backgroundColor: '#28a745', color: 'white', fontSize: '0.8rem' }}
-                >
-                  {deploying ? 'Adding ClaimIssuer Keys...' : 'Add ClaimIssuer Keys'}
-                </Button>
-                {processingClaimIssuer && (
-                  <div style={{ fontSize: '0.7rem', color: '#17a2b8', marginTop: '4px', fontStyle: 'italic' }}>
-                    {processingClaimIssuer}
-                  </div>
-                )}
-              </div>
-              <div style={{ fontSize: '0.7rem', color: '#6c757d', marginTop: '4px' }}>
-                Add ClaimIssuer keys to this OnchainID (for OnchainIDs created with old approach)
+          {/* Create New Identity Box */}
+          <div style={{ padding: '15px', backgroundColor: 'white', borderRadius: '8px', border: '1px solid #dee2e6' }}>
+            <h4 style={{ marginBottom: '15px', color: '#495057' }}>Create New Identity</h4>
+            <div style={{ fontSize: '0.8rem', color: '#17a2b8', marginBottom: '10px', padding: '8px', backgroundColor: '#e3f2fd', borderRadius: '4px' }}>
+              💡 <strong>Manual Approach:</strong> OnchainIDs are created with the signer as owner. You must manually select which ClaimIssuer to use for each claim. The user wallet is added as a management key.
+            </div>
+            
+            <div style={{ marginBottom: '10px' }}>
+              <label>Wallet Address:</label>
+              <input
+                type="text"
+                value={userAddress}
+                onChange={(e) => setUserAddress(e.target.value)}
+                placeholder="0x..."
+                style={{ width: '100%', padding: '8px', marginTop: '5px', borderRadius: '4px', border: '1px solid #ced4da' }}
+              />
+            </div>
+            <div style={{ marginBottom: '10px' }}>
+              <label>Country Code (ISO 3166-1 numeric):</label>
+              <input
+                type="number"
+                value={userCountry}
+                onChange={(e) => setUserCountry(parseInt(e.target.value) || 0)}
+                placeholder="0 (default)"
+                style={{ width: '100%', padding: '8px', marginTop: '5px', borderRadius: '4px', border: '1px solid #ced4da' }}
+              />
+              <div style={{ fontSize: '0.8rem', color: '#6c757d', marginTop: '2px' }}>
+                Examples: 840 (USA), 124 (Canada), 826 (UK), 276 (Germany), 250 (France)
               </div>
             </div>
-          )}
+            <Button onClick={createOnchainId} disabled={deploying || !userAddress.trim()}>
+              {deploying ? 'Creating...' : 'Create OnchainID'}
+            </Button>
+          </div>
         </div>
+      )}
 
-        {/* Create New Identity Box */}
-        <div style={{ padding: '15px', backgroundColor: 'white', borderRadius: '8px', border: '1px solid #dee2e6' }}>
-          <h4 style={{ marginBottom: '15px', color: '#495057' }}>Create New Identity</h4>
-          <div style={{ fontSize: '0.8rem', color: '#17a2b8', marginBottom: '10px', padding: '8px', backgroundColor: '#e3f2fd', borderRadius: '4px' }}>
-            💡 <strong>Manual Approach:</strong> OnchainIDs are created with the signer as owner. You must manually select which ClaimIssuer to use for each claim. The user wallet is added as a management key.
-          </div>
-          
-          <div style={{ marginBottom: '10px' }}>
-            <label>Wallet Address:</label>
-            <input
-              type="text"
-              value={userAddress}
-              onChange={(e) => setUserAddress(e.target.value)}
-              placeholder="0x..."
-              style={{ width: '100%', padding: '8px', marginTop: '5px', borderRadius: '4px', border: '1px solid #ced4da' }}
-            />
-          </div>
-          <div style={{ marginBottom: '10px' }}>
-            <label>Country Code (ISO 3166-1 numeric):</label>
-            <input
-              type="number"
-              value={userCountry}
-              onChange={(e) => setUserCountry(parseInt(e.target.value) || 0)}
-              placeholder="0 (default)"
-              style={{ width: '100%', padding: '8px', marginTop: '5px', borderRadius: '4px', border: '1px solid #ced4da' }}
-            />
-            <div style={{ fontSize: '0.8rem', color: '#6c757d', marginTop: '2px' }}>
-              Examples: 840 (USA), 124 (Canada), 826 (UK), 276 (Germany), 250 (France)
-            </div>
-          </div>
-          <Button onClick={createOnchainId} disabled={deploying || !userAddress.trim()}>
-            {deploying ? 'Creating...' : 'Create OnchainID'}
-          </Button>
-        </div>
-      </div>
+            {/* Sub-step 2: OnchainID Management */}
+      {currentSubStep === 'manage' && (
+        <div>
+          <h3>Section 2: OnchainID Management</h3>
+          <p>Manage existing OnchainID identities - register in Identity Registry and add claims.</p>
 
-      {/* Identity Registry Selection */}
+          {/* OnchainID Selection */}
+          <div style={{ marginBottom: '20px', padding: '15px', backgroundColor: '#f8f9fa', borderRadius: '8px', border: '1px solid #dee2e6' }}>
+            <h4 style={{ marginBottom: '10px', color: '#495057' }}>Select OnchainID to Manage</h4>
+            <select
+              value={onchainIdAddress || ''}
+              onChange={(e) => {
+                setOnchainIdAddress(e.target.value);
+                // Also set userAddress and userCountry from the selected identity
+                const found = userIdentities.find(id => id.onchainIdAddress === e.target.value);
+                if (found) {
+                  setUserAddress(found.userAddress);
+                  setUserCountry(found.country || 0);
+                }
+              }}
+              style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ced4da' }}
+            >
+              <option value="">-- Select an OnchainID to manage --</option>
+              {userIdentities.map((identity, index) => (
+                <option key={index} value={identity.onchainIdAddress}>
+                  User: {identity.userAddress} - OnchainID: {identity.onchainIdAddress}
+                </option>
+              ))}
+            </select>
+            {userIdentities.length === 0 && (
+              <div style={{ color: '#dc3545', fontSize: '0.9rem', marginTop: '5px' }}>
+                No OnchainIDs found. Please create some in Section 1 first.
+              </div>
+            )}
+          </div>
+
+        {/* Identity Registry Selection */}
       <div style={{ marginBottom: '20px', padding: '15px', backgroundColor: '#f8f9fa', borderRadius: '8px', border: '1px solid #dee2e6' }}>
         <h3 style={{ marginBottom: '15px', color: '#495057' }}>Identity Registry Configuration</h3>
         
@@ -1373,20 +1412,6 @@ const UserManagementPhase = ({ deployedContracts = {}, selectedContracts = {}, s
             </div>
           </div>
           
-          <div style={{ marginBottom: '10px' }}>
-            <label>Manual Issuer Address (Advanced - only if not using trusted issuer above):</label>
-            <input
-              type="text"
-              value={issuerAddress}
-              onChange={(e) => setIssuerAddress(e.target.value)}
-              placeholder="OnchainID address (not wallet address) - only use if not selecting trusted issuer above"
-              style={{ width: '100%', padding: '8px', marginTop: '5px', borderRadius: '4px', border: '1px solid #ced4da' }}
-            />
-            <div style={{ fontSize: '0.8rem', color: '#6c757d', marginTop: '2px' }}>
-              ⚠️ Only use this if you're not selecting a trusted issuer above. Manual addresses may not be trusted for compliance.
-            </div>
-          </div>
-          
           {/* Current Issuer Selection Display */}
           {(selectedTrustedIssuer || issuerAddress.trim()) && (
             <div style={{ 
@@ -1419,8 +1444,8 @@ const UserManagementPhase = ({ deployedContracts = {}, selectedContracts = {}, s
           </Button>
         </div>
       )}
-
-
+        </div>
+      )}
 
       {/* Status Message */}
       {message && (

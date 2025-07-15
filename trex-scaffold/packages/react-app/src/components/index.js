@@ -59,8 +59,3 @@ export { default as StatusMessage } from './StatusMessage';
 
 // Phase Components
 export { default as DeploymentPhase } from './phases/DeploymentPhase';
-export { default as ClaimTopicsPhase } from './phases/ClaimTopicsPhase';
-export { default as TrustedIssuersPhase } from './phases/TrustedIssuersPhase';
-export { default as UsersPhase } from './phases/UsersPhase';
-export { default as TokenPhase } from './phases/TokenPhase';
-export { default as LogsPhase } from './phases/LogsPhase';

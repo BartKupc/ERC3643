@@ -1844,14 +1844,17 @@ const DeploymentPhase = () => {
   // Comprehensive verification diagnostics
   const runComprehensiveDiagnostics = async () => {
     try {
-      if (!selectedContracts.Token || !userAddressToCheck.trim()) {
-        setMessage('Please select a token and enter a user address');
+      if (!selectedContracts.Token) {
+        setMessage('Please select a token');
         return;
       }
 
+      // Use account 0 if no address is provided
+      const addressToCheck = userAddressToCheck.trim() || '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266';
+
       setCheckingVerification(true);
       setMessage('Running comprehensive diagnostics...');
-      addLog(`Running comprehensive diagnostics for user: ${userAddressToCheck}`, "info");
+      addLog(`Running comprehensive diagnostics for user: ${addressToCheck}`, "info");
 
       const signer = await getSigner();
       const tokenArtifacts = getContractArtifacts('Token');
@@ -1859,7 +1862,7 @@ const DeploymentPhase = () => {
       
       let diagnosticResults = `🔍 COMPREHENSIVE VERIFICATION DIAGNOSTICS\n`;
       diagnosticResults += `==========================================\n\n`;
-      diagnosticResults += `User Address: ${userAddressToCheck}\n`;
+      diagnosticResults += `User Address: ${addressToCheck}\n`;
       diagnosticResults += `Token: ${selectedContracts.Token}\n\n`;
 
       // 1. Check Token's Identity Registry
@@ -1875,7 +1878,7 @@ const DeploymentPhase = () => {
       
       let irTrustedIssuersRegistry;
       try {
-        irTrustedIssuersRegistry = await ir.trustedIssuersRegistry();
+        irTrustedIssuersRegistry = await ir.issuersRegistry();
         diagnosticResults += `2. IDENTITY REGISTRY'S TRUSTED ISSUERS REGISTRY:\n`;
         diagnosticResults += `   Address: ${irTrustedIssuersRegistry}\n`;
       } catch (e) {
@@ -1897,7 +1900,7 @@ const DeploymentPhase = () => {
 
       // 4. Check if user has OnchainID
       addLog('4. Checking user\'s OnchainID...', "info");
-      const onchainIdAddress = await ir.identity(userAddressToCheck);
+      const onchainIdAddress = await ir.identity(addressToCheck);
       diagnosticResults += `4. USER'S ONCHAINID:\n`;
       diagnosticResults += `   Address: ${onchainIdAddress}\n`;
       diagnosticResults += `   Has OnchainID: ${onchainIdAddress !== '0x0000000000000000000000000000000000000000' ? '✅ YES' : '❌ NO'}\n`;
@@ -1908,49 +1911,28 @@ const DeploymentPhase = () => {
         return;
       }
 
-      // 5. Check TrustedIssuersRegistry configuration
-      addLog('5. Checking TrustedIssuersRegistry configuration...', "info");
-      if (irTrustedIssuersRegistry) {
-        const tirArtifacts = getContractArtifacts('TrustedIssuersRegistry');
-        const tir = new ethers.Contract(irTrustedIssuersRegistry, tirArtifacts.abi, signer);
-        
-        // Check if OnchainID is trusted issuer
-        try {
-          const isTrustedIssuer = await tir.isTrustedIssuer(onchainIdAddress);
-          diagnosticResults += `5. TRUSTED ISSUERS REGISTRY:\n`;
-          diagnosticResults += `   Address: ${irTrustedIssuersRegistry}\n`;
-          diagnosticResults += `   OnchainID is trusted: ${isTrustedIssuer ? '✅ YES' : '❌ NO'}\n`;
-          
-          if (!isTrustedIssuer) {
-            diagnosticResults += `   ❌ ONCHAINID IS NOT A TRUSTED ISSUER!\n`;
-          }
-        } catch (e) {
-          diagnosticResults += `5. TRUSTED ISSUERS REGISTRY:\n`;
-          diagnosticResults += `   Address: ${irTrustedIssuersRegistry}\n`;
-          diagnosticResults += `   ❌ ERROR checking trusted status: ${e.message}\n`;
-        }
-      }
 
-      // 6. Check ClaimTopicsRegistry configuration
-      addLog('6. Checking ClaimTopicsRegistry configuration...', "info");
+
+      // 5. Check ClaimTopicsRegistry configuration
+      addLog('5. Checking ClaimTopicsRegistry configuration...', "info");
       if (irClaimTopicsRegistry) {
         const ctrArtifacts = getContractArtifacts('ClaimTopicsRegistry');
         const ctr = new ethers.Contract(irClaimTopicsRegistry, ctrArtifacts.abi, signer);
         
         try {
           const requiredTopics = await ctr.getClaimTopics();
-          diagnosticResults += `6. CLAIM TOPICS REGISTRY:\n`;
+          diagnosticResults += `5. CLAIM TOPICS REGISTRY:\n`;
           diagnosticResults += `   Address: ${irClaimTopicsRegistry}\n`;
           diagnosticResults += `   Required topics: ${requiredTopics.map(t => t.toNumber()).join(', ')}\n`;
         } catch (e) {
-          diagnosticResults += `6. CLAIM TOPICS REGISTRY:\n`;
+          diagnosticResults += `5. CLAIM TOPICS REGISTRY:\n`;
           diagnosticResults += `   Address: ${irClaimTopicsRegistry}\n`;
           diagnosticResults += `   ❌ ERROR getting topics: ${e.message}\n`;
         }
       }
 
-      // 7. Check OnchainID claims in detail
-      addLog('7. Checking OnchainID claims in detail...', "info");
+      // 6. Check OnchainID claims in detail
+      addLog('6. Checking OnchainID claims in detail...', "info");
       const onchainIdArtifacts = getContractArtifacts('Identity');
       const onchainId = new ethers.Contract(onchainIdAddress, onchainIdArtifacts.abi, signer);
       
@@ -1961,7 +1943,7 @@ const DeploymentPhase = () => {
         const tir = new ethers.Contract(irTrustedIssuersRegistry, tirArtifacts.abi, signer);
         
         const requiredTopics = await ctr.getClaimTopics();
-        diagnosticResults += `7. ONCHAINID CLAIMS ANALYSIS:\n`;
+        diagnosticResults += `6. ONCHAINID CLAIMS ANALYSIS:\n`;
         
         for (const topicId of requiredTopics) {
           const topicNum = topicId.toNumber();
@@ -2006,14 +1988,14 @@ const DeploymentPhase = () => {
         }
       }
 
-      // 8. Check final verification status
-      addLog('8. Checking final verification status...', "info");
-      const isVerified = await ir.isVerified(userAddressToCheck);
-      diagnosticResults += `8. FINAL VERIFICATION STATUS:\n`;
+      // 7. Check final verification status
+      addLog('7. Checking final verification status...', "info");
+      const isVerified = await ir.isVerified(addressToCheck);
+      diagnosticResults += `7. FINAL VERIFICATION STATUS:\n`;
       diagnosticResults += `   Result: ${isVerified ? '✅ VERIFIED' : '❌ NOT VERIFIED'}\n`;
 
-      // 9. Check if there's a mismatch between expected and actual registries
-      diagnosticResults += `9. REGISTRY CONFIGURATION CHECK:\n`;
+      // 8. Check if there's a mismatch between expected and actual registries
+      diagnosticResults += `8. REGISTRY CONFIGURATION CHECK:\n`;
       
       // Check if the token's IR matches the IR where claims were added
       const expectedIR = tokenIdentityRegistry;
@@ -2029,24 +2011,12 @@ const DeploymentPhase = () => {
         }
       }
 
-      // 10. Recommendations
-      diagnosticResults += `\n10. RECOMMENDATIONS:\n`;
+      // 9. Recommendations
+      diagnosticResults += `\n9. RECOMMENDATIONS:\n`;
       if (!isVerified) {
         diagnosticResults += `   ❌ User is not verified. Check the issues above.\n`;
         
-        // Check if OnchainID is trusted
-        if (irTrustedIssuersRegistry) {
-          const tirArtifacts = getContractArtifacts('TrustedIssuersRegistry');
-          const tir = new ethers.Contract(irTrustedIssuersRegistry, tirArtifacts.abi, signer);
-          try {
-            const isTrustedIssuer = await tir.isTrustedIssuer(onchainIdAddress);
-            if (!isTrustedIssuer) {
-              diagnosticResults += `   🔧 FIX: Add OnchainID ${onchainIdAddress} as trusted issuer\n`;
-            }
-          } catch (e) {
-            diagnosticResults += `   🔧 FIX: Check TrustedIssuersRegistry configuration\n`;
-          }
-        }
+
         
         diagnosticResults += `   🔧 FIX: Ensure all required topics have valid claims from trusted issuers\n`;
         diagnosticResults += `   🔧 FIX: Check claim data format and signatures\n`;
@@ -4705,18 +4675,6 @@ const DeploymentPhase = () => {
         console.log('🔍 Passing props to UserManagementPhase:', { deployedContracts, selectedContracts });
         return (
           <div>
-            <div style={{ marginBottom: '2rem', padding: '1rem', backgroundColor: '#fff3cd', borderRadius: '4px', border: '1px solid #ffeaa7' }}>
-              <h4>⚠️ Important: Complete Infrastructure Setup First</h4>
-              <p><strong>Before creating users and adding claims, make sure you have completed:</strong></p>
-              <ul style={{ margin: '0.5rem 0', paddingLeft: '1.5rem' }}>
-                <li>✅ <strong>Step 6:</strong> ClaimIssuer deployed and added as trusted issuer</li>
-                <li>✅ <strong>Required claim topics</strong> added to ClaimTopicsRegistry</li>
-              </ul>
-              <p style={{ marginTop: '1rem', fontWeight: 'bold', color: '#856404' }}>
-                If you haven't completed these steps, go back and finish them first. User creation will fail without proper infrastructure.
-              </p>
-            </div>
-            
             <UserManagementPhase 
               deployedContracts={deployedContracts}
               selectedContracts={selectedContracts}
@@ -4950,9 +4908,8 @@ const DeploymentPhase = () => {
           {/* Sub-step 8c: Claim/Token Management */}
           {currentSubStep === 'claims' && (
             <div>
-              <h4>Claim/Token Management</h4>
+              <h4>Claim/Token Check</h4>
               <p>Check required claims and user verification status for token operations.</p>
-              
               {/* Token Selector */}
               {deployedTokens.length > 0 && (
                 <div style={{ marginBottom: '1rem', padding: '1rem', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
@@ -4982,490 +4939,35 @@ const DeploymentPhase = () => {
                   </select>
                 </div>
               )}
-              
-              {/* Check Required Claim Topics */}
-              {selectedContracts.Token && (
-                <div style={{ marginBottom: '1rem', padding: '1rem', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
-                  <h4>Required Claim Topics:</h4>
-                  <p>Check what claim topics are required for this token.</p>
-                  
-                  <Button
-                    onClick={checkRequiredClaimTopics}
-                    disabled={checkingVerification || !selectedContracts.Token}
-                    style={{ backgroundColor: '#007bff', color: 'white', marginBottom: '1rem' }}
-                  >
-                    {checkingVerification ? 'Checking...' : 'Check Required Claim Topics'}
-                  </Button>
-                  
-                  {requiredClaimTopics.length > 0 && (
-                    <div style={{ marginTop: '1rem' }}>
-                      <h5>Required Topics ({requiredClaimTopics.length}):</h5>
-                      <div style={{ display: 'grid', gap: '0.5rem' }}>
-                        {requiredClaimTopics.map((topic, index) => (
-                          <div key={index} style={{ 
-                            padding: '0.5rem', 
-                            backgroundColor: 'white', 
-                            border: '1px solid #dee2e6', 
-                            borderRadius: '4px',
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center'
-                          }}>
-                            <div>
-                              <strong>Topic {topic.id}:</strong> {topic.name}
-                            </div>
-                            <div style={{ 
-                              backgroundColor: '#28a745', 
-                              color: 'white', 
-                              padding: '0.25rem 0.5rem', 
-                              borderRadius: '3px', 
-                              fontSize: '0.8rem',
-                              fontWeight: 'bold'
-                            }}>
-                              Required
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  
-                  {selectedClaimTopicsRegistry && (
-                    <div style={{ marginTop: '1rem', fontSize: '0.9rem', color: '#666' }}>
-                      <strong>Claim Topics Registry:</strong> {selectedClaimTopicsRegistry}
-                    </div>
-                  )}
-                </div>
-              )}
-              
-              {/* Check User Verification */}
-              {selectedContracts.Token && requiredClaimTopics.length > 0 && (
-                <div style={{ marginBottom: '1rem', padding: '1rem', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
-                  <h4>User Verification Check:</h4>
-                  <p>Check if a user is verified for this token (has all required claims from trusted issuers).</p>
-                  
-                  <div style={{ marginBottom: '1rem' }}>
+              {/* User Address to Check */}
+              <div style={{ marginBottom: '1rem', padding: '1rem', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
+                <h4>User Verification Check:</h4>
+                <p>Check if a user is verified for this token (has all required claims from trusted issuers).</p>
+                                  <div style={{ marginBottom: '1rem' }}>
                     <label>User Address to Check:</label>
                     <input
                       type="text"
                       value={userAddressToCheck}
                       onChange={(e) => setUserAddressToCheck(e.target.value)}
-                      placeholder="0x..."
+                      placeholder="0x... (leave empty to use account 0)"
                       style={{ width: '100%', padding: '0.5rem', marginTop: '0.5rem', borderRadius: '4px', border: '1px solid #ced4da' }}
                     />
                   </div>
-                  
-                  <Button
-                    onClick={checkUserVerification}
-                    disabled={checkingVerification || !selectedContracts.Token || !userAddressToCheck.trim()}
-                    style={{ backgroundColor: '#17a2b8', color: 'white', marginBottom: '1rem', marginRight: '0.5rem' }}
-                  >
-                    {checkingVerification ? 'Checking...' : 'Check User Verification'}
-                  </Button>
-                  
-                  <Button
-                    onClick={inspectOnchainIDClaims}
-                    disabled={checkingVerification || !selectedContracts.Token || !userAddressToCheck.trim()}
-                    style={{ backgroundColor: '#6f42c1', color: 'white', marginBottom: '1rem', marginRight: '0.5rem' }}
-                  >
-                    {checkingVerification ? 'Inspecting...' : '🔍 Inspect Claims'}
-                  </Button>
-                  
-                  <Button
-                    onClick={debugVerificationStepByStep}
-                    disabled={checkingVerification || !selectedContracts.Token || !userAddressToCheck.trim()}
-                    style={{ backgroundColor: '#fd7e14', color: 'white', marginBottom: '1rem', marginRight: '0.5rem' }}
-                  >
-                    {checkingVerification ? 'Debugging...' : '🐛 Debug Verification'}
-                  </Button>
-                  
-                  <Button
+                {/* Only one comprehensive check button */}
+                                  <Button
                     onClick={runComprehensiveDiagnostics}
-                    disabled={checkingVerification || !selectedContracts.Token || !userAddressToCheck.trim()}
-                    style={{ backgroundColor: '#20c997', color: 'white', marginBottom: '1rem', marginRight: '0.5rem' }}
-                  >
-                    {checkingVerification ? 'Diagnosing...' : '🔬 Comprehensive Diagnostics'}
-                  </Button>
-                  
-                  <Button
-                    onClick={checkAndFixIdentityRegistry}
                     disabled={checkingVerification || !selectedContracts.Token}
-                    style={{ backgroundColor: '#e83e8c', color: 'white', marginBottom: '1rem', marginRight: '0.5rem' }}
+                    style={{ backgroundColor: '#007bff', color: 'white', marginBottom: '1rem', marginRight: '0.5rem' }}
                   >
-                    {checkingVerification ? 'Checking...' : '🔧 Check IdentityRegistry'}
+                    {checkingVerification ? 'Checking...' : 'Run Comprehensive Check'}
                   </Button>
-                  
-                  <Button
-                    onClick={reinitializeIdentityRegistry}
-                    disabled={checkingVerification || !selectedContracts.Token}
-                    style={{ backgroundColor: '#dc3545', color: 'white', marginBottom: '1rem', marginRight: '0.5rem' }}
-                  >
-                    {checkingVerification ? 'Fixing...' : '🛠️ Re-initialize IdentityRegistry'}
-                  </Button>
-                  
-                  <Button
-                    onClick={testVerificationDirectly}
-                    disabled={checkingVerification || !selectedContracts.Token || !userAddressToCheck.trim()}
-                    style={{ backgroundColor: '#6f42c1', color: 'white', marginBottom: '1rem', marginRight: '0.5rem' }}
-                  >
-                    {checkingVerification ? 'Testing...' : '🧪 Test Verification Directly'}
-                  </Button>
-                  
-                  <Button
-                    onClick={debugIsVerifiedImplementation}
-                    disabled={checkingVerification || !selectedContracts.Token || !userAddressToCheck.trim()}
-                    style={{ backgroundColor: '#fd7e14', color: 'white', marginBottom: '1rem', marginRight: '0.5rem' }}
-                  >
-                    {checkingVerification ? 'Debugging...' : '🔍 Debug isVerified()'}
-                  </Button>
-                  
-                  <Button
-                    onClick={checkDataTypeMismatches}
-                    disabled={checkingVerification || !selectedContracts.Token || !userAddressToCheck.trim()}
-                    style={{ backgroundColor: '#17a2b8', color: 'white', marginBottom: '1rem', marginRight: '0.5rem' }}
-                  >
-                    {checkingVerification ? 'Checking...' : '🔢 Check Data Types'}
-                  </Button>
-                  
-                  <Button
-                    onClick={testRemainingIssues}
-                    disabled={checkingVerification || !selectedContracts.Token || !userAddressToCheck.trim()}
-                    style={{ backgroundColor: '#28a745', color: 'white', marginBottom: '1rem', marginRight: '0.5rem' }}
-                  >
-                    {checkingVerification ? 'Testing...' : '🔬 Test Remaining Issues'}
-                  </Button>
-                  
-                  <Button
-                    onClick={testComplianceBypass}
-                    disabled={checkingVerification || !selectedContracts.Token || !userAddressToCheck.trim()}
-                    style={{ backgroundColor: '#6f42c1', color: 'white', marginBottom: '1rem', marginRight: '0.5rem' }}
-                  >
-                    {checkingVerification ? 'Testing...' : '🔄 Test Compliance Bypass'}
-                  </Button>
-                  
-                  <Button
-                    onClick={testClaimSignatureIssues}
-                    disabled={checkingVerification || !selectedContracts.Token || !userAddressToCheck.trim()}
-                    style={{ backgroundColor: '#fd7e14', color: 'white', marginBottom: '1rem', marginRight: '0.5rem' }}
-                  >
-                    {checkingVerification ? 'Testing...' : '✍️ Test Claim Signatures'}
-                  </Button>
-                  
-                  <Button
-                    onClick={analyzeTokenyFlow}
-                    disabled={checkingVerification || !selectedContracts.Token || !userAddressToCheck.trim()}
-                    style={{ backgroundColor: '#20c997', color: 'white', marginBottom: '1rem', marginRight: '0.5rem' }}
-                  >
-                    {checkingVerification ? 'Analyzing...' : '🔍 Analyze Tokeny Flow'}
-                  </Button>
-                  
-                  <Button
-                    onClick={fixTokenyFlow}
-                    disabled={checkingVerification || !selectedContracts.Token || !userAddressToCheck.trim()}
-                    style={{ backgroundColor: '#dc3545', color: 'white', marginBottom: '1rem' }}
-                  >
-                    {checkingVerification ? 'Fixing...' : '🔧 Fix Tokeny Flow'}
-                  </Button>
-                  
-                  {verificationStatus !== 'Not checked' && (
-                    <div style={{ marginTop: '1rem' }}>
-                      <div style={{ padding: '0.5rem', backgroundColor: 'white', borderRadius: '4px', border: '1px solid #dee2e6', marginBottom: '1rem' }}>
-                        <strong>Verification Status:</strong> 
-                        <span style={{ 
-                          marginLeft: '0.5rem',
-                          color: verificationStatus.includes('✅') ? '#28a745' : '#dc3545',
-                          fontWeight: 'bold'
-                        }}>
-                          {verificationStatus}
-                        </span>
-                      </div>
-                      
-                      {/* Detailed Verification Results */}
-                      {verificationStatus.includes('❌') && verificationDetails && (
-                        <div style={{ backgroundColor: '#fff3cd', borderRadius: '4px', border: '1px solid #ffeaa7', padding: '1rem' }}>
-                          <h5 style={{ color: '#856404', marginBottom: '1rem' }}>🔍 Verification Details:</h5>
-                          
-                          {/* OnchainID Status */}
-                          <div style={{ marginBottom: '1rem' }}>
-                            <strong>OnchainID Status:</strong>
-                            {verificationDetails.hasOnchainID ? (
-                              <div style={{ color: '#28a745', marginLeft: '0.5rem' }}>
-                                ✅ Registered at: {verificationDetails.onchainIDAddress}
-                              </div>
-                            ) : (
-                              <div style={{ color: '#dc3545', marginLeft: '0.5rem' }}>
-                                ❌ No OnchainID registered - User needs to create and register an OnchainID
-                              </div>
-                            )}
-                          </div>
-                          
-                          {/* Missing Topics */}
-                          {verificationDetails.missingTopics.length > 0 && (
-                            <div style={{ marginBottom: '1rem' }}>
-                              <strong style={{ color: '#dc3545' }}>❌ Missing Required Topics:</strong>
-                              <div style={{ marginTop: '0.5rem' }}>
-                                {verificationDetails.missingTopics.map((topic, index) => (
-                                  <div key={index} style={{ 
-                                    backgroundColor: 'white', 
-                                    padding: '0.5rem', 
-                                    marginBottom: '0.5rem', 
-                                    borderRadius: '4px',
-                                    border: '1px solid #dc3545'
-                                  }}>
-                                    <div style={{ fontWeight: 'bold', color: '#dc3545' }}>
-                                      Topic {topic.id}: {topic.name}
-                                    </div>
-                                    <div style={{ fontSize: '0.9rem', color: '#666' }}>
-                                      {topic.reason}
-                                    </div>
-                                    {topic.trustedIssuers && topic.trustedIssuers.length > 0 && (
-                                      <div style={{ fontSize: '0.8rem', color: '#666', marginTop: '0.25rem' }}>
-                                        <strong>Trusted Issuers:</strong> {topic.trustedIssuers.join(', ')}
-                                      </div>
-                                    )}
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                          
-                          {/* Untrusted Issuers */}
-                          {verificationDetails.untrustedIssuers.length > 0 && (
-                            <div style={{ marginBottom: '1rem' }}>
-                              <strong style={{ color: '#ffc107' }}>⚠️ Claims from Untrusted Issuers:</strong>
-                              <div style={{ marginTop: '0.5rem' }}>
-                                {verificationDetails.untrustedIssuers.map((item, index) => (
-                                  <div key={index} style={{ 
-                                    backgroundColor: 'white', 
-                                    padding: '0.5rem', 
-                                    marginBottom: '0.5rem', 
-                                    borderRadius: '4px',
-                                    border: '1px solid #ffc107'
-                                  }}>
-                                    <div style={{ fontWeight: 'bold', color: '#856404' }}>
-                                      Topic {item.topicId}: {item.topicName}
-                                    </div>
-                                    <div style={{ fontSize: '0.9rem', color: '#666' }}>
-                                      Claim {item.claimId} from untrusted issuer: {item.issuer}
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                          
-                          {/* Invalid Claims */}
-                          {verificationDetails.invalidClaims.length > 0 && (
-                            <div style={{ marginBottom: '1rem' }}>
-                              <strong style={{ color: '#dc3545' }}>❌ Invalid Claims:</strong>
-                              <div style={{ marginTop: '0.5rem' }}>
-                                {verificationDetails.invalidClaims.map((item, index) => (
-                                  <div key={index} style={{ 
-                                    backgroundColor: 'white', 
-                                    padding: '0.5rem', 
-                                    marginBottom: '0.5rem', 
-                                    borderRadius: '4px',
-                                    border: '1px solid #dc3545'
-                                  }}>
-                                    <div style={{ fontWeight: 'bold', color: '#dc3545' }}>
-                                      Topic {item.topicId}: {item.topicName}
-                                    </div>
-                                    <div style={{ fontSize: '0.9rem', color: '#666' }}>
-                                      Claim {item.claimId}: {item.error}
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                          
-                          {/* Debug Information */}
-                          <div style={{ 
-                            backgroundColor: '#f8f9fa', 
-                            borderRadius: '4px', 
-                            border: '1px solid #dee2e6', 
-                            padding: '1rem',
-                            marginTop: '1rem'
-                          }}>
-                            <h6 style={{ color: '#495057', marginBottom: '0.5rem' }}>🔍 Debug Info:</h6>
-                            <div style={{ fontSize: '0.8rem', color: '#6c757d' }}>
-                              <div><strong>Token:</strong> {selectedContracts.Token}</div>
-                              <div><strong>OnchainID:</strong> {verificationDetails.onchainIDAddress}</div>
-                              <div><strong>ClaimIssuer:</strong> {Object.values(verificationDetails.trustedIssuersForTopics)[0]?.[0] || 'None'}</div>
-                              <div><strong>Required Topics:</strong> {requiredClaimTopics.map(t => t.id).join(', ')}</div>
-                            </div>
-                          </div>
-                          
-                          {/* Action Items */}
-                          <div style={{ 
-                            backgroundColor: '#d1ecf1', 
-                            borderRadius: '4px', 
-                            border: '1px solid #bee5eb', 
-                            padding: '1rem',
-                            marginTop: '1rem'
-                          }}>
-                            <h6 style={{ color: '#0c5460', marginBottom: '0.5rem' }}>🔧 To Fix Verification:</h6>
-                            <ul style={{ margin: '0', paddingLeft: '1.5rem', color: '#0c5460', fontSize: '0.9rem' }}>
-                              {!verificationDetails.hasOnchainID && (
-                                <li>Create and register an OnchainID for this user</li>
-                              )}
-                              {verificationDetails.missingTopics.length > 0 && (
-                                <li>Add claims for missing topics from trusted issuers</li>
-                              )}
-                              {verificationDetails.untrustedIssuers.length > 0 && (
-                                <li>Add claims from trusted issuers (current claims are from untrusted issuers)</li>
-                              )}
-                              {verificationDetails.invalidClaims.length > 0 && (
-                                <li>Fix invalid claims or add new valid claims</li>
-                              )}
-                            </ul>
-                            
-                            {/* Quick Fix Button for OnchainID as Trusted Issuer */}
-                            {verificationDetails.untrustedIssuers.length > 0 && verificationDetails.hasOnchainID && (
-                              <div style={{ marginTop: '1rem', padding: '1rem', backgroundColor: '#fff3cd', borderRadius: '4px', border: '1px solid #ffeaa7' }}>
-                                <h6 style={{ color: '#856404', marginBottom: '0.5rem' }}>🚀 Quick Fix:</h6>
-                                <p style={{ color: '#856404', fontSize: '0.9rem', marginBottom: '1rem' }}>
-                                  Your OnchainID is issuing claims but isn't a trusted issuer. Add it as a trusted issuer:
-                                </p>
-                                <Button
-                                  onClick={async () => {
-                                    try {
-                                      setCheckingVerification(true);
-                                      setMessage('Adding OnchainID as trusted issuer...');
-                                      
-                                      const signer = await getSigner();
-                                      
-                                      // Get the exact TrustedIssuersRegistry that the token is using
-                                      const tokenArtifacts = getContractArtifacts('Token');
-                                      const token = new ethers.Contract(selectedContracts.Token, tokenArtifacts.abi, signer);
-                                      const identityRegistryAddress = await token.identityRegistry();
-                                      
-                                      const irArtifacts = getContractArtifacts('IdentityRegistry');
-                                      const ir = new ethers.Contract(identityRegistryAddress, irArtifacts.abi, signer);
-                                      const tirAddress = await ir.issuersRegistry();
-                                      
-                                      addLog(`Using TrustedIssuersRegistry: ${tirAddress}`, "info");
-                                      
-                                      const tirArtifacts = getContractArtifacts('TrustedIssuersRegistry');
-                                      const tir = new ethers.Contract(tirAddress, tirArtifacts.abi, signer);
-                                      
-                                      // Check if already a trusted issuer
-                                      const isAlreadyTrusted = await tir.isTrustedIssuer(verificationDetails.onchainIDAddress);
-                                      if (isAlreadyTrusted) {
-                                        setMessage('OnchainID is already a trusted issuer!');
-                                        addLog('OnchainID already trusted', "info");
-                                        return;
-                                      }
-                                      
-                                      // Get all required topics
-                                      const allTopics = requiredClaimTopics.map(t => t.id);
-                                      
-                                      addLog(`Adding OnchainID ${verificationDetails.onchainIDAddress} as trusted issuer for topics: ${allTopics.join(', ')}`, "info");
-                                      
-                                      const tx = await tir.addTrustedIssuer(verificationDetails.onchainIDAddress, allTopics);
-                                      await tx.wait();
-                                      
-                                      setMessage('OnchainID added as trusted issuer! Check verification again.');
-                                      addLog('OnchainID added as trusted issuer', "success");
-                                    } catch (error) {
-                                      const cleanError = extractCleanError(error);
-                                      setMessage(`Error adding OnchainID as trusted issuer: ${cleanError}`);
-                                      addLog(`Error: ${cleanError}`, "error");
-                                    } finally {
-                                      setCheckingVerification(false);
-                                    }
-                                  }}
-                                  disabled={checkingVerification}
-                                  style={{ backgroundColor: '#28a745', color: 'white', marginRight: '0.5rem' }}
-                                >
-                                  {checkingVerification ? 'Adding...' : 'Add OnchainID as Trusted Issuer'}
-                                </Button>
-                                <div style={{ fontSize: '0.8rem', color: '#856404', marginTop: '0.5rem' }}>
-                                  This will allow your OnchainID to issue claims for all required topics.
-                                </div>
-                                
-                                {/* Test Direct Verification */}
-                                <Button
-                                  onClick={async () => {
-                                    try {
-                                      setCheckingVerification(true);
-                                      setMessage('Testing direct verification...');
-                                      
-                                      const signer = await getSigner();
-                                      const tokenArtifacts = getContractArtifacts('Token');
-                                      const token = new ethers.Contract(selectedContracts.Token, tokenArtifacts.abi, signer);
-                                      const identityRegistryAddress = await token.identityRegistry();
-                                      
-                                      const irArtifacts = getContractArtifacts('IdentityRegistry');
-                                      const ir = new ethers.Contract(identityRegistryAddress, irArtifacts.abi, signer);
-                                      
-                                      // Test direct verification
-                                      const isVerified = await ir.isVerified(userAddressToCheck);
-                                      addLog(`Direct verification result: ${isVerified}`, "info");
-                                      
-                                      if (isVerified) {
-                                        setMessage('✅ Direct verification shows VERIFIED!');
-                                        setVerificationStatus('✅ VERIFIED');
-                                      } else {
-                                        setMessage('❌ Direct verification shows NOT VERIFIED');
-                                        setVerificationStatus('❌ NOT VERIFIED');
-                                      }
-                                    } catch (error) {
-                                      const cleanError = extractCleanError(error);
-                                      setMessage(`Error in direct verification: ${cleanError}`);
-                                      addLog(`Direct verification error: ${cleanError}`, "error");
-                                    } finally {
-                                      setCheckingVerification(false);
-                                    }
-                                  }}
-                                  disabled={checkingVerification}
-                                  style={{ backgroundColor: '#17a2b8', color: 'white', marginLeft: '0.5rem' }}
-                                >
-                                  {checkingVerification ? 'Testing...' : 'Test Direct Verification'}
-                                </Button>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  
-                  <div style={{ marginTop: '1rem', fontSize: '0.9rem', color: '#666' }}>
-                    <p><strong>What this checks:</strong></p>
-                    <ul style={{ margin: '0.5rem 0', paddingLeft: '1.5rem' }}>
-                      <li>Does the user have an OnchainID registered?</li>
-                      <li>Does the OnchainID have claims for all required topics?</li>
-                      <li>Are those claims issued by trusted issuers for each topic?</li>
-                      <li>Are the claims valid (signature, data, etc.)?</li>
-                    </ul>
+                {/* Show result area as before */}
+                {message && (
+                  <div style={{ marginTop: '1rem', padding: '1rem', backgroundColor: '#fff3cd', borderRadius: '4px', border: '1px solid #ffeaa7', color: '#856404' }}>
+                    <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontFamily: 'inherit', fontSize: '1rem', margin: 0 }}>{message}</pre>
                   </div>
-                </div>
-              )}
-              
-              {/* Troubleshooting Guide */}
-              {selectedContracts.Token && (
-                <div style={{ marginTop: '1rem', padding: '1rem', backgroundColor: '#fff3cd', borderRadius: '4px', border: '1px solid #ffeaa7' }}>
-                  <h4 style={{ color: '#856404', marginBottom: '0.5rem' }}>🔧 Troubleshooting Guide</h4>
-                  <div style={{ fontSize: '0.9rem', color: '#856404' }}>
-                    <p><strong>If user is NOT VERIFIED:</strong></p>
-                    <ol style={{ margin: '0.5rem 0', paddingLeft: '1.5rem' }}>
-                      <li>Make sure the user has an OnchainID created and registered</li>
-                      <li>Add claims for all required topics to the user's OnchainID</li>
-                      <li>Ensure claims are issued by trusted issuers for each topic</li>
-                      <li>Check that claim values are correct (e.g., "YES" for KYC/AML)</li>
-                      <li>Verify that trusted issuers are properly set up in TrustedIssuersRegistry</li>
-                    </ol>
-                    <p><strong>Common Issues:</strong></p>
-                    <ul style={{ margin: '0.5rem 0', paddingLeft: '1.5rem' }}>
-                      <li>Missing OnchainID registration in IdentityRegistry</li>
-                      <li>Claims issued by non-trusted issuers</li>
-                      <li>Wrong claim topic IDs</li>
-                      <li>Invalid claim signatures or data</li>
-                    </ul>
-                  </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           )}
 
