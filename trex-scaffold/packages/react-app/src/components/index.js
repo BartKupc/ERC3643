@@ -55,11 +55,10 @@ export const Link = styled.a.attrs({
 `;
 
 // Advanced Dashboard Components
-export { default as AdvancedNav } from './AdvancedNav';
 export { default as StatusMessage } from './StatusMessage';
 
 // Phase Components
-export { default as ComponentsPhase } from './phases/ComponentsPhase';
+export { default as DeploymentPhase } from './phases/DeploymentPhase';
 export { default as ClaimTopicsPhase } from './phases/ClaimTopicsPhase';
 export { default as TrustedIssuersPhase } from './phases/TrustedIssuersPhase';
 export { default as UsersPhase } from './phases/UsersPhase';

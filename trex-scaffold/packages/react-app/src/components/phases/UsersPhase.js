@@ -22,6 +22,10 @@ const UsersPhase = ({ deployedComponents }) => {
   const [selectedClaimIssuer, setSelectedClaimIssuer] = useState('');
   const [selectedClaimTopic, setSelectedClaimTopic] = useState('');
   
+  // Claim signer key state
+  const [addingClaimSignerKey, setAddingClaimSignerKey] = useState(false);
+  const [selectedClaimSignerIssuer, setSelectedClaimSignerIssuer] = useState('');
+  
   // OnchainID options
   const [onchainIdOption, setOnchainIdOption] = useState("create"); // "create", "existing", "manual"
   const [existingOnchainIdAddress, setExistingOnchainIdAddress] = useState("");
@@ -963,6 +967,74 @@ const UsersPhase = ({ deployedComponents }) => {
                             ))}
                           </div>
                         </div>
+                        
+                        {/* Add Claim Signer Key Form */}
+                        <div style={{ marginTop: "2rem", padding: "1rem", backgroundColor: "#fff3e0", borderRadius: "4px", border: "1px solid #ffcc02" }}>
+                          <h6 style={{ color: '#e65100', marginBottom: "1rem" }}>🔑 Add Claim Signer Key (Required First Step)</h6>
+                          <p style={{ color: '#e65100', fontSize: "0.9rem", marginBottom: "1rem" }}>
+                            Before issuing claims, you need to add the trusted issuer as a claim signer key to the user's OnchainID.
+                          </p>
+                          <form onSubmit={async (e) => {
+                            e.preventDefault();
+                            if (!selectedUser) {
+                              setMessage("Please select a user first");
+                              return;
+                            }
+                            if (!selectedClaimSignerIssuer) {
+                              setMessage("Please select a trusted issuer");
+                              return;
+                            }
+                            setAddingClaimSignerKey(true);
+                            setMessage("");
+                            try {
+                              const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+                              const deployerAddress = accounts[0];
+                              const response = await axios.post(`/api/users/${selectedUser}/add-claim-signer-key`, {
+                                claimIssuerAddress: selectedClaimSignerIssuer
+                              });
+                              
+                              if (!response.data.success) {
+                                setMessage("Failed to prepare claim signer key addition: " + response.data.error);
+                                setAddingClaimSignerKey(false);
+                                return;
+                              }
+                              
+                              const { transactionData } = response.data;
+                              await window.ethereum.request({
+                                method: 'eth_sendTransaction',
+                                params: [{
+                                  to: transactionData.to,
+                                  data: transactionData.data,
+                                  from: deployerAddress,
+                                  gas: transactionData.gas,
+                                  gasPrice: transactionData.gasPrice
+                                }]
+                              });
+                              
+                              setMessage("Claim signer key added successfully!");
+                              setSelectedClaimSignerIssuer("");
+                              loadOnchainIdDetails(); // Refresh OnchainID details
+                            } catch (err) {
+                              setMessage("Error adding claim signer key: " + (err?.message || err));
+                            } finally {
+                              setAddingClaimSignerKey(false);
+                            }
+                          }}>
+                            <div style={{ marginBottom: "0.5rem" }}>
+                              <label style={{ color: '#e65100', fontWeight: 'bold' }}>Trusted Issuer:</label>
+                              <select value={selectedClaimSignerIssuer} onChange={e => setSelectedClaimSignerIssuer(e.target.value)} style={{ width: "100%", padding: "0.5rem", borderRadius: "4px", border: "1px solid #ffcc02" }}>
+                                <option value="">Select Trusted Issuer</option>
+                                {availableClaimIssuers.map(issuer => (
+                                  <option key={issuer.address} value={issuer.address}>{issuer.address}</option>
+                                ))}
+                              </select>
+                            </div>
+                            <button type="submit" disabled={addingClaimSignerKey} style={{ backgroundColor: '#e65100', color: '#fff', padding: '0.5rem 1.5rem', border: 'none', borderRadius: '4px', fontWeight: 'bold', cursor: addingClaimSignerKey ? 'not-allowed' : 'pointer' }}>
+                              {addingClaimSignerKey ? 'Adding...' : 'Add Claim Signer Key'}
+                            </button>
+                          </form>
+                        </div>
+                        
                         {/* Claim Issuance Form */}
                         <form onSubmit={async (e) => {
                           e.preventDefault();
@@ -1107,6 +1179,7 @@ const UsersPhase = ({ deployedComponents }) => {
                         <ol style={{ margin: "0.5rem 0 0 1rem", padding: 0 }}>
                           <li>Deploy ClaimIssuer contracts in the ClaimIssuers tab</li>
                           <li>Register them as trusted issuers in the Trusted Issuers tab</li>
+                          <li><strong>Add the trusted issuer as a claim signer key to the user's OnchainID (required step)</strong></li>
                           <li>Use the ClaimIssuer contracts to issue claims to users</li>
                           <li>Claims are automatically validated by the OnchainID contract</li>
                         </ol>

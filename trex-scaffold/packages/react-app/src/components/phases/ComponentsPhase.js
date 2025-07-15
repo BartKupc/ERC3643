@@ -39,26 +39,41 @@ const ComponentsPhase = ({
         marginBottom: "2rem"
       }}>
         <h4 style={{ color: '#1a237e', margin: "0 0 1rem 0" }}>Deployment Status</h4>
+        <div style={{ 
+          backgroundColor: "#e3f2fd", 
+          color: "#1565c0", 
+          padding: "0.75rem", 
+          borderRadius: "4px", 
+          marginBottom: "1rem",
+          border: "1px solid #bbdefb"
+        }}>
+          <strong>📋 Deployment Order:</strong> Deploy Identity Factory components first (Identity Implementation, Authority, Factory), 
+          then deploy other TREX components. OnchainIDs will be created using the Identity Factory in subsequent phases.
+        </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(350px, 1fr))", gap: "1rem" }}>
           {[
+            // "Identity Implementation",
+            // "Identity Implementation Authority",
+            // "Identity Factory",
             "Identity Registry",
             "Identity Registry Storage", 
             "Claim Topics Registry",
             "Trusted Issuers Registry",
-            "Modular Compliance",
-            "OnchainID"
+            "Modular Compliance"
           ].map(component => {
             // Count deployed instances of this exact component type
             const deployedInstances = Object.entries(deployedComponents)
               .filter(([name, address]) => {
                 // Map display names to actual component names
                 const componentMap = {
+                  "Identity Implementation": "IdentityImplementation",
+                  "Identity Implementation Authority": "IdentityImplementationAuthority",
+                  "Identity Factory": "IdentityFactory",
                   "Identity Registry": "IdentityRegistry",
                   "Identity Registry Storage": "IdentityRegistryStorage",
                   "Claim Topics Registry": "ClaimTopicsRegistry",
                   "Trusted Issuers Registry": "TrustedIssuersRegistry",
-                  "Modular Compliance": "ModularCompliance",
-                  "OnchainID": "OnchainID"
+                  "Modular Compliance": "ModularCompliance"
                 };
                 const actualComponentName = componentMap[component];
                 
@@ -96,6 +111,24 @@ const ComponentsPhase = ({
       {/* Individual Component Cards */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(350px, 1fr))", gap: "1rem", marginBottom: "2rem" }}>
         {[
+          // {
+          //   name: "IdentityImplementation",
+          //   displayName: "Identity Implementation",
+          //   description: "OnchainID implementation contract (library mode) for Identity Factory",
+          //   dependencies: []
+          // },
+          // {
+          //   name: "IdentityImplementationAuthority",
+          //   displayName: "Identity Implementation Authority",
+          //   description: "Manages Identity implementation upgrades and references",
+          //   dependencies: ["IdentityImplementation"]
+          // },
+          // {
+          //   name: "IdentityFactory",
+          //   displayName: "Identity Factory",
+          //   description: "Creates OnchainID contracts for users and issuers",
+          //   dependencies: ["IdentityImplementationAuthority"]
+          // },
           {
             name: "IdentityRegistry",
             displayName: "Identity Registry",
@@ -126,12 +159,7 @@ const ComponentsPhase = ({
             description: "Handles compliance rules and transfer restrictions",
             dependencies: []
           },
-          {
-            name: "OnchainID",
-            displayName: "OnchainID",
-            description: "Identity contract for user verification and claims management",
-            dependencies: []
-          }
+
         ].map(component => {
           // Find all deployed instances of this component type (exact match or numbered versions)
           const deployedInstances = Object.entries(deployedComponents)

@@ -13,16 +13,15 @@ const AdvancedNav = ({ advancedPhase, setAdvancedPhase, phaseComplete }) => {
       border: "1px solid #b3d9ff"
     }}>
       {[
-        { id: "mainWalletSetup", label: "1. Main Wallet Setup" },
-        { id: "components", label: "2. Deploy Components" },
-        { id: "initialization", label: "3. Initialize Components" },
-        { id: "agentManagement", label: "4. Agent Management" },
-        { id: "claimTopics", label: "5. Claim Topics" },
-        { id: "trustedIssuers", label: "6. Trusted Issuers" },
-        { id: "claimIssuers", label: "7. ClaimIssuers" },
-        { id: "users", label: "8. Manage Users" },
-        { id: "token", label: "9. Deploy Token" },
-        { id: "logs", label: "10. Logs" }
+        { id: "deployment", label: "1. Deploy Contracts" },
+        { id: "initialization", label: "2. Initialize System" },
+        { id: "agentManagement", label: "3. Agent Management" },
+        { id: "claimTopics", label: "4. Claim Topics" },
+        { id: "trustedIssuers", label: "5. Trusted Issuers" },
+        { id: "claimIssuers", label: "6. Claim Issuers" },
+        { id: "users", label: "7. Manage Users" },
+        { id: "token", label: "8. Deploy Token" },
+        { id: "logs", label: "9. Logs" }
       ].map(phase => (
         <Button
           key={phase.id}

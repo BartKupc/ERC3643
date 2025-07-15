@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { ethers } from 'ethers';
 
 const ClaimIssuerPhase = ({ deployedComponents, account }) => {
   // State management
@@ -71,7 +72,7 @@ const ClaimIssuerPhase = ({ deployedComponents, account }) => {
     setNewIssuerAddress(random);
   };
 
-  // Register the trusted issuer in the registry
+  // Register the trusted issuer in the registry (TREX Flow)
   const handleRegisterIssuer = async () => {
     if (!newIssuerAddress || newIssuerTopics.length === 0) {
       setMessage("Please provide an issuer address and select at least one claim topic.");
@@ -88,36 +89,112 @@ const ClaimIssuerPhase = ({ deployedComponents, account }) => {
         setRegistering(false);
         return;
       }
-      // Prepare backend call to get transaction data
+      
+      // Prepare backend call to get TREX flow data
       const response = await axios.post('/api/trusted-issuers', {
         registryAddress: selectedTrustedIssuersRegistry,
         address: newIssuerAddress,
         topics: newIssuerTopics,
-        deployerAddress: ownerAddress
+        deployerAddress: ownerAddress,
+        userAddress: account // Pass the current user's address
       });
+      
       if (!response.data.success) {
-        setMessage("Failed to prepare registration: " + response.data.error);
+        setMessage("Failed to prepare TREX flow: " + response.data.error);
         setRegistering(false);
         return;
       }
-      // Send transaction via MetaMask
-      const { transactionData } = response.data;
-      await window.ethereum.request({
-        method: 'eth_sendTransaction',
-        params: [{
-          to: transactionData.to,
-          data: transactionData.data,
-          from: transactionData.from,
-          gas: transactionData.gas,
-          gasPrice: transactionData.gasPrice
-        }]
-      });
-      setMessage("Trusted issuer registered successfully!");
+      
+      console.log('🎯 TREX Flow Response:', response.data);
+      
+      // 🎯 TREX FLOW: Handle the complete flow
+      const { trexFlow, createOnchainID, addToTrustedIssuers } = response.data;
+      
+      // Step 1: Create OnchainID if needed
+      if (createOnchainID) {
+        setMessage("🎯 Step 1: Creating OnchainID for the issuer...");
+        
+        try {
+          const createTx = await window.ethereum.request({
+            method: 'eth_sendTransaction',
+            params: [createOnchainID.transactionData]
+          });
+          
+          setMessage(`✅ OnchainID creation transaction sent! Hash: ${createTx}`);
+          
+          // Wait for transaction confirmation
+          const provider = new ethers.providers.Web3Provider(window.ethereum);
+          const receipt = await provider.waitForTransaction(createTx);
+          
+          if (receipt.status === 1) {
+            setMessage("✅ OnchainID created successfully! Now adding to TrustedIssuersRegistry...");
+            
+            // Get the created OnchainID address from the transaction receipt
+            // This is a simplified approach - in production you'd parse the logs
+            const createdOnchainIDAddress = receipt.logs[0]?.address || trexFlow.issuerOnchainID;
+            
+            // Update the transaction data with the actual OnchainID address
+            const updatedAddData = addToTrustedIssuers.transactionData.data.replace(
+              '0x0000000000000000000000000000000000000000',
+              createdOnchainIDAddress.slice(2).padStart(64, '0')
+            );
+            
+            // Step 2: Add to TrustedIssuersRegistry
+            const addTx = await window.ethereum.request({
+              method: 'eth_sendTransaction',
+              params: [{
+                ...addToTrustedIssuers.transactionData,
+                data: updatedAddData
+              }]
+            });
+            
+            setMessage(`✅ TrustedIssuersRegistry transaction sent! Hash: ${addTx}`);
+            
+            // Wait for second transaction confirmation
+            const addReceipt = await provider.waitForTransaction(addTx);
+            
+            if (addReceipt.status === 1) {
+              setMessage("🎉 TREX Flow Complete! Issuer OnchainID created and added to TrustedIssuersRegistry!");
+            } else {
+              setMessage("❌ TrustedIssuersRegistry transaction failed!");
+            }
+          } else {
+            setMessage("❌ OnchainID creation failed!");
+          }
+        } catch (error) {
+          setMessage("❌ Error in TREX flow: " + error.message);
+        }
+      } else {
+        // Issuer already has OnchainID, just add to TrustedIssuersRegistry
+        setMessage("🎯 Adding existing OnchainID to TrustedIssuersRegistry...");
+        
+        try {
+          const addTx = await window.ethereum.request({
+            method: 'eth_sendTransaction',
+            params: [addToTrustedIssuers.transactionData]
+          });
+          
+          setMessage(`✅ TrustedIssuersRegistry transaction sent! Hash: ${addTx}`);
+          
+          // Wait for transaction confirmation
+          const provider = new ethers.providers.Web3Provider(window.ethereum);
+          const receipt = await provider.waitForTransaction(addTx);
+          
+          if (receipt.status === 1) {
+            setMessage("🎉 TREX Flow Complete! Existing OnchainID added to TrustedIssuersRegistry!");
+          } else {
+            setMessage("❌ TrustedIssuersRegistry transaction failed!");
+          }
+        } catch (error) {
+          setMessage("❌ Error adding to TrustedIssuersRegistry: " + error.message);
+        }
+      }
+      
       setNewIssuerAddress("");
       setNewIssuerTopics([]);
       loadTrustedIssuers();
     } catch (err) {
-      setMessage("Error registering trusted issuer: " + (err?.message || err));
+      setMessage("Error in TREX flow: " + (err?.message || err));
     } finally {
       setRegistering(false);
     }
@@ -172,7 +249,21 @@ const ClaimIssuerPhase = ({ deployedComponents, account }) => {
 
       {/* Trusted Issuer Registration Form */}
       <div style={{ margin: "2rem 0", padding: "1rem", backgroundColor: "#f8f9fa", borderRadius: "8px", border: "1px solid #dee2e6" }}>
-        <h3 style={{ color: '#1a237e', marginBottom: "1rem" }}>Register New Trusted Issuer</h3>
+        <h3 style={{ color: '#1a237e', marginBottom: "1rem" }}>🎯 TREX Flow: Register New Trusted Issuer</h3>
+        <div style={{ 
+          padding: "1rem", 
+          backgroundColor: "#e3f2fd", 
+          borderRadius: "4px", 
+          border: "1px solid #2196f3",
+          marginBottom: "1rem"
+        }}>
+          <h4 style={{ color: '#1565c0', margin: "0 0 0.5rem 0" }}>TREX Flow Steps:</h4>
+          <ol style={{ margin: 0, paddingLeft: "1.5rem", color: '#1565c0' }}>
+            <li>Create OnchainID for the issuer (if not exists)</li>
+            <li>Add the issuer's OnchainID to TrustedIssuersRegistry</li>
+            <li>Add claim signer key to user's OnchainID (optional)</li>
+          </ol>
+        </div>
         <div style={{ marginBottom: "1rem" }}>
           <label style={{ color: '#1a237e', fontWeight: 'bold' }}>Issuer Address:</label>
           <input
