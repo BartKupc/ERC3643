@@ -97,8 +97,8 @@ async function main() {
     console.log("\n🚀 Deploying token suite...");
     
     tokenDetails.owner = deployerAddress;
-    tokenDetails.irs = ethers.ZeroAddress;
-    tokenDetails.ONCHAINID = ethers.ZeroAddress;
+    tokenDetails.irs = ethers.constants.AddressZero;
+    tokenDetails.ONCHAINID = ethers.constants.AddressZero;
     
     const tx = await TREXFactory.connect(signer).deployTREXSuite(
       salt,
@@ -121,7 +121,7 @@ async function main() {
     console.log("\n📦 Token Suite Components:");
     console.log("Token Address:", tokenAddress);
     
-    if (tokenAddress === ethers.ZeroAddress) {
+    if (tokenAddress === ethers.constants.AddressZero) {
       console.log("⚠️  Token address is zero - deployment may have failed");
       process.exit(1);
     }

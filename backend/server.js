@@ -247,20 +247,24 @@ app.post('/api/deploy/token', async (req, res) => {
       console.log('✅ Token deployment script completed');
       console.log('Output:', output);
       
-      // Get the latest deployment
+      // Get the latest deployment and find the newly added token
       const latestDeployment = getLatestDeployment();
       
-      if (!latestDeployment || !latestDeployment.token) {
+      if (!latestDeployment || !latestDeployment.tokens || latestDeployment.tokens.length === 0) {
         throw new Error('Token deployment failed - no token data found');
       }
       
-      console.log('📋 Token deployed at:', latestDeployment.token.address);
+      // Get the most recently added token
+      const latestToken = latestDeployment.tokens[latestDeployment.tokens.length - 1];
+      
+      console.log('📋 Token deployed at:', latestToken.token.address);
       
       res.json({
         success: true,
         message: 'Token deployed successfully',
         deployment: latestDeployment,
-        tokenAddress: latestDeployment.token.address
+        tokenAddress: latestToken.token.address,
+        tokenData: latestToken
       });
       
     } finally {

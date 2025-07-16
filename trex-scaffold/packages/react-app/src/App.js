@@ -13,7 +13,7 @@ function WalletButton({ account, onConnect, onDisconnect }) {
         }
       }}
     >
-      {!account ? "Connect Local Account" : `${account.slice(0, 6)}...${account.slice(-4)}`}
+      {!account ? "Connect Wallet" : `${account.slice(0, 6)}...${account.slice(-4)}`}
     </Button>
   );
 }
@@ -21,24 +21,69 @@ function WalletButton({ account, onConnect, onDisconnect }) {
 function App() {
   const [account, setAccount] = useState(null);
 
-  // Clear any existing connection on mount
-  useEffect(() => {
-    setAccount(null);
-  }, []);
+  // Check if MetaMask is installed
+  const checkIfWalletIsConnected = async () => {
+    try {
+      const { ethereum } = window;
+      if (!ethereum) {
+        console.log("Make sure you have MetaMask!");
+        return;
+      } else {
+        console.log("We have the ethereum object", ethereum);
+      }
 
+      // Check if we're authorized to access the user's wallet
+      const accounts = await ethereum.request({ method: 'eth_accounts' });
+
+      if (accounts.length !== 0) {
+        const account = accounts[0];
+        console.log("Found an authorized account:", account);
+        setAccount(account);
+      } else {
+        console.log("No authorized account found");
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Connect wallet function
   const connectWallet = async () => {
     try {
-      // For now, use a mock account since we're using Hardhat local accounts
-      // In a real implementation, you would connect to Hardhat's local network
-      setAccount('0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266'); // Hardhat account 0
+      const { ethereum } = window;
+
+      if (!ethereum) {
+        alert("Get MetaMask!");
+        return;
+      }
+
+      const accounts = await ethereum.request({ method: "eth_requestAccounts" });
+
+      console.log("Connected", accounts[0]);
+      setAccount(accounts[0]);
     } catch (error) {
-      console.error('Error connecting wallet:', error);
+      console.log(error);
     }
   };
 
   const disconnectWallet = () => {
     setAccount(null);
   };
+
+  // Listen for account changes
+  useEffect(() => {
+    checkIfWalletIsConnected();
+
+    if (window.ethereum) {
+      window.ethereum.on('accountsChanged', (accounts) => {
+        if (accounts.length > 0) {
+          setAccount(accounts[0]);
+        } else {
+          setAccount(null);
+        }
+      });
+    }
+  }, []);
 
   return (
     <Container>
@@ -54,7 +99,7 @@ function App() {
         {!account ? (
           <div style={{ textAlign: "center", padding: "2rem" }}>
             <h2>Welcome to T-REX Token Solution</h2>
-            <p>Connect to local Hardhat account to access the dashboard</p>
+            <p>Connect your MetaMask wallet to access the dashboard</p>
           </div>
         ) : (
           <Dashboard account={account} />
