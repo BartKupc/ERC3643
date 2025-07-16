@@ -1,201 +1,284 @@
-# T-REX: ERC-3643 Token & Compliance Suite
+# T-REX: ERC-3643 Token and Compliance Suite
 
-Welcome to the T-REX monorepo! This project provides a full-stack, modular, and extensible platform for deploying, managing, and testing ERC-3643 (T-REX) compliant security tokens, including identity, compliance, and claim management.
+A comprehensive full-stack solution for deploying and managing ERC-3643 compliant security tokens with built-in compliance features.
 
----
-
-## Monorepo Structure
+## 🏗️ Project Structure
 
 ```
 T-REX/
-  trex-scaffold/
-    packages/
-      contracts/    # Solidity smart contracts (Hardhat)
-      react-app/    # Frontend React app (deployment, management UI)
-      subgraph/     # (Dependency only, not used directly)
-  backend/          # Express.js backend API server
-  scripts/          # Deployment and utility scripts (core to setup)
+├── backend/                 # Express.js API server
+│   ├── server.js           # Main server with deployment endpoints
+│   ├── package.json        # Backend dependencies
+│   └── package-lock.json   # Locked dependencies
+├── contracts/              # Solidity smart contracts
+│   ├── token/             # ERC-3643 token implementation
+│   ├── compliance/        # Modular compliance system
+│   ├── registry/          # Identity and claim registries
+│   ├── factory/           # TREXFactory for token deployment
+│   ├── proxy/             # Upgradeable proxy contracts
+│   └── roles/             # Access control and permissions
+├── scripts/               # Deployment and utility scripts
+│   ├── deploy_factory_enhanced.js    # Factory deployment
+│   ├── deploy_token_enhanced.js      # Token deployment
+│   ├── deploy_*.js        # Individual contract deployments
+│   └── startup.js         # Development environment setup
+├── test/                  # Comprehensive test suite
+│   ├── compliance.test.ts # Compliance module tests
+│   ├── token/             # Token functionality tests
+│   └── registries/        # Registry tests
+├── trex-scaffold/         # React frontend application
+│   ├── packages/
+│   │   ├── contracts/     # Contract artifacts and ABIs
+│   │   ├── react-app/     # React frontend
+│   │   └── subgraph/      # The Graph subgraph (optional)
+└── docs/                  # Documentation and whitepaper
 ```
 
----
+## 🚀 Quick Start
 
-## Prerequisites
+### Prerequisites
 
-- **Node.js** (v16+ recommended)
-- **Yarn** (classic) or npm
-- **Hardhat** (for contract development)
-- **A local Ethereum node** (e.g., Hardhat node, or Ganache)
+- Node.js 16+ and npm
+- Hardhat development environment
+- Local blockchain (Hardhat node)
 
----
+### 1. Install Dependencies
 
-## 1. Clone the Repository
+```bash
+# Install root dependencies
+npm install
 
-```sh
-git clone <repo-url>
-cd T-REX
-```
+# Install backend dependencies
+cd backend
+npm install
 
----
-
-## 2. Install All Dependencies
-
-You must install dependencies in each package:
-
-### Install Contracts Dependencies
-
-```sh
-cd trex-scaffold/packages/contracts
-yarn install
-# or
+# Install frontend dependencies
+cd ../trex-scaffold/packages/react-app
 npm install
 ```
 
-### Install Frontend Dependencies
+### 2. Start Development Environment
 
-```sh
-cd ../react-app
-yarn install
-# or
-npm install
-```
+```bash
+# Start local blockchain (in one terminal)
+npx hardhat node
 
-### (Optional) Install Subgraph Dependencies
+# Start backend server (in another terminal)
+cd backend
+npm start
 
-> **Note:** The subgraph package is present for dependency reasons only. You do not need to run or configure The Graph for normal operation.
-
-```sh
-cd ../subgraph
-yarn install
-# or
-npm install
-```
-
-### Install Backend Dependencies
-
-```sh
-cd ../../../backend
-yarn install
-# or
-npm install
-```
-
----
-
-## 3. Using the Scripts Folder
-
-The `/scripts` directory contains essential deployment and utility scripts for setting up and managing your T-REX contracts and environment.  
-**Common scripts include:**
-- `deploy_factory_enhanced.js`, `deploy_token_enhanced.js`, `deploy_token.js`, etc.: Deploy core contracts.
-- `deploy_identity_registry.js`, `deploy_modular_compliance.js`, etc.: Deploy and initialize specific modules.
-- `startup.js`, `stop.js`: Start and stop the full stack.
-- `clean-addresses.js`: Clean up deployment artifacts.
-- `flatten.js`: Flatten contracts for verification.
-- **Usage:**  
-  Run scripts with Hardhat or Node, e.g.:
-  ```sh
-  npx hardhat run scripts/deploy_token_enhanced.js --network localhost
-  node scripts/startup.js
-  ```
-
----
-
-## 4. Compile & Deploy Smart Contracts
-
-From the `contracts` directory:
-
-```sh
-npx hardhat compile
-# To deploy contracts (customize scripts as needed):
-npx hardhat run scripts/deploy_token_enhanced.js --network localhost
-# or use other scripts in /scripts for different modules
-```
-
-- Make sure your local Ethereum node (e.g., Hardhat node) is running:
-  ```sh
-  npx hardhat node
-  ```
-
----
-
-## 5. Start the Backend API Server
-
-From the `backend` directory:
-
-```sh
-yarn start
-# or
+# Start frontend (in another terminal)
+cd trex-scaffold/packages/react-app
 npm start
 ```
 
-- The backend server will run on [http://localhost:3001](http://localhost:3001)
-- Provides API endpoints for health checks, network status, and deployment management
-- Used as a proxy/API for the frontend
+### 3. Access the Application
 
----
+- **Frontend**: http://localhost:3000
+- **Backend API**: http://localhost:3001
+- **Blockchain**: http://localhost:8545
 
-## 6. Start the Frontend App
+**Note**: The application uses Hardhat's local accounts. Click "Connect Local Account" to access the dashboard.
 
-From the `react-app` directory:
+## 🎯 Deployment Workflows
 
-```sh
-yarn start
-# or
-npm start
+### Easy Deploy (Recommended for Beginners)
+
+The Easy Deploy interface provides a streamlined workflow for deploying T-REX tokens:
+
+1. **Deploy Factory**: Creates the TREXFactory and all implementation contracts
+2. **Configure Token**: Set token name, symbol, decimals, and total supply
+3. **Deploy Token**: Deploy the complete token suite with compliance
+
+**Features:**
+- One-click factory deployment
+- Simple token configuration
+- Real-time deployment logs
+- Automatic contract selection
+- Deployment history tracking
+
+### Advanced Deploy (For Power Users)
+
+The Advanced interface provides granular control over the deployment process:
+
+1. **Individual Contract Deployment**: Deploy contracts one by one
+2. **Contract Initialization**: Initialize deployed contracts
+3. **Comprehensive Verification**: Run diagnostics and tests
+4. **User Management**: Add agents and configure permissions
+5. **Token Operations**: Mint, burn, transfer, and approve tokens
+
+**Features:**
+- Step-by-step deployment control
+- Detailed verification diagnostics
+- Real-time logging and error reporting
+- Contract state inspection
+- Advanced testing capabilities
+
+## 🔧 Backend API Endpoints
+
+### Health and Status
+- `GET /api/health` - Server health check
+- `GET /api/test-network` - Test blockchain connection
+
+### Deployment Management
+- `GET /api/factories` - List deployed factories
+- `GET /api/deployments` - List all deployments
+- `GET /api/deployments/:id` - Get specific deployment details
+- `POST /api/deploy/factory` - Deploy new factory
+- `POST /api/deploy/token` - Deploy new token
+
+### Address Management
+- `GET /api/addresses` - Get deployed addresses
+- `POST /api/addresses` - Update deployed addresses
+- `DELETE /api/addresses` - Clear all addresses
+
+## 📋 Contract Architecture
+
+### Core Components
+
+1. **TREXFactory**: Main deployment contract that creates token suites
+2. **Token**: ERC-3643 compliant security token
+3. **ModularCompliance**: Configurable compliance rules
+4. **IdentityRegistry**: Manages user identities and verification
+5. **ClaimTopicsRegistry**: Manages claim topics for identity verification
+6. **TrustedIssuersRegistry**: Manages trusted claim issuers
+
+### Proxy Pattern
+
+All contracts use the OpenZeppelin proxy pattern for upgradeability:
+- Implementation contracts contain the logic
+- Proxy contracts delegate calls to implementations
+- Storage contracts maintain state across upgrades
+
+## 🧪 Testing
+
+### Run All Tests
+```bash
+npm test
 ```
 
-- The app will be available at [http://localhost:3000](http://localhost:3000)
-- The frontend expects contracts to be deployed on your local node (default: `http://127.0.0.1:8545`)
-- The frontend proxies API requests to the backend server at port 3001
+### Run Specific Test Suites
+```bash
+# Compliance tests
+npm run test:compliance
+
+# Token tests
+npm run test:token
+
+# Registry tests
+npm run test:registries
+```
+
+### Test Coverage
+```bash
+npm run test:coverage
+```
+
+## 📚 Scripts Usage
+
+### Deployment Scripts
+
+```bash
+# Deploy factory and all implementations
+npm run deploy:factory
+
+# Deploy token using existing factory
+npm run deploy:token
+
+# Deploy individual contracts
+npm run deploy:compliance
+npm run deploy:registry
+npm run deploy:storage
+```
+
+### Utility Scripts
+
+```bash
+# Start development environment
+npm run start:dev
+
+# Clean deployment data
+npm run clean
+
+# Flatten contracts for verification
+npm run flatten
+```
+
+## 🔐 Security Features
+
+### Access Control
+- Role-based permissions (Owner, Agent, TokenAgent)
+- Upgradeable access control
+- Granular permission management
+
+### Compliance
+- Modular compliance system
+- Country restrictions and whitelisting
+- Transfer approval workflows
+- Conditional transfer rules
+
+### Identity Verification
+- OnchainID integration
+- Claim-based verification
+- Trusted issuer management
+- Multi-topic verification
+
+## 🌐 Network Support
+
+### Development
+- Hardhat Network (localhost:8545)
+- Anvil (Foundry)
+- Ganache
+
+### Production
+- Ethereum Mainnet
+- Polygon
+- Arbitrum
+- Optimism
+- Other EVM-compatible networks
+
+## 📖 Documentation
+
+- **Whitepaper**: `docs/TREX-WhitePaper.pdf`
+- **Component Diagrams**: `docs/img/`
+- **API Documentation**: See backend endpoints above
+- **Contract Documentation**: Inline comments in Solidity files
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests for new functionality
+5. Submit a pull request
+
+### Development Guidelines
+
+- Follow Solidity best practices
+- Write comprehensive tests
+- Update documentation
+- Use conventional commits
+- Ensure all tests pass
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## 🆘 Support
+
+For support and questions:
+- Check the documentation
+- Review existing issues
+- Create a new issue with detailed information
+- Join the community discussions
+
+## 🔄 Version History
+
+- **v4.0.0**: Current version with enhanced deployment workflows
+- **v3.5.2**: Legacy version support
+- **v3.0.0**: Modular compliance system
+- **v2.0.0**: Initial release
 
 ---
 
-## 7. Using the App
-
-- The **DeploymentPhase** UI guides you through:
-  - Deploying and initializing all core contracts
-  - Configuring registries and compliance
-  - Adding agents, claim topics, trusted issuers
-  - Managing users and OnchainIDs
-  - Deploying and managing tokens
-  - Running comprehensive compliance diagnostics
-
-- All steps are automated and provide clear feedback/logs.
-
----
-
-## 8. Troubleshooting
-
-- If you encounter missing contract addresses or ABI errors, ensure contracts are compiled and deployed before starting the frontend.
-- For any dependency issues, try deleting `node_modules` and reinstalling.
-- The backend server logs health and network status at startup.
-
----
-
-## 9. Useful Scripts
-
-- **Contracts**
-  - `npx hardhat compile` — Compile contracts
-  - `npx hardhat test` — Run contract tests
-  - `npx hardhat run scripts/deploy_token_enhanced.js --network localhost` — Deploy contracts
-
-- **Frontend**
-  - `yarn start` — Start React app
-  - `yarn build` — Build for production
-
-- **Backend**
-  - `yarn start` — Start backend API server (uses nodemon for hot reload)
-
-- **Scripts**
-  - `node scripts/startup.js` — Start the full stack
-  - `node scripts/stop.js` — Stop the full stack
-  - `node scripts/clean-addresses.js` — Clean up deployment artifacts
-
----
-
-## 10. Documentation
-
-- See `DEPLOYMENT_FLOW.md` in the frontend for a detailed walkthrough of the deployment and management process.
-
----
-
-**You're ready to launch and explore the T-REX platform!**
+**Note**: This is a development version. For production use, ensure proper security audits and testing.

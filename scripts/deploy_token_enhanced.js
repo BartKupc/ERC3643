@@ -32,10 +32,8 @@ if (process.env.TOKEN_CONFIG_PATH && fs.existsSync(process.env.TOKEN_CONFIG_PATH
 async function main() {
   console.log("🎯 Enhanced Token Deployment");
   
-  // Get MetaMask provider and signer
-  const provider = new ethers.providers.Web3Provider(window.ethereum);
-  await provider.send("eth_requestAccounts", []); // Request account access
-  const signer = provider.getSigner();
+  // Get Hardhat signer (first account) - using local Hardhat accounts only
+  const [signer] = await ethers.getSigners();
   const deployerAddress = await signer.getAddress();
   
   console.log("Deployer:", deployerAddress);
@@ -99,8 +97,8 @@ async function main() {
     console.log("\n🚀 Deploying token suite...");
     
     tokenDetails.owner = deployerAddress;
-    tokenDetails.irs = ethers.constants.AddressZero;
-    tokenDetails.ONCHAINID = ethers.constants.AddressZero;
+    tokenDetails.irs = ethers.ZeroAddress;
+    tokenDetails.ONCHAINID = ethers.ZeroAddress;
     
     const tx = await TREXFactory.connect(signer).deployTREXSuite(
       salt,
@@ -123,7 +121,7 @@ async function main() {
     console.log("\n📦 Token Suite Components:");
     console.log("Token Address:", tokenAddress);
     
-    if (tokenAddress === ethers.constants.AddressZero) {
+    if (tokenAddress === ethers.ZeroAddress) {
       console.log("⚠️  Token address is zero - deployment may have failed");
       process.exit(1);
     }

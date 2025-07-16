@@ -3,6 +3,10 @@ const cors = require('cors');
 const { ethers } = require('ethers');
 const path = require('path');
 const fs = require('fs');
+const { exec } = require('child_process');
+const util = require('util');
+
+const execAsync = util.promisify(exec);
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -26,6 +30,40 @@ function normalizeAddress(address) {
     throw new Error(`Invalid address provided: ${address} (type: ${typeof address})`);
   }
   return ethers.utils.getAddress(address.toLowerCase());
+}
+
+// Helper to run deployment scripts using Hardhat
+async function runDeploymentScript(scriptName, options = {}) {
+  const scriptPath = path.join(__dirname, '../scripts', scriptName);
+  
+  if (!fs.existsSync(scriptPath)) {
+    throw new Error(`Deployment script not found: ${scriptPath}`);
+  }
+
+  const env = { ...process.env, ...options };
+  
+  // Use hardhat run instead of node to properly handle TypeScript config
+  const { stdout, stderr } = await execAsync(`npx hardhat run ${scriptPath} --network localhost`, { 
+    env,
+    cwd: path.join(__dirname, '..') // Run from project root where hardhat.config.ts is located
+  });
+  
+  if (stderr) {
+    console.error('Script stderr:', stderr);
+  }
+  
+  return stdout;
+}
+
+// Helper to get latest deployment
+function getLatestDeployment() {
+  const deploymentsPath = path.join(__dirname, '../deployments.json');
+  if (!fs.existsSync(deploymentsPath)) {
+    return null;
+  }
+  
+  const deployments = JSON.parse(fs.readFileSync(deploymentsPath, 'utf8'));
+  return deployments[deployments.length - 1];
 }
 
 // Routes
@@ -87,7 +125,160 @@ app.get('/api/deployments', (req, res) => {
   }
 });
 
+// Get specific deployment by ID
+app.get('/api/deployments/:deploymentId', (req, res) => {
+  try {
+    const { deploymentId } = req.params;
+    const deploymentsPath = path.join(__dirname, '../deployments.json');
+    
+    if (!fs.existsSync(deploymentsPath)) {
+      return res.status(404).json({ error: 'No deployments found' });
+    }
+    
+    const deployments = JSON.parse(fs.readFileSync(deploymentsPath, 'utf8'));
+    const deployment = deployments.find(d => d.deploymentId === deploymentId);
+    
+    if (!deployment) {
+      return res.status(404).json({ error: 'Deployment not found' });
+    }
+    
+    res.json(deployment);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
+// Get factories
+app.get('/api/factories', (req, res) => {
+  try {
+    const deploymentsPath = path.join(__dirname, '../deployments.json');
+    if (!fs.existsSync(deploymentsPath)) {
+      return res.json([]);
+    }
+    
+    const deployments = JSON.parse(fs.readFileSync(deploymentsPath, 'utf8'));
+    const factoryDeployments = deployments
+      .filter(d => d.factory && d.factory.address)
+      .map(d => ({
+        deploymentId: d.deploymentId,
+        address: d.factory.address,
+        owner: d.factory.owner,
+        timestamp: d.timestamp,
+        network: d.network,
+        deployer: d.deployer
+      }));
+    
+    res.json(factoryDeployments);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Deploy Factory
+app.post('/api/deploy/factory', async (req, res) => {
+  try {
+    console.log('🚀 Starting factory deployment...');
+    
+    // Run the factory deployment script
+    const output = await runDeploymentScript('deploy_factory_enhanced.js');
+    
+    console.log('✅ Factory deployment script completed');
+    console.log('Output:', output);
+    
+    // Get the latest deployment
+    const latestDeployment = getLatestDeployment();
+    
+    if (!latestDeployment || !latestDeployment.factory) {
+      throw new Error('Factory deployment failed - no deployment data found');
+    }
+    
+    console.log('📋 Factory deployed at:', latestDeployment.factory.address);
+    
+    res.json({
+      success: true,
+      message: 'Factory deployed successfully',
+      deployment: latestDeployment,
+      factoryAddress: latestDeployment.factory.address
+    });
+    
+  } catch (error) {
+    console.error('❌ Factory deployment failed:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      details: 'Factory deployment failed'
+    });
+  }
+});
+
+// Deploy Token
+app.post('/api/deploy/token', async (req, res) => {
+  try {
+    const { factoryAddress, tokenDetails } = req.body;
+    
+    if (!factoryAddress) {
+      return res.status(400).json({
+        success: false,
+        error: 'Factory address is required'
+      });
+    }
+    
+    if (!tokenDetails || !tokenDetails.name || !tokenDetails.symbol) {
+      return res.status(400).json({
+        success: false,
+        error: 'Token details (name, symbol) are required'
+      });
+    }
+    
+    console.log('🎯 Starting token deployment...');
+    console.log('Factory Address:', factoryAddress);
+    console.log('Token Details:', tokenDetails);
+    
+    // Create temporary token config file
+    const configPath = path.join(__dirname, '../temp_token_config.json');
+    fs.writeFileSync(configPath, JSON.stringify(tokenDetails, null, 2));
+    
+    try {
+      // Run the token deployment script with config
+      const output = await runDeploymentScript('deploy_token_enhanced.js', {
+        TOKEN_CONFIG_PATH: configPath
+      });
+      
+      console.log('✅ Token deployment script completed');
+      console.log('Output:', output);
+      
+      // Get the latest deployment
+      const latestDeployment = getLatestDeployment();
+      
+      if (!latestDeployment || !latestDeployment.token) {
+        throw new Error('Token deployment failed - no token data found');
+      }
+      
+      console.log('📋 Token deployed at:', latestDeployment.token.address);
+      
+      res.json({
+        success: true,
+        message: 'Token deployed successfully',
+        deployment: latestDeployment,
+        tokenAddress: latestDeployment.token.address
+      });
+      
+    } finally {
+      // Clean up temporary config file
+      if (fs.existsSync(configPath)) {
+        fs.unlinkSync(configPath);
+      }
+    }
+    
+  } catch (error) {
+    console.error('❌ Token deployment failed:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      details: 'Token deployment failed'
+    });
+  }
+});
 
 // Save deployment to deployments.json
 app.post('/api/save-deployment', (req, res) => {
@@ -117,11 +308,27 @@ app.post('/api/save-deployment', (req, res) => {
   }
 });
 
+// Clear all addresses
+app.delete('/api/addresses', (req, res) => {
+  try {
+    deployedAddresses = {};
+    const deploymentsPath = path.join(__dirname, '../deployments.json');
+    if (fs.existsSync(deploymentsPath)) {
+      fs.unlinkSync(deploymentsPath);
+    }
+    res.json({ success: true, message: 'All addresses and deployments cleared' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Start server
 app.listen(PORT, () => {
   console.log(`🚀 T-REX Backend Server running on port ${PORT}`);
   console.log(`📡 Health check: http://localhost:${PORT}/api/health`);
   console.log(`🌐 Network test: http://localhost:${PORT}/api/test-network`);
+  console.log(`🏭 Factory deployment: POST http://localhost:${PORT}/api/deploy/factory`);
+  console.log(`🎯 Token deployment: POST http://localhost:${PORT}/api/deploy/token`);
 });
 
 module.exports = app; 

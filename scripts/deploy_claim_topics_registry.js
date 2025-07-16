@@ -4,10 +4,8 @@ const { ethers } = hre;
 async function main() {
   console.log("🎯 ClaimTopicsRegistry Component Deployment");
   
-  // Get MetaMask provider and signer
-  const provider = new ethers.providers.Web3Provider(window.ethereum);
-  await provider.send("eth_requestAccounts", []); // Request account access
-  const signer = provider.getSigner();
+  // Get Hardhat signer (first account) - using local Hardhat accounts only
+  const [signer] = await ethers.getSigners();
   const deployerAddress = await signer.getAddress();
   
   console.log("Deployer:", deployerAddress);

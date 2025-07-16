@@ -20,17 +20,27 @@ const EasyDeploy = ({
   handleFactoryChange, 
   loadDeploymentDetails, 
   deployingFactory, 
-  deployingToken 
+  deployingToken,
+  logs,
+  clearLogs
 }) => (
   <div style={{ padding: "2rem", marginLeft: "250px" }}>
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: "2rem" }}>
       <h2 style={{ color: '#1a237e', margin: 0 }}>Easy Deploy Dashboard</h2>
-      <Button 
-        onClick={handleClearAddresses}
-        style={{ backgroundColor: "#dc3545", color: "white" }}
-      >
-        Clear Addresses
-      </Button>
+      <div style={{ display: 'flex', gap: '1rem' }}>
+        <Button 
+          onClick={clearLogs}
+          style={{ backgroundColor: "#6c757d", color: "white" }}
+        >
+          Clear Logs
+        </Button>
+        <Button 
+          onClick={handleClearAddresses}
+          style={{ backgroundColor: "#dc3545", color: "white" }}
+        >
+          Clear Addresses
+        </Button>
+      </div>
     </div>
     
 
@@ -47,6 +57,42 @@ const EasyDeploy = ({
         {message}
       </div>
     )}
+
+    {/* Logs Section */}
+    <div style={{ margin: "2rem 0" }}>
+      <h3 style={{ color: '#1a237e', marginBottom: "1rem" }}>Deployment Logs</h3>
+      <div style={{ 
+        backgroundColor: "#f8f9fa", 
+        border: "1px solid #dee2e6", 
+        borderRadius: "8px", 
+        padding: "1rem",
+        maxHeight: "300px",
+        overflowY: "auto",
+        fontFamily: "monospace",
+        fontSize: "0.85rem"
+      }}>
+        {logs.length === 0 ? (
+          <div style={{ color: "#6c757d", fontStyle: "italic" }}>No logs yet. Start a deployment to see activity.</div>
+        ) : (
+          logs.map((log, index) => (
+            <div key={index} style={{ 
+              marginBottom: "0.5rem",
+              padding: "0.25rem 0",
+              borderBottom: index < logs.length - 1 ? "1px solid #e9ecef" : "none"
+            }}>
+              <span style={{ color: "#6c757d", marginRight: "0.5rem" }}>[{log.timestamp}]</span>
+              <span style={{ 
+                color: log.type === "error" ? "#dc3545" : 
+                       log.type === "success" ? "#28a745" : 
+                       log.type === "warning" ? "#ffc107" : "#007bff"
+              }}>
+                {log.message}
+              </span>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
 
     {/* Factory Management */}
     <div style={{ margin: "2rem 0" }}>
@@ -237,36 +283,57 @@ const Dashboard = ({ account }) => {
   const [activeMode, setActiveMode] = useState("easy"); // "easy" or "advanced"
   const [deployingFactory, setDeployingFactory] = useState(false);
   const [deployingToken, setDeployingToken] = useState(false);
+  const [logs, setLogs] = useState([]);
+
+  const addLog = (message, type = "info") => {
+    setLogs(prevLogs => [...prevLogs, { message, type, timestamp: new Date().toISOString() }]);
+  };
+
+  const clearLogs = () => {
+    setLogs([]);
+  };
 
   // Load factories from API
   useEffect(() => {
+    addLog("Initializing Easy Deploy dashboard...", "info");
     loadFactories();
   }, []);
 
   const loadFactories = async () => {
     try {
+      addLog("Loading factories from backend...", "info");
       const response = await axios.get('/api/factories');
       setFactories(response.data);
+      addLog(`Loaded ${response.data.length} factories`, "success");
+      
       if (response.data.length > 0) {
         setSelectedFactory(response.data[0]);
+        addLog(`Selected first factory: ${response.data[0].address}`, "info");
         loadDeploymentDetails(response.data[0].deploymentId);
+      } else {
+        addLog("No factories found", "warning");
       }
     } catch (error) {
       console.error('Error loading factories:', error);
+      addLog(`Error loading factories: ${error.message}`, "error");
     }
   };
 
   const loadDeploymentDetails = async (deploymentId) => {
     try {
+      addLog(`Loading deployment details for: ${deploymentId}`, "info");
       const response = await axios.get(`/api/deployments/${deploymentId}`);
       setDeploymentDetails(response.data);
+      addLog("Deployment details loaded successfully", "success");
     } catch (error) {
       console.error('Error loading deployment details:', error);
+      addLog(`Error loading deployment details: ${error.message}`, "error");
     }
   };
 
   const handleFactoryChange = (factory) => {
     setSelectedFactory(factory);
+    addLog(`Factory changed to: ${factory.address}`, "info");
     loadDeploymentDetails(factory.deploymentId);
   };
 
@@ -274,16 +341,22 @@ const Dashboard = ({ account }) => {
   const handleClearAddresses = async () => {
     if (window.confirm("Are you sure you want to clear all deployed addresses?")) {
       try {
+        addLog("Clearing all deployed addresses...", "warning");
         const response = await axios.delete('/api/addresses');
         setDeployedAddresses({});
         // Clear localStorage for advanced components as well
         localStorage.removeItem("trexDeployedComponents");
         setMessage(response.data.message || "Addresses cleared!");
+        addLog("All addresses cleared successfully", "success");
         await loadFactories();
         window.location.reload();
       } catch (error) {
-        setMessage("Failed to clear addresses: " + (error.response?.data?.error || error.message));
+        const errorMessage = error.response?.data?.error || error.message;
+        setMessage("Failed to clear addresses: " + errorMessage);
+        addLog(`Failed to clear addresses: ${errorMessage}`, "error");
       }
+    } else {
+      addLog("Address clearing cancelled by user", "info");
     }
   };
 
@@ -291,20 +364,35 @@ const Dashboard = ({ account }) => {
   const handleDeployFactory = async () => {
     setDeployingFactory(true);
     setMessage("");
+    addLog("Starting factory deployment...", "info");
+    
     try {
-      await axios.post('/api/deploy/factory');
+      addLog("Sending factory deployment request to backend...", "info");
+      const response = await axios.post('/api/deploy/factory');
+      
+      addLog("Factory deployment request sent successfully", "success");
+      addLog("Waiting for backend to process deployment...", "info");
+      
       // Wait a moment for backend to update deployments.json
       await new Promise(res => setTimeout(res, 1500));
-      const response = await axios.get('/api/factories');
-      setFactories(response.data);
-      if (response.data.length > 0) {
-        const latestFactory = response.data[response.data.length - 1];
+      
+      addLog("Loading updated factory list...", "info");
+      const factoriesResponse = await axios.get('/api/factories');
+      setFactories(factoriesResponse.data);
+      
+      if (factoriesResponse.data.length > 0) {
+        const latestFactory = factoriesResponse.data[factoriesResponse.data.length - 1];
         setSelectedFactory(latestFactory);
+        addLog(`Selected latest factory: ${latestFactory.address}`, "success");
         loadDeploymentDetails(latestFactory.deploymentId);
       }
+      
       setMessage("Factory deployed successfully!");
+      addLog("Factory deployment completed successfully!", "success");
     } catch (error) {
-      setMessage("Failed to deploy factory: " + (error.response?.data?.error || error.message));
+      const errorMessage = error.response?.data?.error || error.message;
+      setMessage("Failed to deploy factory: " + errorMessage);
+      addLog(`Factory deployment failed: ${errorMessage}`, "error");
     }
     setDeployingFactory(false);
   };
@@ -313,19 +401,42 @@ const Dashboard = ({ account }) => {
   const handleDeployToken = async () => {
     if (!selectedFactory) {
       setMessage("Please select a factory first.");
+      addLog("Token deployment cancelled: No factory selected", "warning");
       return;
     }
+    
     setDeployingToken(true);
     setMessage("");
+    addLog("Starting token deployment...", "info");
+    addLog(`Using factory: ${selectedFactory.address}`, "info");
+    addLog(`Token details: ${tokenDetails.name} (${tokenDetails.symbol})`, "info");
+    
     try {
-      await axios.post('/api/deploy/token', {
+      addLog("Sending token deployment request to backend...", "info");
+      const response = await axios.post('/api/deploy/token', {
         factoryAddress: selectedFactory.address,
         tokenDetails
       });
+      
+      addLog("Token deployment request sent successfully", "success");
+      addLog("Waiting for backend to process deployment...", "info");
+      
+      // Wait a moment for backend to update deployments.json
+      await new Promise(res => setTimeout(res, 1500));
+      
+      addLog("Loading updated factory list...", "info");
       await loadFactories();
+      
+      if (response.data && response.data.tokenAddress) {
+        addLog(`Token deployed at: ${response.data.tokenAddress}`, "success");
+      }
+      
       setMessage("Token deployed successfully!");
+      addLog("Token deployment completed successfully!", "success");
     } catch (error) {
-      setMessage("Failed to deploy token: " + (error.response?.data?.error || error.message));
+      const errorMessage = error.response?.data?.error || error.message;
+      setMessage("Failed to deploy token: " + errorMessage);
+      addLog(`Token deployment failed: ${errorMessage}`, "error");
     }
     setDeployingToken(false);
   };
@@ -403,6 +514,8 @@ const Dashboard = ({ account }) => {
             loadDeploymentDetails={loadDeploymentDetails}
             deployingFactory={deployingFactory}
             deployingToken={deployingToken}
+            logs={logs}
+            clearLogs={clearLogs}
           />
         ) : (
           <AdvancedDashboard account={account} handleClearAddresses={handleClearAddresses} />

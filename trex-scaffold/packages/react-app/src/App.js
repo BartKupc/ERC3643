@@ -13,7 +13,7 @@ function WalletButton({ account, onConnect, onDisconnect }) {
         }
       }}
     >
-      {!account ? "Connect Wallet" : `${account.slice(0, 6)}...${account.slice(-4)}`}
+      {!account ? "Connect Local Account" : `${account.slice(0, 6)}...${account.slice(-4)}`}
     </Button>
   );
 }
@@ -28,12 +28,9 @@ function App() {
 
   const connectWallet = async () => {
     try {
-      if (typeof window.ethereum !== 'undefined') {
-        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-        setAccount(accounts[0]);
-      } else {
-        alert('Please install MetaMask!');
-      }
+      // For now, use a mock account since we're using Hardhat local accounts
+      // In a real implementation, you would connect to Hardhat's local network
+      setAccount('0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266'); // Hardhat account 0
     } catch (error) {
       console.error('Error connecting wallet:', error);
     }
@@ -57,7 +54,7 @@ function App() {
         {!account ? (
           <div style={{ textAlign: "center", padding: "2rem" }}>
             <h2>Welcome to T-REX Token Solution</h2>
-            <p>Connect your wallet to access the dashboard</p>
+            <p>Connect to local Hardhat account to access the dashboard</p>
           </div>
         ) : (
           <Dashboard account={account} />
