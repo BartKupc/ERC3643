@@ -34,23 +34,93 @@ T-REX is an open-source standard for compliant security tokens on Ethereum. It p
 
 Before you begin, ensure you have the following installed:
 
-- **Node.js** (v16 or higher)
-- **Yarn** (required for workspace management)
 - **Git**
+
+### Installing Node.js
+
+You need Node.js version 16 or higher. Here are installation methods:
+
+#### Method 1: Using apt (Ubuntu/Debian - may be older version)
+```bash
+sudo apt update
+sudo apt install nodejs npm
+```
+
+#### Verify Installation
+After installation, verify Node.js is installed:
+```bash
+node --version
+npm --version
+```
+
+### Installing Yarn
+
+If you don't have Yarn installed, you can install it using one of these methods:
+
+#### Method 1: Using npm (if you have Node.js)
+```bash
+sudo npm install --global yarn
+```
+
+#### Verify Installation
+After installation, verify Yarn is installed:
+```bash
+yarn --version
+```
 
 ## 🛠️ Quick Start Guide
 
 ### 1. Clone the Repository
 
 ```bash
-git clone <repository-url>
-cd T-REX
+git clone https://github.com/BartKupc/ERC3643.git
+cd ERC3643
 ```
 
 ### 2. Install Dependencies
 
+**Use npm instead of yarn:**
 ```bash
-yarn install
+npm install --legacy-peer-deps
+
+npm admin fix
+#or
+npm audit fix --force
+
+npm install --save-dev @openzeppelin/hardhat-upgrades
+npm install --save-dev @xyrusworx/hardhat-solidity-json
+npm install --save-dev @nomiclabs/hardhat-solhint
+npm install --save-dev @primitivefi/hardhat-dodoc
+```
+
+**If you get TypeChain dependency conflicts, use:**
+```bash
+npm install --force
+```
+
+### 2b. Install Missing Runtime Dependencies 
+
+If you see errors like `nodemon: not found` or `react-scripts: not found` when starting the backend or frontend, run the following:
+
+#### For nodemon (backend):
+```bash
+npm install -g nodemon
+# or, to install locally in backend only:
+cd backend
+npm install --save-dev nodemon
+cd ..
+```
+
+#### For react-scripts (frontend):
+```bash
+cd trex-scaffold/packages/react-app
+npm install
+cd ../../../..
+```
+
+After installing these, try running your start script again from the project root:
+```bash
+npm run start
 ```
 
 ### 3. Start Local Blockchain
@@ -58,23 +128,15 @@ yarn install
 Open a new terminal and start a local Hardhat node:
 
 ```bash
-npx hardhat node
+npx hardhat node --hostname 0.0.0.0
 ```
 
 This starts a local blockchain on `http://127.0.0.1:8545` with pre-funded accounts.
 
-### 4. Deploy Smart Contracts
-
-In another terminal, deploy the T-REX contracts:
+### 4. Start the Learning Platform
 
 ```bash
-npx hardhat run scripts/deploy.js --network localhost
-```
-
-### 5. Start the Learning Platform
-
-```bash
-yarn react-app:start
+npm run start
 ```
 
 The platform will be available at [http://localhost:3000](http://localhost:3000).
