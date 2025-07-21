@@ -108,10 +108,10 @@ async function main() {
     console.log("\n📦 Token Suite Components:");
     console.log("Token Address:", tokenAddress);
     
-    if (tokenAddress === ethers.constants.AddressZero) {
-      console.log("⚠️  Token address is zero - deployment may have failed");
-      process.exit(1);
-    }
+      if (tokenAddress === ethers.ZeroAddress) {
+    console.log("⚠️  Token address is zero - deployment may have failed");
+    process.exit(1);
+  }
 
     // Get the token contract instance
     const token = await ethers.getContractAt("Token", tokenAddress);

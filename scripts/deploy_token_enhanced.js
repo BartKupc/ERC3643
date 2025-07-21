@@ -119,8 +119,8 @@ async function main() {
     console.log("\n🚀 Deploying token suite...");
     
     tokenDetails.owner = deployerAddress;
-    tokenDetails.irs = ethers.constants.AddressZero;
-    tokenDetails.ONCHAINID = ethers.constants.AddressZero;
+    tokenDetails.irs = ethers.ZeroAddress;
+    tokenDetails.ONCHAINID = ethers.ZeroAddress;
     
     // Automatically add deployer as agent for both Token and IR
     tokenDetails.tokenAgents = [deployerAddress];
@@ -151,7 +151,7 @@ async function main() {
     console.log("\n📦 Token Suite Components:");
     console.log("Token Address:", tokenAddress);
     
-    if (tokenAddress === ethers.constants.AddressZero) {
+    if (tokenAddress === ethers.ZeroAddress) {
       console.log("⚠️  Token address is zero - deployment may have failed");
       process.exit(1);
     }

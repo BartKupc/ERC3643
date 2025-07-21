@@ -50,8 +50,8 @@ export const isContractInitialized = async (contractName, address) => {
         // Check if it's connected to other registries
         const trustedIssuersRegistry = await contract.getTrustedIssuersRegistry();
         const claimTopicsRegistry = await contract.getClaimTopicsRegistry();
-        return trustedIssuersRegistry !== ethers.constants.AddressZero && 
-               claimTopicsRegistry !== ethers.constants.AddressZero;
+          return trustedIssuersRegistry !== ethers.ZeroAddress &&
+    claimTopicsRegistry !== ethers.ZeroAddress;
         
       case 'ModularCompliance':
         // Check if it has any modules
