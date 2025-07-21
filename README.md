@@ -1,300 +1,287 @@
-# T-REX Suite - ERC-3643 Token & Compliance Platform
+# T-REX (ERC3643) Learning Platform
 
-A comprehensive full-stack ERC-3643 token and compliance suite with React frontend, Solidity contracts, backend API, and deployment scripts.
+A comprehensive web application for learning and experimenting with T-REX (Token for Regulated EXchanges) - the ERC3643 standard for compliant security tokens. This platform provides an intuitive UI to understand and deploy T-REX smart contracts on a local Hardhat blockchain.
 
-## 🏗️ Architecture
+## 🎯 What is T-REX (ERC3643)?
 
-- **Frontend**: React.js with ethers.js for blockchain interaction
-- **Backend**: Node.js/Express API for deployment orchestration
-- **Smart Contracts**: Solidity contracts following ERC-3643 standard
-- **Deployment**: Hardhat-based deployment scripts with local account management
+T-REX is an open-source standard for compliant security tokens on Ethereum. It provides:
 
-## 🚀 Quick Start
+- **Identity Management**: OnchainID for user identity verification
+- **Compliance Engine**: Built-in compliance checks for token transfers
+- **Claim System**: Verifiable claims (KYC, AML, etc.) for regulatory compliance
+- **Agent System**: Specialized roles for token management
+- **Transfer Restrictions**: Automated compliance enforcement
 
-### Prerequisites
+## 🚀 Why Use This Platform?
 
-- Node.js 16+
-- Hardhat
-- Local blockchain (Hardhat Network)
+### For Developers Learning ERC3643:
+- **Visual Learning**: See how T-REX contracts interact through an intuitive UI
+- **Step-by-Step Deployment**: Understand the deployment process for each component
+- **Real-time Feedback**: Watch transactions and compliance checks in action
+- **Local Testing**: Experiment safely on a local Hardhat blockchain
 
-### Installation
+### For Compliance Officers:
+- **Compliance Visualization**: See how identity verification and claims work
+- **Transfer Monitoring**: Understand how compliance rules are enforced
+- **User Management**: Learn how to manage user identities and claims
+
+### For Token Issuers:
+- **Complete Workflow**: From factory deployment to token operations
+- **Compliance Setup**: Configure claim topics and trusted issuers
+- **User Onboarding**: Create and manage user identities with claims
+
+## 📋 Prerequisites
+
+Before you begin, ensure you have the following installed:
+
+- **Node.js** (v16 or higher)
+- **Yarn** (required for workspace management)
+- **Git**
+
+## 🛠️ Quick Start Guide
+
+### 1. Clone the Repository
 
 ```bash
-# Install dependencies
-npm install
+git clone <repository-url>
+cd T-REX
+```
 
-# Start local blockchain
+### 2. Install Dependencies
+
+```bash
+yarn install
+```
+
+### 3. Start Local Blockchain
+
+Open a new terminal and start a local Hardhat node:
+
+```bash
 npx hardhat node
-
-# In another terminal, deploy the factory
-npx hardhat run scripts/deploy_factory_enhanced.js --network localhost
-
-# TREXGateway is now automatically deployed with the factory
-
-# Start the backend server
-cd backend && npm start
-
-# Start the frontend
-cd trex-scaffold/packages/react-app && npm start
 ```
 
-## 📋 Complete T-REX Flow
+This starts a local blockchain on `http://127.0.0.1:8545` with pre-funded accounts.
 
-This implementation follows the official T-REX deployment flow:
+### 4. Deploy Smart Contracts
 
-### 1. 🏭 Deploy Implementation Contracts (Once)
-
-Deploy all implementation contracts that will be used by proxies:
+In another terminal, deploy the T-REX contracts:
 
 ```bash
-npx hardhat run scripts/deploy_factory_enhanced.js --network localhost
+npx hardhat run scripts/deploy.js --network localhost
 ```
 
-This deploys:
-- `ClaimTopicsRegistry.sol` (implementation)
-- `TrustedIssuersRegistry.sol` (implementation)
-- `IdentityRegistryStorage.sol` (implementation)
-- `IdentityRegistry.sol` (implementation)
-- `ModularCompliance.sol` (implementation)
-- `Token.sol` (ERC3643 implementation)
-- `TREXImplementationAuthority.sol`
-- `TREXFactory.sol`
-- `TREXGateway.sol` (automatically deployed for access control)
-
-### 2. 🧠 Configure TREXImplementationAuthority
-
-The factory deployment script automatically:
-- Sets implementation addresses in the authority
-- Configures version management
-- Links all components together
-
-### 3. 🏭 Deploy TREXFactory and TREXGateway
-
-The factory deployment automatically:
-- Deploys TREXFactory with TREXImplementationAuthority reference
-- Deploys TREXGateway for access control and fee management
-- Configures Identity Factory (for OnchainID creation)
-- Sets up proper ownership and permissions
-- Configures public deployment access
-- Disables deployment fees by default
-
-### 4. 🧱 Create Full Stack: Identity + Token
-
-Use the factory to deploy a complete token suite:
+### 5. Start the Learning Platform
 
 ```bash
-npx hardhat run scripts/deploy_token_enhanced.js --network localhost
+yarn react-app:start
 ```
 
-This creates:
-- Identity Registry (proxy)
-- Identity Registry Storage (proxy)
-- Modular Compliance (proxy)
-- Token (ERC3643 proxy)
-- Links them properly
-- Returns token address
+The platform will be available at [http://localhost:3000](http://localhost:3000).
 
-### 5. 👮 Add Agents (New Feature)
+## 🎓 Learning Paths
 
-After token creation, add agents to manage the contracts:
+### 🟢 Beginner: Easy Deploy Phase
 
-**Token Agents**: Can mint/burn tokens, pause/unpause transfers
-**Identity Registry Agents**: Can register users, update user data, freeze/unfreeze users
+**Perfect for**: First-time users, understanding basic T-REX concepts
 
-Use the **Agent Management** tab in the Easy Deploy interface or call directly:
+**What you'll learn**:
+- How T-REX factories work
+- Token deployment with compliance
+- User identity creation and management
+- Basic token operations
 
+**Follow the walkthrough**: [Easy Deploy Walkthrough](./EASY_DEPLOY_WALKTHROUGH.md)
+
+**Key Concepts**:
+- **Factory Management**: Central coordinator for T-REX operations
+- **Token Deployment**: Creating compliant security tokens
+- **User Management**: Creating OnchainIDs and managing identities
+- **Claim System**: Adding KYC, AML, and other compliance claims
+- **Token Operations**: Minting, burning, and transferring tokens
+
+### 🔵 Advanced: Advanced Phase
+
+**Perfect for**: Developers, custom configurations, deep understanding
+
+**What you'll learn**:
+- Individual contract deployment
+- Custom claim topic configuration
+- Advanced agent management
+- Detailed compliance setup
+
+**Follow the walkthrough**: [Advanced Phase Walkthrough](./ADVANCED_PHASE_WALKTHROUGH.md)
+
+**Key Concepts**:
+- **Granular Control**: Deploy each component individually
+- **Custom Configuration**: Set up custom claim topics and rules
+- **Advanced Agents**: Configure specialized agent roles
+- **Compliance Rules**: Define custom compliance requirements
+
+## 🏗️ Architecture Overview
+
+### Core Components
+
+```
+T-REX Factory
+├── Identity Registry (OnchainID management)
+├── Claim Topics Registry (KYC, AML, etc.)
+├── Trusted Issuers Registry (Authorized claim issuers)
+├── Token Registry (Token management)
+└── Security Tokens (ERC3643 compliant tokens)
+```
+
+### Key Contracts
+
+- **TREXFactory**: Main coordinator contract
+- **Token**: ERC3643 compliant security token
+- **IdentityRegistry**: Manages user identities
+- **ClaimIssuer**: Issues verifiable claims
+- **OnchainID**: User identity contract
+
+## 🎯 Learning Objectives
+
+### Understanding ERC3643 Compliance
+
+1. **Identity Verification**: Learn how OnchainID works
+2. **Claim Management**: Understand KYC, AML, and other claims
+3. **Transfer Restrictions**: See compliance enforcement in action
+4. **Agent System**: Understand specialized roles and permissions
+
+### Practical Skills
+
+1. **Contract Deployment**: Deploy T-REX contracts step-by-step
+2. **User Onboarding**: Create and manage user identities
+3. **Compliance Setup**: Configure claim topics and issuers
+4. **Token Operations**: Perform compliant token transactions
+
+## 📚 Educational Resources
+
+### Walkthrough Guides
+- **[Easy Deploy Walkthrough](./EASY_DEPLOY_WALKTHROUGH.md)**: Step-by-step guide for beginners
+- **[Advanced Phase Walkthrough](./ADVANCED_PHASE_WALKTHROUGH.md)**: Detailed guide for advanced users
+
+### Key Concepts to Explore
+
+#### Identity Management
+- **OnchainID**: Self-sovereign identity contracts
+- **Identity Registration**: Linking users to the system
+- **Claim Integration**: Adding compliance claims to identities
+
+#### Compliance Engine
+- **Claim Topics**: Types of compliance claims (KYC, AML, etc.)
+- **Trusted Issuers**: Authorized entities that can issue claims
+- **Transfer Restrictions**: Automatic compliance enforcement
+
+#### Token Operations
+- **Minting**: Creating new tokens with compliance checks
+- **Burning**: Destroying tokens with proper permissions
+- **Transferring**: Moving tokens with identity verification
+
+## 🔧 Configuration Examples
+
+### Basic Token Setup
 ```javascript
-// Add token agent
-await tokenContract.addAgent(agentAddress);
-
-// Add identity registry agent  
-await identityRegistryContract.addAgent(agentAddress);
+// Token configuration
+{
+  name: "My Security Token",
+  symbol: "MST",
+  decimals: 18,
+  totalSupply: "1000000",
+  claimTopics: [1, 2, 3] // KYC, AML, Accredited
+}
 ```
 
-### 6. 📌 Add Claim Topics
-
-Add required claim topics to the ClaimTopicsRegistry:
-
+### User Identity Creation
 ```javascript
-await claimTopicsRegistry.addClaimTopic(1); // KYC
-await claimTopicsRegistry.addClaimTopic(2); // AML
-await claimTopicsRegistry.addClaimTopic(3); // Accredited Investor
+// User setup
+{
+  address: "0x...",
+  country: "840", // USA
+  claims: {
+    kyc: "1",     // Verified
+    aml: "1",     // Compliant
+    accredited: "1" // Accredited investor
+  }
+}
 ```
 
-### 7. ✅ Add Trusted Issuers
+## 🐛 Common Learning Scenarios
 
-Create ClaimIssuer (OnchainID) and add to TrustedIssuersRegistry:
+### Scenario 1: Understanding Compliance
+1. Deploy a token with KYC requirements
+2. Create a user without KYC claims
+3. Try to transfer tokens → See compliance failure
+4. Add KYC claim to user
+5. Try transfer again → See successful compliance
 
-```javascript
-await trustedIssuersRegistry.addTrustedIssuer(
-  claimIssuerAddress,
-  [1, 2, 3] // Topics it is trusted for
-);
-```
+### Scenario 2: Agent Permissions
+1. Deploy token with specific agents
+2. Try operations without agent permissions → See failure
+3. Add yourself as an agent
+4. Perform operations → See success
 
-### 8. 🧾 Issue Claims and Register Users
+### Scenario 3: Claim Management
+1. Deploy claim issuer
+2. Create user identity
+3. Add claims to user
+4. Verify claims on-chain
+5. Perform compliant transfers
 
-Deploy OnchainID for users and register them:
+## 🆘 Troubleshooting
 
-```javascript
-// Deploy user OnchainID
-const userIdentity = await identityFactory.createIdentity(userAddress, salt);
+### Common Issues
 
-// Register in IdentityRegistry
-await identityRegistry.registerIdentity(userAddress, userIdentity, countryCode);
+1. **"No factories found"**
+   - Ensure Hardhat node is running
+   - Check if contracts are deployed
+   - Verify network configuration
 
-// Issue claims using ClaimIssuer
-await claimIssuer.addClaim(topic, scheme, issuer, signature, data, uri);
-```
+2. **"Transaction failed"**
+   - Check account balance
+   - Verify gas settings
+   - Ensure proper permissions
 
-## 🎯 Easy Deploy Interface
+3. **"Compliance check failed"**
+   - Verify user has proper identity
+   - Check required claims are present
+   - Ensure claim issuer is trusted
 
-The React frontend provides an intuitive interface for the complete T-REX flow:
-
-### Tabs Overview
-
-1. **🏭 Factory Management**
-   - Deploy new factories
-   - Select existing factories
-   - View deployment details
-
-2. **🎯 Token Management**
-   - Deploy token suites
-   - Configure token parameters
-   - View deployed tokens
-
-3. **🏷️ Claims Management**
-   - Add claim topics to CTR
-   - View existing claim topics
-   - Manage claim requirements
-
-4. **🔐 Trusted Issuer Management**
-   - Deploy claim issuers
-   - Add trusted issuers to TIR
-   - Configure issuer permissions
-
-5. **👮 Agent Management** *(New)*
-   - Add agents to Token contracts
-   - Add agents to Identity Registry
-   - Manage agent permissions
-   - Quick-add common Hardhat accounts
-
-6. **👥 User Management**
-   - Create user OnchainIDs
-   - Register users in Identity Registry
-   - Issue claims to users
-
-### Flow Sequence
-
-The recommended flow follows the official T-REX pattern:
-
-```
-Factory Management → Token Management → Claims Management → 
-Trusted Issuer Management → Agent Management → User Management
-```
-
-## 🔧 Backend API
-
-The backend provides REST endpoints for deployment orchestration:
-
-### Endpoints
-
-- `POST /api/deploy/factory` - Deploy new factory
-- `POST /api/deploy/token` - Deploy token suite
-- `GET /api/deployments` - Get deployment history
-
-### Usage
-
-```bash
-# Start backend
-cd backend && npm start
-
-# Deploy factory via API
-curl -X POST http://localhost:3001/api/deploy/factory
-
-# Deploy token via API
-curl -X POST http://localhost:3001/api/deploy/token \
-  -H "Content-Type: application/json" \
-  -d '{"factoryAddress":"0x...","tokenDetails":{"name":"MyToken","symbol":"MTK","decimals":18}}'
-```
-
-## 📁 Project Structure
-
-```
-T-REX/
-├── contracts/                 # Solidity smart contracts
-│   ├── factory/              # Factory contracts
-│   ├── token/                # Token contracts
-│   ├── registry/             # Registry contracts
-│   ├── compliance/           # Compliance contracts
-│   └── proxy/                # Proxy contracts
-├── scripts/                  # Deployment scripts
-│   ├── deploy_factory_enhanced.js
-│   ├── deploy_token_enhanced.js
-│   └── deploy_gateway.js
-├── backend/                  # Node.js API server
-│   └── server.js
-├── trex-scaffold/           # React frontend
-│   └── packages/
-│       └── react-app/
-└── test/                    # Test files
-```
-
-## 🔐 Security Features
-
-- **Access Control**: Agent-based permissions for token and registry operations
-- **Compliance**: Modular compliance system with configurable rules
-- **Identity Management**: OnchainID-based identity verification
-- **Claim System**: Flexible claim issuance and verification
-- **Proxy Pattern**: Upgradeable contracts with implementation authority
-
-## 🧪 Testing
-
-```bash
-# Run all tests
-npx hardhat test
-
-# Run specific test file
-npx hardhat test test/token/token-transfer.test.ts
-
-# Run with coverage
-npx hardhat coverage
-```
-
-## 📚 Key Features
-
-### Agent Management
-- **Token Agents**: Mint/burn tokens, pause/unpause transfers
-- **Identity Registry Agents**: Register users, update data, freeze/unfreeze
-- **Quick Setup**: Pre-configured Hardhat accounts for testing
-- **Visual Interface**: Easy-to-use tab in the deployment interface
-
-### Factory Pattern
-- **CREATE2 Deployment**: Deterministic contract addresses
-- **Suite Deployment**: Single transaction deploys entire token stack
-- **Version Management**: Implementation authority for upgrades
-- **Access Control**: Gateway for deployment permissions
-
-### Compliance System
-- **Modular Design**: Pluggable compliance modules
-- **Flexible Rules**: Configurable transfer restrictions
-- **Country Codes**: Geographic compliance support
-- **Claim Integration**: KYC/AML claim verification
+### Debug Mode
+- Check browser console for detailed logs
+- Monitor transaction logs in Hardhat
+- Use the logging panel in the UI
 
 ## 🤝 Contributing
+
+This platform is designed for educational purposes. Contributions are welcome:
 
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
-4. Add tests
+4. Add tests if applicable
 5. Submit a pull request
 
 ## 📄 License
 
-This project is licensed under the MIT License.
+This project is licensed under the MIT License - see the LICENSE file for details.
 
-## 🔗 Resources
+## 🆘 Support
 
-- [ERC-3643 Standard](https://eips.ethereum.org/EIPS/eip-3643)
-- [T-REX Documentation](https://docs.trex.technology/)
-- [OnchainID](https://onchainid.com/)
+For support and questions:
+- Check the walkthrough guides
+- Review the browser console logs
+- Refer to T-REX documentation
+- Open an issue on GitHub
+
+## 🔗 Additional Resources
+
+- **[T-REX Documentation](https://docs.trex.technology/)**: Official T-REX documentation
+- **[ERC3643 Standard](https://eips.ethereum.org/EIPS/eip-3643)**: Ethereum Improvement Proposal
+- **[OnchainID](https://onchainid.com/)**: Self-sovereign identity solution
+
+---
+
+**Note**: This platform is designed for educational and development purposes. For production use, ensure proper security measures and audit procedures are in place.
+
+**Happy Learning! 🚀**
