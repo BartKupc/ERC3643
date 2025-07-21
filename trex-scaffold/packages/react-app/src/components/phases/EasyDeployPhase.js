@@ -116,9 +116,18 @@ const EasyDeployPhase = () => {
 
   // Helper function to get signer for Hardhat local environment
   const getSigner = async () => {
-    const privateKey = '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80';
-    const provider = new ethers.providers.JsonRpcProvider('http://127.0.0.1:8545');
-    return new ethers.Wallet(privateKey, provider);
+    try {
+      const privateKey = '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80';
+      const provider = new ethers.providers.JsonRpcProvider('http://127.0.0.1:8545');
+      
+      // Test the connection
+      await provider.getNetwork();
+      
+      return new ethers.Wallet(privateKey, provider);
+    } catch (error) {
+      console.error('Network connection error:', error);
+      throw new Error(`Failed to connect to Hardhat network. Please ensure Hardhat node is running with: npx hardhat node --hostname 0.0.0.0`);
+    }
   };
 
   // Load deployment details

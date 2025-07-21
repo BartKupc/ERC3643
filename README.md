@@ -83,7 +83,7 @@ cd ERC3643
 ```bash
 npm install --legacy-peer-deps
 
-npm admin fix
+npm audit fix
 #or
 npm audit fix --force
 
@@ -91,7 +91,16 @@ npm install --save-dev @openzeppelin/hardhat-upgrades
 npm install --save-dev @xyrusworx/hardhat-solidity-json
 npm install --save-dev @nomiclabs/hardhat-solhint
 npm install --save-dev @primitivefi/hardhat-dodoc
+npm install --save-dev ts-node
 ```
+### 3. Start Local Blockchain
+
+Open a new terminal and start a local Hardhat node:
+
+```bash
+npx hardhat node --hostname 0.0.0.0
+```
+
 
 **If you get TypeChain dependency conflicts, use:**
 ```bash
@@ -100,12 +109,8 @@ npm install --force
 
 ### 2b. Install Missing Runtime Dependencies 
 
-If you see errors like `nodemon: not found` or `react-scripts: not found` when starting the backend or frontend, run the following:
-
 #### For nodemon (backend):
 ```bash
-npm install -g nodemon
-# or, to install locally in backend only:
 cd backend
 npm install --save-dev nodemon
 cd ..
@@ -123,13 +128,6 @@ After installing these, try running your start script again from the project roo
 npm run start
 ```
 
-### 3. Start Local Blockchain
-
-Open a new terminal and start a local Hardhat node:
-
-```bash
-npx hardhat node --hostname 0.0.0.0
-```
 
 This starts a local blockchain on `http://127.0.0.1:8545` with pre-funded accounts.
 
