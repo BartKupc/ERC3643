@@ -334,6 +334,93 @@ app.post('/api/deploy/token', async (req, res) => {
   }
 });
 
+// Deploy ClaimIssuer
+app.post('/api/deploy/claim-issuer', async (req, res) => {
+  try {
+    console.log('🎯 Starting ClaimIssuer deployment...');
+    
+    // Get the deployer address (account 0)
+    const provider = createProvider();
+    const wallet = new ethers.Wallet(process.env.PRIVATE_KEY || '0xdf57089febbacf7ba0bc227dafbffa9fc08a93fdc68e1e42411a14efcf23656e', provider);
+    const deployerAddress = await wallet.getAddress();
+    
+    console.log('🔑 Deploying ClaimIssuer with deployer address:', deployerAddress);
+    
+    // Get ClaimIssuer artifacts
+    const claimIssuerArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/contracts/src/@onchain-id/solidity/contracts/ClaimIssuer.sol/ClaimIssuer.json');
+    
+    if (!fs.existsSync(claimIssuerArtifactsPath)) {
+      throw new Error('ClaimIssuer artifacts not found. Please compile contracts first.');
+    }
+    
+    const claimIssuerArtifacts = JSON.parse(fs.readFileSync(claimIssuerArtifactsPath, 'utf8'));
+    
+    // Deploy ClaimIssuer contract
+    const claimIssuerFactory = new ethers.ContractFactory(
+      claimIssuerArtifacts.abi,
+      claimIssuerArtifacts.bytecode,
+      wallet
+    );
+    
+    const claimIssuer = await claimIssuerFactory.deploy(deployerAddress);
+    await claimIssuer.deployed();
+    
+    console.log('✅ ClaimIssuer deployed at:', claimIssuer.address);
+    
+    // Add signing key to ClaimIssuer
+    const signingKeyHash = ethers.utils.keccak256(
+      ethers.utils.defaultAbiCoder.encode(['address'], [deployerAddress])
+    );
+    
+    const addKeyTx = await claimIssuer.addKey(signingKeyHash, 3, 1); // purpose=3 (signing), keyType=1 (ECDSA)
+    await addKeyTx.wait();
+    
+    console.log('✅ Signing key added to ClaimIssuer');
+    
+    // Add to trusted issuers if factory is available
+    const latestDeployment = getLatestDeployment();
+    if (latestDeployment && latestDeployment.suite && latestDeployment.suite.trustedIssuersRegistry) {
+      try {
+        const tirAddress = latestDeployment.suite.trustedIssuersRegistry;
+        const tirArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/contracts/src/contracts/registries/TrustedIssuersRegistry.sol/TrustedIssuersRegistry.json');
+        
+        if (fs.existsSync(tirArtifactsPath)) {
+          const tirArtifacts = JSON.parse(fs.readFileSync(tirArtifactsPath, 'utf8'));
+          const tir = new ethers.Contract(tirAddress, tirArtifacts.abi, wallet);
+          
+          // Check if issuer already exists
+          const exists = await tir.isTrustedIssuer(claimIssuer.address);
+          if (!exists) {
+            // Add with default claim topics [1, 2, 3] (KYC, AML, Accredited)
+            const defaultClaimTopics = [1, 2, 3];
+            const addTrustedTx = await tir.addTrustedIssuer(claimIssuer.address, defaultClaimTopics);
+            await addTrustedTx.wait();
+            console.log('✅ ClaimIssuer added as trusted issuer with default claim topics [1, 2, 3]');
+          } else {
+            console.log('ℹ️ ClaimIssuer already exists as trusted issuer');
+          }
+        }
+      } catch (error) {
+        console.warn('⚠️ Could not add ClaimIssuer to trusted issuers:', error.message);
+      }
+    }
+    
+    res.json({
+      success: true,
+      message: 'ClaimIssuer deployed successfully',
+      claimIssuerAddress: claimIssuer.address,
+      deployerAddress: deployerAddress
+    });
+    
+  } catch (error) {
+    console.error('❌ ClaimIssuer deployment failed:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 // Save deployment to deployments.json
 app.post('/api/save-deployment', (req, res) => {
   try {
@@ -383,6 +470,7 @@ app.listen(PORT, () => {
   console.log(`🌐 Network test: http://localhost:${PORT}/api/test-network`);
   console.log(`🏭 Factory deployment: POST http://localhost:${PORT}/api/deploy/factory`);
   console.log(`🎯 Token deployment: POST http://localhost:${PORT}/api/deploy/token`);
+  console.log(`🔐 ClaimIssuer deployment: POST http://localhost:${PORT}/api/deploy/claim-issuer`);
 });
 
 module.exports = app; 

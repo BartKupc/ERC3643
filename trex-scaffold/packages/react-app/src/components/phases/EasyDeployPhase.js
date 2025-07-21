@@ -591,78 +591,45 @@ const EasyDeployPhase = () => {
     addLog("Starting ClaimIssuer deployment...", "info");
     
     try {
-      const signer = await getSigner();
-      const signerAddress = await signer.getAddress();
+      addLog("Sending ClaimIssuer deployment request to backend...", "info");
+      const response = await axios.post('/api/deploy/claim-issuer');
       
-      // Step 1: Deploy ClaimIssuer contract
-      addLog("Step 1: Deploying ClaimIssuer contract...", "info");
-      const claimIssuerArtifacts = getContractArtifacts('ClaimIssuer');
-      const claimIssuerFactory = new ethers.ContractFactory(claimIssuerArtifacts.abi, claimIssuerArtifacts.bytecode, signer);
-      const claimIssuer = await claimIssuerFactory.deploy(signerAddress); // Pass the management key
-      await claimIssuer.deployed();
-      
-      addLog(`ClaimIssuer deployed at: ${claimIssuer.address}`, "success");
-      
-      // Step 2: Add signing key to ClaimIssuer
-      addLog("Step 2: Adding signing key to ClaimIssuer...", "info");
-      const signingKeyHash = ethers.utils.keccak256(ethers.utils.defaultAbiCoder.encode(['address'], [signerAddress]));
-      const addKeyTx = await claimIssuer.addKey(signingKeyHash, 3, 1); // purpose=3 (signing), keyType=1 (ECDSA)
-      await addKeyTx.wait();
-      addLog("Signing key added to ClaimIssuer", "success");
-      
-      // Step 3: Add ClaimIssuer as trusted issuer if we have a factory with deployment details
-      if (selectedFactory && deploymentDetails && deploymentDetails.suite && deploymentDetails.suite.trustedIssuersRegistry) {
-        addLog("Step 3: Adding ClaimIssuer as trusted issuer...", "info");
-        const tirAddress = deploymentDetails.suite.trustedIssuersRegistry;
-        const tirArtifacts = getContractArtifacts('TrustedIssuersRegistry');
-        const tir = new ethers.Contract(tirAddress, tirArtifacts.abi, signer);
+      if (response.data.success) {
+        const { claimIssuerAddress, deployerAddress } = response.data;
         
-        // Check if issuer already exists
-        try {
-          const exists = await tir.isTrustedIssuer ? await tir.isTrustedIssuer(claimIssuer.address) : false;
-          if (exists) {
-            addLog("ClaimIssuer already exists as trusted issuer", "info");
-          } else {
-            // Add with default claim topics [1, 2, 3] (KYC, AML, Accredited)
-            const defaultClaimTopics = [1, 2, 3];
-            const addTrustedTx = await tir.addTrustedIssuer(claimIssuer.address, defaultClaimTopics);
-            await addTrustedTx.wait();
-            addLog("ClaimIssuer added as trusted issuer with default claim topics [1, 2, 3]", "success");
-          }
-        } catch (e) {
-          addLog(`Error checking/adding trusted issuer: ${e.message}`, "error");
-        }
+        addLog(`ClaimIssuer deployed at: ${claimIssuerAddress}`, "success");
+        addLog(`Deployer address: ${deployerAddress}`, "info");
+        
+        // Add to local state
+        const newClaimIssuer = {
+          address: claimIssuerAddress,
+          name: `ClaimIssuer-${Date.now()}`,
+          claimTopics: [1, 2, 3], // Default topics
+          timestamp: Date.now()
+        };
+        
+        setClaimIssuers(prev => [...prev, newClaimIssuer]);
+        setSelectedClaimIssuer(claimIssuerAddress);
+        
+        // Also save to localStorage for persistence
+        setAvailableClaimIssuers(prev => {
+          const updated = [...prev, newClaimIssuer];
+          localStorage.setItem('trex_available_claim_issuers', JSON.stringify(updated));
+          return updated;
+        });
+        
+        addLog(`ClaimIssuer deployment completed successfully!`, "success");
+        addLog(`Address: ${claimIssuerAddress}`, "info");
+        addLog(`Auto-selected for token deployment`, "info");
+        
+        setMessage("ClaimIssuer deployed successfully!");
       } else {
-        addLog("No TrustedIssuersRegistry found - skipping trusted issuer registration", "warning");
+        throw new Error(response.data.error || 'Unknown error');
       }
-      
-      // Add to local state
-      const newClaimIssuer = {
-        address: claimIssuer.address,
-        name: `ClaimIssuer-${Date.now()}`,
-        claimTopics: [1, 2, 3], // Default topics
-        timestamp: Date.now()
-      };
-      
-      setClaimIssuers(prev => [...prev, newClaimIssuer]);
-      setSelectedClaimIssuer(claimIssuer.address);
-      
-      // Also save to localStorage for persistence
-      setAvailableClaimIssuers(prev => {
-        const updated = [...prev, newClaimIssuer];
-        localStorage.setItem('trex_available_claim_issuers', JSON.stringify(updated));
-        return updated;
-      });
-      
-      addLog(`ClaimIssuer deployment completed successfully!`, "success");
-      addLog(`Address: ${claimIssuer.address}`, "info");
-      addLog(`Auto-selected for token deployment`, "info");
-      
-      setMessage("ClaimIssuer deployed successfully!");
       
     } catch (error) {
       console.error('Error deploying ClaimIssuer:', error);
-      const cleanError = error.message || error.toString();
+      const cleanError = error.response?.data?.error || error.message || error.toString();
       setMessage("Failed to deploy ClaimIssuer: " + cleanError);
       addLog(`Error deploying ClaimIssuer: ${cleanError}`, "error");
     } finally {
