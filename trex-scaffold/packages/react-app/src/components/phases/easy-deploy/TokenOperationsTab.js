@@ -29,7 +29,8 @@ const TokenOperationsTab = ({
   handleMintToken,
   handleBurnToken,
   handleTransferToken,
-  handleTransferFromToken
+  handleTransferFromToken,
+  message
 }) => {
   const [selectedToken, setSelectedToken] = useState(null);
   const [tokenInfo, setTokenInfo] = useState(null);
@@ -243,7 +244,17 @@ const TokenOperationsTab = ({
       const ctr = new ethers.Contract(ctrAddress, ctrArtifacts.abi, signer);
       
       // Get required claim topics
-      const requiredTopics = await ctr.getClaimTopics();
+      let requiredTopics = [];
+      try {
+        requiredTopics = await ctr.getClaimTopics();
+        // Ensure requiredTopics is an array
+        if (!Array.isArray(requiredTopics)) {
+          requiredTopics = [];
+        }
+      } catch (topicError) {
+        addLog && addLog(`Warning: Could not get claim topics: ${topicError.message}`, "warning");
+        requiredTopics = [];
+      }
       
       // Get the OnchainID contract
       const onchainIdArtifacts = getContractArtifacts('Identity');
@@ -252,14 +263,34 @@ const TokenOperationsTab = ({
       // Check each required topic
       let verificationDetails = [];
       for (const topicId of requiredTopics) {
-        const topicNum = topicId.toNumber();
+        let topicNum;
+        try {
+          topicNum = typeof topicId === 'object' && topicId.toNumber ? topicId.toNumber() : Number(topicId);
+        } catch (numError) {
+          addLog && addLog(`Warning: Could not convert topic ID ${topicId}: ${numError.message}`, "warning");
+          continue;
+        }
         
         // Get trusted issuers for this topic
-        const trustedIssuers = await tir.getTrustedIssuersForClaimTopic(topicNum);
-        const trustedIssuerAddresses = trustedIssuers.map(issuer => issuer.toString());
+        let trustedIssuers = [];
+        let trustedIssuerAddresses = [];
+        try {
+          trustedIssuers = await tir.getTrustedIssuersForClaimTopic(topicNum);
+          trustedIssuerAddresses = trustedIssuers.map(issuer => issuer.toString());
+        } catch (issuerError) {
+          addLog && addLog(`Warning: Could not get trusted issuers for topic ${topicNum}: ${issuerError.message}`, "warning");
+        }
         
         // Check if user has claims for this topic
-        const claims = await onchainId.getClaimIdsByTopic(topicNum);
+        let claims = [];
+        try {
+          claims = await onchainId.getClaimIdsByTopic(topicNum);
+          if (!Array.isArray(claims)) {
+            claims = [];
+          }
+        } catch (claimsError) {
+          addLog && addLog(`Warning: Could not get claims for topic ${topicNum}: ${claimsError.message}`, "warning");
+        }
         
         let hasValidClaim = false;
         let claimDetails = [];
@@ -308,8 +339,8 @@ const TokenOperationsTab = ({
           onchainIdAddress,
           identityRegistry: identityRegistryAddress,
           investorCountry: typeof investorCountry === 'object' && investorCountry.toNumber ? investorCountry.toNumber() : Number(investorCountry),
-          requiredTopics: requiredTopics.map(t => typeof t === 'object' && t.toNumber ? t.toNumber() : Number(t)),
-          verificationDetails
+          requiredTopics: Array.isArray(requiredTopics) ? requiredTopics.map(t => typeof t === 'object' && t.toNumber ? t.toNumber() : Number(t)) : [],
+          verificationDetails: Array.isArray(verificationDetails) ? verificationDetails : []
         }
       });
       
@@ -353,23 +384,46 @@ const TokenOperationsTab = ({
           {error}
         </div>
       )}
-
+      
+      {/* Message Display */}
+      {message && (
+        <div style={{
+          padding: "1rem",
+          backgroundColor: message.includes('Error') ? "#f8d7da" : "#d4edda",
+          color: message.includes('Error') ? "#721c24" : "#155724",
+          borderRadius: "4px",
+          marginBottom: "1rem",
+          border: `1px solid ${message.includes('Error') ? '#f5c6cb' : '#c3e6cb'}`
+        }}>
+          {message}
+        </div>
+      )}
+      
       {/* Sub-tab Navigation */}
       <div style={{
         display: 'flex',
-        borderBottom: '2px solid #dee2e6',
-        marginBottom: '2rem'
+        borderBottom: '3px solid #dee2e6',
+        marginBottom: '2rem',
+        backgroundColor: '#f8f9fa',
+        borderRadius: '8px 8px 0 0',
+        padding: '0.5rem 0.5rem 0 0.5rem'
       }}>
         <button
           onClick={() => setActiveSubTab('info')}
           style={{
-            padding: '1rem 2rem',
+            flex: 1,
+            padding: '1.5rem 2rem',
             border: 'none',
-            backgroundColor: activeSubTab === 'info' ? '#1a237e' : 'transparent',
-            color: activeSubTab === 'info' ? 'white' : '#1a237e',
+            backgroundColor: activeSubTab === 'info' ? '#1a237e' : '#e9ecef',
+            color: activeSubTab === 'info' ? 'white' : '#495057',
             cursor: 'pointer',
             fontWeight: 'bold',
-            borderBottom: activeSubTab === 'info' ? '2px solid #1a237e' : 'none'
+            fontSize: '1.1rem',
+            borderRadius: '8px 8px 0 0',
+            borderBottom: activeSubTab === 'info' ? '3px solid #1a237e' : '3px solid transparent',
+            transition: 'all 0.3s ease',
+            boxShadow: activeSubTab === 'info' ? '0 2px 8px rgba(26, 35, 126, 0.3)' : 'none',
+            marginRight: '0.5rem'
           }}
         >
           📊 Token Info & Verification
@@ -377,13 +431,18 @@ const TokenOperationsTab = ({
         <button
           onClick={() => setActiveSubTab('operations')}
           style={{
-            padding: '1rem 2rem',
+            flex: 1,
+            padding: '1.5rem 2rem',
             border: 'none',
-            backgroundColor: activeSubTab === 'operations' ? '#1a237e' : 'transparent',
-            color: activeSubTab === 'operations' ? 'white' : '#1a237e',
+            backgroundColor: activeSubTab === 'operations' ? '#1a237e' : '#e9ecef',
+            color: activeSubTab === 'operations' ? 'white' : '#495057',
             cursor: 'pointer',
             fontWeight: 'bold',
-            borderBottom: activeSubTab === 'operations' ? '2px solid #1a237e' : 'none'
+            fontSize: '1.1rem',
+            borderRadius: '8px 8px 0 0',
+            borderBottom: activeSubTab === 'operations' ? '3px solid #1a237e' : '3px solid transparent',
+            transition: 'all 0.3s ease',
+            boxShadow: activeSubTab === 'operations' ? '0 2px 8px rgba(26, 35, 126, 0.3)' : 'none'
           }}
         >
           ⚡ Token Operations
@@ -426,7 +485,7 @@ const TokenOperationsTab = ({
                   <option value="">-- Select a token --</option>
                   {deploymentDetails.tokens.map((token, index) => (
                     <option key={index} value={token.token.address}>
-                      {token.token.name} ({token.token.symbol}) - {token.token.address}
+                      {token.token.name} ({token.token.symbol}) - {new Date(token.timestamp).toLocaleString()}
                     </option>
                   ))}
                 </select>
@@ -448,94 +507,94 @@ const TokenOperationsTab = ({
           
           {/* Token Information */}
           {selectedToken && (
+      <div style={{
+        padding: "1.5rem",
+        backgroundColor: "#f8f9fa",
+        borderRadius: "8px",
+        border: "1px solid #dee2e6",
+        marginBottom: "2rem",
+        color: '#333'
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: "1rem" }}>
+          <h4 style={{ color: '#1a237e', margin: 0 }}>Token Information</h4>
+          <Button
+                  onClick={() => loadTokenInfo(selectedToken.token.address)}
+            disabled={loading}
+            style={{ backgroundColor: "#17a2b8", color: "white" }}
+          >
+                  {loading ? "Loading..." : "Refresh On-Chain Data"}
+          </Button>
+        </div>
+        
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: "2rem", color: '#333' }}>
+            Loading token information from blockchain...
+          </div>
+        ) : tokenInfo ? (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem' }}>
             <div style={{
-              padding: "1.5rem",
-              backgroundColor: "#f8f9fa",
+              padding: "1rem",
+              backgroundColor: "white",
               borderRadius: "8px",
               border: "1px solid #dee2e6",
-              marginBottom: "2rem",
               color: '#333'
             }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: "1rem" }}>
-                <h4 style={{ color: '#1a237e', margin: 0 }}>Token Information</h4>
-                <Button
-                  onClick={() => loadTokenInfo(selectedToken.token.address)}
-                  disabled={loading}
-                  style={{ backgroundColor: "#17a2b8", color: "white" }}
-                >
-                  {loading ? "Loading..." : "Refresh On-Chain Data"}
-                </Button>
-              </div>
-              
-              {loading ? (
-                <div style={{ textAlign: 'center', padding: "2rem", color: '#333' }}>
-                  Loading token information from blockchain...
-                </div>
-              ) : tokenInfo ? (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem' }}>
-                  <div style={{
-                    padding: "1rem",
-                    backgroundColor: "white",
-                    borderRadius: "8px",
-                    border: "1px solid #dee2e6",
-                    color: '#333'
-                  }}>
-                    <div style={{ fontWeight: 'bold', color: '#1a237e', marginBottom: '0.5rem' }}>Name</div>
-                    <div>{tokenInfo.name}</div>
-                  </div>
-                  <div style={{
-                    padding: "1rem",
-                    backgroundColor: "white",
-                    borderRadius: "8px",
-                    border: "1px solid #dee2e6",
-                    color: '#333'
-                  }}>
-                    <div style={{ fontWeight: 'bold', color: '#1a237e', marginBottom: '0.5rem' }}>Symbol</div>
-                    <div>{tokenInfo.symbol}</div>
-                  </div>
-                  <div style={{
-                    padding: "1rem",
-                    backgroundColor: "white",
-                    borderRadius: "8px",
-                    border: "1px solid #dee2e6",
-                    color: '#333'
-                  }}>
-                    <div style={{ fontWeight: 'bold', color: '#1a237e', marginBottom: '0.5rem' }}>Decimals</div>
-                    <div>{tokenInfo.decimals}</div>
-                  </div>
-                  <div style={{
-                    padding: "1rem",
-                    backgroundColor: "white",
-                    borderRadius: "8px",
-                    border: "1px solid #dee2e6",
-                    color: '#333'
-                  }}>
-                    <div style={{ fontWeight: 'bold', color: '#1a237e', marginBottom: '0.5rem' }}>Total Supply</div>
-                    <div>{tokenInfo.totalSupply} {tokenInfo.symbol}</div>
-                  </div>
-                  <div style={{
-                    padding: "1rem",
-                    backgroundColor: "white",
-                    borderRadius: "8px",
-                    border: "1px solid #dee2e6",
-                    color: '#333'
-                  }}>
-                    <div style={{ fontWeight: 'bold', color: '#1a237e', marginBottom: '0.5rem' }}>Owner</div>
-                    <div style={{ fontFamily: 'monospace', fontSize: '0.9rem' }}>{tokenInfo.owner}</div>
-                  </div>
-                  <div style={{
-                    padding: "1rem",
-                    backgroundColor: "white",
-                    borderRadius: "8px",
-                    border: "1px solid #dee2e6",
-                    color: '#333'
-                  }}>
-                    <div style={{ fontWeight: 'bold', color: '#1a237e', marginBottom: '0.5rem' }}>Contract Address</div>
-                    <div style={{ fontFamily: 'monospace', fontSize: '0.9rem' }}>{tokenInfo.address}</div>
-                  </div>
-                </div>
-              ) : (
-                <div style={{ textAlign: 'center', padding: "2rem", color: '#666' }}>
+              <div style={{ fontWeight: 'bold', color: '#1a237e', marginBottom: '0.5rem' }}>Name</div>
+              <div>{tokenInfo.name}</div>
+            </div>
+            <div style={{
+              padding: "1rem",
+              backgroundColor: "white",
+              borderRadius: "8px",
+              border: "1px solid #dee2e6",
+              color: '#333'
+            }}>
+              <div style={{ fontWeight: 'bold', color: '#1a237e', marginBottom: '0.5rem' }}>Symbol</div>
+              <div>{tokenInfo.symbol}</div>
+            </div>
+            <div style={{
+              padding: "1rem",
+              backgroundColor: "white",
+              borderRadius: "8px",
+              border: "1px solid #dee2e6",
+              color: '#333'
+            }}>
+              <div style={{ fontWeight: 'bold', color: '#1a237e', marginBottom: '0.5rem' }}>Decimals</div>
+              <div>{tokenInfo.decimals}</div>
+            </div>
+            <div style={{
+              padding: "1rem",
+              backgroundColor: "white",
+              borderRadius: "8px",
+              border: "1px solid #dee2e6",
+              color: '#333'
+            }}>
+              <div style={{ fontWeight: 'bold', color: '#1a237e', marginBottom: '0.5rem' }}>Total Supply</div>
+              <div>{tokenInfo.totalSupply} {tokenInfo.symbol}</div>
+            </div>
+            <div style={{
+              padding: "1rem",
+              backgroundColor: "white",
+              borderRadius: "8px",
+              border: "1px solid #dee2e6",
+              color: '#333'
+            }}>
+              <div style={{ fontWeight: 'bold', color: '#1a237e', marginBottom: '0.5rem' }}>Owner</div>
+              <div style={{ fontFamily: 'monospace', fontSize: '0.9rem' }}>{tokenInfo.owner}</div>
+            </div>
+            <div style={{
+              padding: "1rem",
+              backgroundColor: "white",
+              borderRadius: "8px",
+              border: "1px solid #dee2e6",
+              color: '#333'
+            }}>
+              <div style={{ fontWeight: 'bold', color: '#1a237e', marginBottom: '0.5rem' }}>Contract Address</div>
+              <div style={{ fontFamily: 'monospace', fontSize: '0.9rem' }}>{tokenInfo.address}</div>
+            </div>
+          </div>
+        ) : (
+          <div style={{ textAlign: 'center', padding: "2rem", color: '#666' }}>
                   No on-chain token information available. Click "Refresh On-Chain Data" to load.
                 </div>
               )}
@@ -664,12 +723,12 @@ const TokenOperationsTab = ({
                         <strong>Investor Country:</strong> {verificationResults.details.investorCountry}
                       </div>
                       <div style={{ marginBottom: "0.5rem" }}>
-                        <strong>Required Topics:</strong> {verificationResults.details.requiredTopics.join(', ')}
+                        <strong>Required Topics:</strong> {verificationResults.details.requiredTopics ? verificationResults.details.requiredTopics.join(', ') : 'None'}
                       </div>
                       
                       <div style={{ marginTop: "1rem" }}>
                         <strong>Verification Details:</strong>
-                        {verificationResults.details.verificationDetails.map((detail, index) => (
+                        {verificationResults.details.verificationDetails && verificationResults.details.verificationDetails.map((detail, index) => (
                           <div key={index} style={{ 
                             marginLeft: "1rem", 
                             marginTop: "0.5rem",
@@ -677,16 +736,16 @@ const TokenOperationsTab = ({
                             backgroundColor: "white",
                             borderRadius: "4px"
                           }}>
-                            <div><strong>Topic {detail.topic}:</strong></div>
+                            <div><strong>Topic {detail.topic || 'Unknown'}:</strong></div>
                             <div>Has Claims: {detail.hasClaims ? "✅ YES" : "❌ NO"}</div>
                             <div>Has Valid Claim: {detail.hasValidClaim ? "✅ YES" : "❌ NO"}</div>
-                            <div>Trusted Issuers: {detail.trustedIssuers.length}</div>
-                            {detail.claimDetails.length > 0 && (
+                            <div>Trusted Issuers: {Array.isArray(detail.trustedIssuers) ? detail.trustedIssuers.length : 0}</div>
+                            {Array.isArray(detail.claimDetails) && detail.claimDetails.length > 0 && (
                               <div style={{ marginTop: "0.5rem" }}>
                                 <strong>Claims:</strong>
                                 {detail.claimDetails.map((claim, claimIndex) => (
                                   <div key={claimIndex} style={{ marginLeft: "1rem", fontSize: '0.8rem' }}>
-                                    • {claim.claimId}: {claim.issuer} {claim.isFromTrustedIssuer ? "✅" : "❌"}
+                                    • {claim.claimId || 'Unknown'}: {claim.issuer || 'Unknown'} {claim.isFromTrustedIssuer ? "✅" : "❌"}
                                   </div>
                                 ))}
                               </div>
@@ -990,9 +1049,9 @@ const TokenOperationsTab = ({
             }}>
               <h4 style={{ color: '#856404', marginBottom: "1rem" }}>No Token Selected</h4>
               <p>Please go to the "Token Info & Verification" tab to select a token first.</p>
-            </div>
-          )}
-        </div>
+          </div>
+        )}
+      </div>
       )}
       
       {/* Token Operations Status */}

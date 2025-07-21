@@ -7,10 +7,25 @@ const FactoryManagementTab = ({
   handleFactoryChange,
   handleDeployFactory,
   deployingFactory,
-  deploymentDetails
+  deploymentDetails,
+  message
 }) => (
   <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 20px' }}>
     <h3 style={{ color: '#1a237e', marginBottom: '1rem' }}>Factory Management</h3>
+    
+    {/* Message Display */}
+    {message && (
+      <div style={{
+        padding: "1rem",
+        backgroundColor: message.includes('Error') ? "#f8d7da" : "#d4edda",
+        color: message.includes('Error') ? "#721c24" : "#155724",
+        borderRadius: "4px",
+        marginBottom: "1rem",
+        border: `1px solid ${message.includes('Error') ? '#f5c6cb' : '#c3e6cb'}`
+      }}>
+        {message}
+      </div>
+    )}
     
     {/* Factory Selection */}
     <div style={{ marginBottom: '2rem' }}>
@@ -40,7 +55,7 @@ const FactoryManagementTab = ({
             <option value=''>-- Select a factory --</option>
             {factories.map(factory => (
               <option key={factory.deploymentId} value={factory.deploymentId}>
-                {factory.address} - {factory.network} - {factory.tokenCount} tokens - {new Date(factory.timestamp).toLocaleDateString()}
+                {factory.address} - {factory.network} - {factory.tokenCount} tokens - {new Date(factory.timestamp).toLocaleString()}
               </option>
             ))}
           </select>

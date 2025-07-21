@@ -5,7 +5,7 @@ import { getContractArtifacts } from '../../../hooks/compiledContracts';
 
 const IDENTITIES_STORAGE_KEY = 'trex_user_identities';
 
-const UserManagementTab = ({ deploymentDetails, addLog, getSigner }) => {
+const UserManagementTab = ({ deploymentDetails, addLog, getSigner, factories }) => {
   // User Management State
   const [userAddress, setUserAddress] = useState('');
   const [userCountry, setUserCountry] = useState('840');
@@ -86,28 +86,75 @@ const UserManagementTab = ({ deploymentDetails, addLog, getSigner }) => {
     loadUserIdentities();
   }, []); // Remove addLog dependency to prevent infinite loops
 
-  // Load available Identity Registries and their trusted issuers
+  // Load available Identity Registries and their trusted issuers from ALL factories
   useEffect(() => {
     const loadAvailableIRs = async () => {
-      if (!deploymentDetails) return;
+      if (!factories || factories.length === 0) return;
       
       setLoadingIRs(true);
       try {
         const irs = [];
+        const irToTokenMap = new Map(); // Map IR address to token info
         
-        // Check for IRs in different possible locations and deduplicate
-        const possibleIRs = [
-          deploymentDetails.suite?.identityRegistry,
-          deploymentDetails.latestToken?.suite?.identityRegistry,
-          ...(deploymentDetails.tokens?.map(token => token.suite?.identityRegistry) || [])
-        ].filter(Boolean);
+        // Collect IRs from ALL factories with their associated token info
+        for (const factory of factories) {
+          try {
+            addLog && addLog(`Loading IRs from factory: ${factory.address}`, "info");
+            
+            // Get deployment details for this factory
+            const response = await fetch(`/api/deployments/${factory.deploymentId}`);
+            if (response.ok) {
+              const factoryDeploymentDetails = await response.json();
+              
+              // Map IRs to their tokens
+              if (factoryDeploymentDetails.tokens) {
+                for (const token of factoryDeploymentDetails.tokens) {
+                  if (token.suite?.identityRegistry) {
+                    irToTokenMap.set(token.suite.identityRegistry, {
+                      tokenName: token.token.name,
+                      tokenSymbol: token.token.symbol,
+                      timestamp: token.timestamp,
+                      deploymentId: token.deploymentId
+                    });
+                    addLog && addLog(`Mapped IR ${token.suite.identityRegistry} to token ${token.token.name} (${token.token.symbol}) - ${new Date(token.timestamp).toLocaleString()}`, "info");
+                  }
+                }
+              }
+              
+              // Also check for IR in suite and latestToken
+              if (factoryDeploymentDetails.suite?.identityRegistry) {
+                if (!irToTokenMap.has(factoryDeploymentDetails.suite.identityRegistry)) {
+                  irToTokenMap.set(factoryDeploymentDetails.suite.identityRegistry, {
+                    tokenName: 'Factory Suite',
+                    tokenSymbol: 'SUITE',
+                    timestamp: factoryDeploymentDetails.timestamp || Date.now(),
+                    deploymentId: factoryDeploymentDetails.deploymentId
+                  });
+                }
+              }
+              
+              if (factoryDeploymentDetails.latestToken?.suite?.identityRegistry) {
+                if (!irToTokenMap.has(factoryDeploymentDetails.latestToken.suite.identityRegistry)) {
+                  irToTokenMap.set(factoryDeploymentDetails.latestToken.suite.identityRegistry, {
+                    tokenName: factoryDeploymentDetails.latestToken.token.name,
+                    tokenSymbol: factoryDeploymentDetails.latestToken.token.symbol,
+                    timestamp: factoryDeploymentDetails.latestToken.timestamp,
+                    deploymentId: factoryDeploymentDetails.latestToken.deploymentId
+                  });
+                }
+              }
+              
+              addLog && addLog(`Factory ${factory.address}: Found ${irToTokenMap.size} IR mappings`, "info");
+            }
+          } catch (error) {
+            addLog && addLog(`Error loading IRs from factory ${factory.address}: ${error.message}`, "warning");
+          }
+        }
         
-        // Remove duplicates by converting to Set and back to array
-        const uniqueIRs = [...new Set(possibleIRs)];
+        addLog && addLog(`Total IRs found across all factories: ${irToTokenMap.size}`, "info");
         
-        addLog && addLog(`Found ${possibleIRs.length} possible Identity Registries, ${uniqueIRs.length} unique`, "info");
-        
-        for (const irAddress of uniqueIRs) {
+        // Process each IR with its token info
+        for (const [irAddress, tokenInfo] of irToTokenMap) {
           try {
             const signer = await getSigner();
             const irArtifacts = getContractArtifacts('IdentityRegistry');
@@ -133,10 +180,14 @@ const UserManagementTab = ({ deploymentDetails, addLog, getSigner }) => {
             irs.push({
               address: irAddress,
               trustedIssuers: issuersWithTopics,
-              tirAddress: tirAddress
+              tirAddress: tirAddress,
+              timestamp: tokenInfo.timestamp,
+              tokenName: tokenInfo.tokenName,
+              tokenSymbol: tokenInfo.tokenSymbol,
+              deploymentId: tokenInfo.deploymentId
             });
             
-            addLog && addLog(`IR ${irAddress}: ${issuersWithTopics.length} trusted issuers`, "info");
+            addLog && addLog(`IR ${irAddress} (${tokenInfo.tokenName}): ${issuersWithTopics.length} trusted issuers - ${new Date(tokenInfo.timestamp).toLocaleString()}`, "info");
           } catch (error) {
             addLog && addLog(`Error loading IR ${irAddress}: ${error.message}`, "error");
           }
@@ -147,7 +198,6 @@ const UserManagementTab = ({ deploymentDetails, addLog, getSigner }) => {
         // Auto-select first IR if none selected
         if (irs.length > 0 && !selectedIR) {
           setSelectedIR(irs[0].address);
-          setTrustedIssuers(irs[0].trustedIssuers);
           addLog && addLog(`Auto-selected IR: ${irs[0].address}`, "info");
         }
         
@@ -161,7 +211,53 @@ const UserManagementTab = ({ deploymentDetails, addLog, getSigner }) => {
     };
     
     loadAvailableIRs();
-  }, [deploymentDetails]); // Only depend on the specific property that matters
+  }, [factories]); // Load IRs from all factories, not just selected factory
+
+  // Load available Claim Issuers from localStorage and get actual topics
+  useEffect(() => {
+    const loadClaimIssuers = async () => {
+      try {
+        const savedClaimIssuers = localStorage.getItem('trex_available_claim_issuers');
+        if (savedClaimIssuers) {
+          const parsedClaimIssuers = JSON.parse(savedClaimIssuers);
+          
+          // Get actual topics from contracts
+          const issuersWithActualTopics = await Promise.all(
+            parsedClaimIssuers.map(async (issuer) => {
+              try {
+                const signer = await getSigner();
+                const claimIssuerArtifacts = getContractArtifacts('ClaimIssuer');
+                const claimIssuer = new ethers.Contract(issuer.address, claimIssuerArtifacts.abi, signer);
+                
+                // Try to get topics from the contract (this might not be available on all ClaimIssuer contracts)
+                let actualTopics = issuer.claimTopics || [1, 2, 3]; // fallback to stored topics
+                
+                // For now, we'll use the stored topics but you can extend this to get from contract
+                return {
+                  ...issuer,
+                  actualTopics: actualTopics
+                };
+              } catch (error) {
+                // If we can't get topics from contract, use stored ones
+                return {
+                  ...issuer,
+                  actualTopics: issuer.claimTopics || [1, 2, 3]
+                };
+              }
+            })
+          );
+          
+          setAvailableClaimIssuers(issuersWithActualTopics);
+          addLog && addLog(`Loaded ${issuersWithActualTopics.length} Claim Issuers from storage`, "info");
+        }
+      } catch (error) {
+        console.error('Error loading claim issuers:', error);
+        addLog && addLog("Error loading claim issuers", "error");
+      }
+    };
+    
+    loadClaimIssuers();
+  }, []); // Load once on component mount
 
   // Save user identity to localStorage
   const saveUserIdentity = (identity) => {
@@ -303,8 +399,7 @@ const UserManagementTab = ({ deploymentDetails, addLog, getSigner }) => {
     setSelectedIR(irAddress);
     const selectedIRData = availableIRs.find(ir => ir.address === irAddress);
     if (selectedIRData) {
-      setTrustedIssuers(selectedIRData.trustedIssuers);
-      addLog && addLog(`Selected IR: ${irAddress} with ${selectedIRData.trustedIssuers.length} trusted issuers`, "info");
+      addLog && addLog(`Selected IR: ${irAddress}`, "info");
     }
   };
 
@@ -678,9 +773,10 @@ const UserManagementTab = ({ deploymentDetails, addLog, getSigner }) => {
       const artifacts = getContractArtifacts('Identity');
       const onchainId = new ethers.Contract(onchainIdAddress, artifacts.abi, signer);
       
-      // Check for claims on common topics (1-10)
-      const commonTopics = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+      // Check for claims on common topics (1-10) - expanded to catch more topics
+      const commonTopics = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20];
       const claims = [];
+      const processedClaimIds = new Set(); // To avoid duplicates
       
       addLog && addLog(`Checking ${commonTopics.length} common claim topics...`, "info");
       
@@ -693,6 +789,14 @@ const UserManagementTab = ({ deploymentDetails, addLog, getSigner }) => {
             addLog && addLog(`Topic ${topicId}: Found ${claimIds.length} claims`, "info");
             
             for (const claimId of claimIds) {
+              const claimIdStr = claimId.toString();
+              
+              // Skip if we've already processed this claim ID
+              if (processedClaimIds.has(claimIdStr)) {
+                addLog && addLog(`  Skipping duplicate claim ID: ${claimIdStr}`, "info");
+                continue;
+              }
+              
               try {
                 const claim = await onchainId.getClaim(claimId);
                 let claimData = '';
@@ -702,21 +806,23 @@ const UserManagementTab = ({ deploymentDetails, addLog, getSigner }) => {
                   claimData = claim.data; // Keep as hex if not UTF8
                 }
                 
-                addLog && addLog(`  Claim ID: ${claimId}`, "info");
+                addLog && addLog(`  Claim ID: ${claimIdStr}`, "info");
                 addLog && addLog(`    - Issuer: ${claim.issuer}`, "info");
                 addLog && addLog(`    - Topic: ${claim.topic.toString()}`, "info");
                 addLog && addLog(`    - Data: ${claimData}`, "info");
                 addLog && addLog(`    - Scheme: ${claim.scheme.toString()}`, "info");
                 
                 claims.push({
-                  id: claimId,
+                  id: claimIdStr,
                   topic: claim.topic.toNumber(),
                   issuer: claim.issuer,
                   data: claimData,
                   scheme: claim.scheme.toNumber()
                 });
+                
+                processedClaimIds.add(claimIdStr);
               } catch (claimError) {
-                addLog && addLog(`Error getting claim ${claimId}: ${claimError.message}`, "error");
+                addLog && addLog(`Error getting claim ${claimIdStr}: ${claimError.message}`, "error");
               }
             }
           }
@@ -733,6 +839,7 @@ const UserManagementTab = ({ deploymentDetails, addLog, getSigner }) => {
       }
       
       addLog && addLog(`Total claims found on contract: ${claims.length}`, "success");
+      addLog && addLog(`Unique claim IDs processed: ${processedClaimIds.size}`, "info");
       setMessage(`Found ${claims.length} claims on OnchainID contract`);
       
       // Update the selected identity with actual claims from contract
@@ -819,20 +926,27 @@ const UserManagementTab = ({ deploymentDetails, addLog, getSigner }) => {
           <div style={{ maxHeight: '300px', overflow: 'auto' }}>
             {userIdentities.map((identity, index) => (
               <div key={index} style={{ 
-                border: '1px solid #dee2e6', 
+                border: selectedIdentity?.userAddress === identity.userAddress ? '2px solid #007bff' : '1px solid #dee2e6', 
                 borderRadius: '4px', 
                 padding: '1rem', 
                 marginBottom: '1rem',
-                background: selectedIdentity?.userAddress === identity.userAddress ? '#f8f9fa' : '#fff'
+                background: selectedIdentity?.userAddress === identity.userAddress ? '#e7f3ff' : '#fff',
+                boxShadow: selectedIdentity?.userAddress === identity.userAddress ? '0 2px 8px rgba(0, 123, 255, 0.2)' : 'none'
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
                   <strong style={{ color: '#333' }}>{identity.userAddress}</strong>
                   <div style={{ display: 'flex', gap: '0.5rem' }}>
                     <Button
                       onClick={() => loadExistingIdentity(identity)}
-                      style={{ backgroundColor: "#007bff", color: "white", padding: '0.25rem 0.5rem', fontSize: '0.8rem' }}
+                      style={{ 
+                        backgroundColor: selectedIdentity?.userAddress === identity.userAddress ? "#28a745" : "#007bff", 
+                        color: "white", 
+                        padding: '0.25rem 0.5rem', 
+                        fontSize: '0.8rem',
+                        fontWeight: selectedIdentity?.userAddress === identity.userAddress ? 'bold' : 'normal'
+                      }}
                     >
-                      Load
+                      {selectedIdentity?.userAddress === identity.userAddress ? 'Selected' : 'Select'}
                     </Button>
                     <Button
                       onClick={() => {
@@ -971,7 +1085,7 @@ const UserManagementTab = ({ deploymentDetails, addLog, getSigner }) => {
                 <option value="">Select an Identity Registry</option>
                 {availableIRs.map(ir => (
                   <option key={ir.address} value={ir.address}>
-                    {ir.address} ({ir.trustedIssuers.length} trusted issuers)
+                    IR: {ir.tokenName} ({ir.tokenSymbol}) - {ir.timestamp ? new Date(ir.timestamp).toLocaleString() : 'Unknown time'}
                   </option>
                 ))}
               </select>
@@ -988,11 +1102,11 @@ const UserManagementTab = ({ deploymentDetails, addLog, getSigner }) => {
             )}
           </div>
           
-          {/* Trusted Issuers for Selected IR - FIXED DROPDOWN */}
-          {selectedIR && trustedIssuers.length > 0 && (
+          {/* Available Claim Issuers - Show all regardless of IR selection */}
+          {availableClaimIssuers.length > 0 && (
             <div style={{ marginBottom: '1rem' }}>
               <label style={{ display: 'block', marginBottom: '0.5rem', color: '#333', fontWeight: 'bold' }}>
-                Available Trusted Issuers:
+                Available Claim Issuers:
               </label>
               <select
                 value={selectedTrustedIssuer}
@@ -1007,10 +1121,10 @@ const UserManagementTab = ({ deploymentDetails, addLog, getSigner }) => {
                   color: '#333'
                 }}
               >
-                <option value="">Select a trusted issuer</option>
-                {trustedIssuers.map((issuer, index) => (
+                <option value="">Select a Claim Issuer</option>
+                {availableClaimIssuers.map((issuer, index) => (
                   <option key={index} value={issuer.address}>
-                    {issuer.address} - Topics: {issuer.topics.join(', ')}
+                    {issuer.name || 'Unnamed Issuer'} - {issuer.timestamp ? new Date(issuer.timestamp).toLocaleString() : 'Unknown time'}
                   </option>
                 ))}
               </select>
@@ -1101,10 +1215,10 @@ const UserManagementTab = ({ deploymentDetails, addLog, getSigner }) => {
                   color: '#333'
                 }}
               >
-                <option value="">Select a trusted issuer</option>
-                {trustedIssuers.map(issuer => (
+                <option value="">Select a Claim Issuer</option>
+                {availableClaimIssuers.map(issuer => (
                   <option key={issuer.address} value={issuer.address}>
-                    {issuer.address.slice(0, 10)}... ({issuer.topics.join(', ')})
+                    {issuer.name || 'Unnamed'} - {issuer.timestamp ? new Date(issuer.timestamp).toLocaleString() : 'Unknown time'}
                   </option>
                 ))}
               </select>
@@ -1140,9 +1254,11 @@ const UserManagementTab = ({ deploymentDetails, addLog, getSigner }) => {
           padding: '1.5rem',
           marginBottom: '2rem'
         }}>
-          <h4 style={{ color: '#1a237e', marginBottom: '1rem' }}>Claims on Contract</h4>
+          <h4 style={{ color: '#1a237e', marginBottom: '1rem' }}>
+            Claims on Contract ({selectedIdentity.actualClaims.length} total)
+          </h4>
           
-          <div style={{ maxHeight: '300px', overflow: 'auto' }}>
+          <div style={{ maxHeight: '400px', overflow: 'auto' }}>
             {selectedIdentity.actualClaims.map((claim, index) => (
               <div key={index} style={{ 
                 border: '1px solid #dee2e6', 
@@ -1152,14 +1268,37 @@ const UserManagementTab = ({ deploymentDetails, addLog, getSigner }) => {
                 background: '#f8f9fa'
               }}>
                 <div style={{ fontSize: '0.9rem', color: '#333' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                    <strong>Claim #{index + 1}</strong>
+                    <span style={{ 
+                      backgroundColor: '#007bff', 
+                      color: 'white', 
+                      padding: '0.2rem 0.5rem', 
+                      borderRadius: '4px', 
+                      fontSize: '0.8rem' 
+                    }}>
+                      Topic {claim.topic}
+                    </span>
+                  </div>
                   <div><strong>Claim ID:</strong> {claim.id}</div>
-                  <div><strong>Topic:</strong> {claim.topic}</div>
                   <div><strong>Issuer:</strong> {claim.issuer}</div>
                   <div><strong>Data:</strong> {claim.data}</div>
                   <div><strong>Scheme:</strong> {claim.scheme}</div>
                 </div>
               </div>
             ))}
+          </div>
+          
+          <div style={{ 
+            marginTop: '1rem', 
+            padding: '0.5rem', 
+            backgroundColor: '#e7f3ff', 
+            borderRadius: '4px', 
+            fontSize: '0.8rem', 
+            color: '#1a237e' 
+          }}>
+            <strong>Note:</strong> All claims shown above are directly from the OnchainID contract. 
+            If you have claims from multiple issuers, they should all be displayed here.
           </div>
         </div>
       )}

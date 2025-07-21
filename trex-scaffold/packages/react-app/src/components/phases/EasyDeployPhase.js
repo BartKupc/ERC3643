@@ -631,7 +631,8 @@ const EasyDeployPhase = () => {
       const newClaimIssuer = {
         address: claimIssuer.address,
         name: `ClaimIssuer-${Date.now()}`,
-        claimTopics: [1, 2, 3] // Default topics
+        claimTopics: [1, 2, 3], // Default topics
+        timestamp: Date.now()
       };
       
       setClaimIssuers(prev => [...prev, newClaimIssuer]);
@@ -767,6 +768,7 @@ const EasyDeployPhase = () => {
           handleDeployFactory={handleDeployFactory}
           deployingFactory={deployingFactory}
           deploymentDetails={deploymentDetails}
+          message={message}
         />
       )}
       {activeTab === 'token' && (
@@ -791,16 +793,17 @@ const EasyDeployPhase = () => {
           selectedClaimTopics={selectedClaimTopics}
           setSelectedClaimTopics={setSelectedClaimTopics}
           addingClaimIssuer={addingClaimIssuer}
+          message={message}
         />
       )}
       {activeTab === 'claims' && (
-        <ClaimsManagementTab deploymentDetails={deploymentDetails} addLog={addLog} getSigner={getSigner} />
+        <ClaimsManagementTab deploymentDetails={deploymentDetails} addLog={addLog} getSigner={getSigner} factories={factories} />
       )}
       {activeTab === 'issuers' && (
-        <TrustedIssuerManagementTab deploymentDetails={deploymentDetails} addLog={addLog} getSigner={getSigner} />
+        <TrustedIssuerManagementTab deploymentDetails={deploymentDetails} addLog={addLog} getSigner={getSigner} factories={factories} />
       )}
       {activeTab === 'agents' && (
-        <AgentManagementTab deploymentDetails={deploymentDetails} addLog={addLog} getSigner={getSigner} />
+        <AgentManagementTab deploymentDetails={deploymentDetails} addLog={addLog} getSigner={getSigner} factories={factories} />
       )}
       {activeTab === 'users' && (
         <UserManagementTab
@@ -866,6 +869,7 @@ const EasyDeployPhase = () => {
           handleBurnToken={handleBurnToken}
           handleTransferToken={handleTransferToken}
           handleTransferFromToken={handleTransferFromToken}
+          message={message}
         />
       )}
       
