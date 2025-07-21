@@ -142,6 +142,16 @@ app.get('/api/deployments/:deploymentId', (req, res) => {
       return res.status(404).json({ error: 'Deployment not found' });
     }
     
+    // If this is a factory deployment, include the latest token's suite information
+    if (deployment.factory && deployment.tokens && deployment.tokens.length > 0) {
+      const latestToken = deployment.tokens[deployment.tokens.length - 1];
+      if (latestToken.suite) {
+        deployment.suite = latestToken.suite;
+      }
+      // Also include the latest token information
+      deployment.latestToken = latestToken;
+    }
+    
     res.json(deployment);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -214,7 +224,7 @@ app.post('/api/deploy/factory', async (req, res) => {
 // Deploy Token
 app.post('/api/deploy/token', async (req, res) => {
   try {
-    const { factoryAddress, tokenDetails } = req.body;
+    const { factoryAddress, tokenDetails, claimDetails } = req.body;
     
     if (!factoryAddress) {
       return res.status(400).json({
@@ -233,16 +243,49 @@ app.post('/api/deploy/token', async (req, res) => {
     console.log('🎯 Starting token deployment...');
     console.log('Factory Address:', factoryAddress);
     console.log('Token Details:', tokenDetails);
+    console.log('Claim Details:', claimDetails);
+    
+    // Get the deployer address (account 0)
+    const provider = createProvider();
+    const wallet = new ethers.Wallet(process.env.PRIVATE_KEY || '0xdf57089febbacf7ba0bc227dafbffa9fc08a93fdc68e1e42411a14efcf23656e', provider);
+    const deployerAddress = await wallet.getAddress();
+    
+    // Automatically add deployer as agent for both Token and IR
+    const enhancedTokenDetails = {
+      ...tokenDetails,
+      tokenAgents: [deployerAddress],
+      irAgents: [deployerAddress]
+    };
+    
+    console.log('🔑 Auto-configured agents for deployment:');
+    console.log('Deployer Address:', deployerAddress);
+    console.log('Token Agents:', enhancedTokenDetails.tokenAgents);
+    console.log('IR Agents:', enhancedTokenDetails.irAgents);
     
     // Create temporary token config file
     const configPath = path.join(__dirname, '../temp_token_config.json');
-    fs.writeFileSync(configPath, JSON.stringify(tokenDetails, null, 2));
+    fs.writeFileSync(configPath, JSON.stringify(enhancedTokenDetails, null, 2));
+    
+    // Create temporary claim details file if provided
+    let claimDetailsPath = null;
+    if (claimDetails) {
+      claimDetailsPath = path.join(__dirname, '../temp_claim_details.json');
+      fs.writeFileSync(claimDetailsPath, JSON.stringify(claimDetails, null, 2));
+      console.log('📋 Claim details saved to:', claimDetailsPath);
+    }
     
     try {
-      // Run the token deployment script with config
-      const output = await runDeploymentScript('deploy_token_enhanced.js', {
+      // Prepare environment variables for the deployment script
+      const envVars = {
         TOKEN_CONFIG_PATH: configPath
-      });
+      };
+      
+      if (claimDetailsPath) {
+        envVars.CLAIM_DETAILS_PATH = claimDetailsPath;
+      }
+      
+      // Run the token deployment script with config
+      const output = await runDeploymentScript('deploy_token_enhanced.js', envVars);
       
       console.log('✅ Token deployment script completed');
       console.log('Output:', output);
@@ -258,6 +301,10 @@ app.post('/api/deploy/token', async (req, res) => {
       const latestToken = latestDeployment.tokens[latestDeployment.tokens.length - 1];
       
       console.log('📋 Token deployed at:', latestToken.token.address);
+      console.log('🔑 Deployer automatically added as agent to Token and IR');
+      if (claimDetails) {
+        console.log('🔐 Claim details included in deployment');
+      }
       
       res.json({
         success: true,
@@ -268,9 +315,12 @@ app.post('/api/deploy/token', async (req, res) => {
       });
       
     } finally {
-      // Clean up temporary config file
+      // Clean up temporary files
       if (fs.existsSync(configPath)) {
         fs.unlinkSync(configPath);
+      }
+      if (claimDetailsPath && fs.existsSync(claimDetailsPath)) {
+        fs.unlinkSync(claimDetailsPath);
       }
     }
     

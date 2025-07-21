@@ -24,6 +24,8 @@ if (process.env.TOKEN_CONFIG_PATH && fs.existsSync(process.env.TOKEN_CONFIG_PATH
     if (config.symbol) tokenDetails.symbol = config.symbol;
     if (config.decimals) tokenDetails.decimals = config.decimals;
     if (config.totalSupply) tokenDetails.totalSupply = config.totalSupply;
+    if (config.tokenAgents) tokenDetails.tokenAgents = config.tokenAgents;
+    if (config.irAgents) tokenDetails.irAgents = config.irAgents;
   } catch (e) {
     console.error("Failed to read token config:", e);
   }
@@ -86,6 +88,26 @@ async function main() {
       issuerClaims: []
     };
 
+    // Load claim details from environment if provided
+    if (process.env.CLAIM_DETAILS_PATH && fs.existsSync(process.env.CLAIM_DETAILS_PATH)) {
+      try {
+        const claimConfig = JSON.parse(fs.readFileSync(process.env.CLAIM_DETAILS_PATH, 'utf8'));
+        console.log('📋 Loaded claim details from config:', claimConfig);
+        
+        // Update claimDetails with the loaded configuration
+        claimDetails.claimTopics = claimConfig.claimTopics || [];
+        claimDetails.issuers = claimConfig.issuers || [];
+        claimDetails.issuerClaims = claimConfig.issuerClaims || [];
+        
+        console.log('📋 Claim topics:', claimDetails.claimTopics);
+        console.log('📋 Issuers:', claimDetails.issuers);
+        console.log('📋 Issuer claims:', claimDetails.issuerClaims);
+      } catch (e) {
+        console.error("Failed to read claim details config:", e);
+        console.log("Using default empty claim details");
+      }
+    }
+
     const salt = "token-" + Date.now();
 
     console.log("\n📋 Token Details:");
@@ -99,6 +121,14 @@ async function main() {
     tokenDetails.owner = deployerAddress;
     tokenDetails.irs = ethers.constants.AddressZero;
     tokenDetails.ONCHAINID = ethers.constants.AddressZero;
+    
+    // Automatically add deployer as agent for both Token and IR
+    tokenDetails.tokenAgents = [deployerAddress];
+    tokenDetails.irAgents = [deployerAddress];
+    
+    console.log("🔑 Auto-configured agents:");
+    console.log("Token Agents:", tokenDetails.tokenAgents);
+    console.log("IR Agents:", tokenDetails.irAgents);
     
     const tx = await TREXFactory.connect(signer).deployTREXSuite(
       salt,
@@ -133,8 +163,15 @@ async function main() {
     const identityRegistry = await token.identityRegistry();
     const compliance = await token.compliance();
     
+    // Get the Identity Registry contract to access CTR and TIR
+    const identityRegistryContract = await ethers.getContractAt("IdentityRegistry", identityRegistry);
+    const claimTopicsRegistry = await identityRegistryContract.topicsRegistry();
+    const trustedIssuersRegistry = await identityRegistryContract.issuersRegistry();
+    
     console.log("Identity Registry:", identityRegistry);
     console.log("Compliance:", compliance);
+    console.log("Claim Topics Registry:", claimTopicsRegistry);
+    console.log("Trusted Issuers Registry:", trustedIssuersRegistry);
     
     // Verify token details
     const tokenName = await token.name();
@@ -162,7 +199,9 @@ async function main() {
       },
       suite: {
         identityRegistry: identityRegistry,
-        compliance: compliance
+        compliance: compliance,
+        claimTopicsRegistry: claimTopicsRegistry,
+        trustedIssuersRegistry: trustedIssuersRegistry
       },
       transaction: {
         hash: tx.hash,
@@ -185,8 +224,8 @@ const addresses = {
   Token: "${tokenAddress}",
   ModularCompliance: "${compliance}",
   IdentityRegistry: "${identityRegistry}",
-  ClaimTopicsRegistry: "0x0000000000000000000000000000000000000000",
-  TrustedIssuersRegistry: "0x0000000000000000000000000000000000000000",
+  ClaimTopicsRegistry: "${claimTopicsRegistry}",
+  TrustedIssuersRegistry: "${trustedIssuersRegistry}",
 };
 export default addresses;
 `;

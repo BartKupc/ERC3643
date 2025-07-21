@@ -123,6 +123,8 @@ const UserManagementPhase = ({ deployedContracts = {}, selectedContracts = {}, s
     loadTrustedIssuers();
   }, [selectedContracts.IdentityRegistry]);
 
+
+
   // Save user identity to localStorage
   const saveUserIdentity = (identity) => {
     setUserIdentities(prev => {
@@ -1075,18 +1077,39 @@ const UserManagementPhase = ({ deployedContracts = {}, selectedContracts = {}, s
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
                         <div>
-                          <div style={{ fontWeight: 'bold', color: '#495057', fontSize: '1.1rem' }}>
+                          <div style={{ fontWeight: 'bold', color: '#495057', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            {identity.isTokenOnchainID && (
+                              <span style={{ 
+                                backgroundColor: '#ffc107', 
+                                color: '#856404', 
+                                padding: '2px 6px', 
+                                borderRadius: '3px', 
+                                fontSize: '0.7rem', 
+                                fontWeight: 'bold' 
+                              }}>
+                                TOKEN ISSUER
+                              </span>
+                            )}
                             User: {identity.userAddress}
                           </div>
                           <div style={{ fontSize: '0.9rem', color: '#6c757d', marginTop: '2px' }}>
                             OnchainID: {identity.onchainIdAddress}
                           </div>
+                          {identity.isTokenOnchainID && (
+                            <div style={{ fontSize: '0.8rem', color: '#17a2b8', marginTop: '2px' }}>
+                              Token: {identity.tokenAddress}
+                            </div>
+                          )}
                         </div>
                         <div style={{ textAlign: 'right' }}>
                           <div style={{ fontSize: '0.8rem', color: '#6c757d' }}>
                             Country: {identity.country || 0}
                           </div>
-                          <div style={{ fontSize: '0.8rem', color: '#28a745', fontWeight: 'bold' }}>
+                          <div style={{ 
+                            fontSize: '0.8rem', 
+                            color: identity.isTokenOnchainID ? '#ffc107' : '#28a745', 
+                            fontWeight: 'bold' 
+                          }}>
                             Status: {identity.status || 'created'}
                           </div>
                         </div>
@@ -1154,6 +1177,8 @@ const UserManagementPhase = ({ deployedContracts = {}, selectedContracts = {}, s
             <Button onClick={createOnchainId} disabled={deploying || !userAddress.trim()}>
               {deploying ? 'Creating...' : 'Create OnchainID'}
             </Button>
+            
+
           </div>
         </div>
       )}

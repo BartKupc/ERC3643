@@ -59,14 +59,14 @@ const Dashboard = ({ account }) => {
 
   return (
     <div style={{ background: "#f4f8fb", minHeight: "100vh", width: "100vw" }}>
-      <Container style={{ background: "#f4f8fb", minHeight: "100vh" }}>
-        <Sidebar />
+      <Sidebar />
+      <div style={{ marginLeft: "250px", minHeight: "100vh" }}>
         {activeMode === "easy" ? (
           <EasyDeployPhase />
         ) : (
           <AdvancedDashboard account={account} />
         )}
-      </Container>
+      </div>
     </div>
   );
 };

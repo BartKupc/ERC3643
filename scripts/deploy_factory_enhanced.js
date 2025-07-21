@@ -125,7 +125,46 @@ async function main() {
     await addTokenFactoryTx.wait();
     console.log("✅ Added TREXFactory to Identity Factory");
 
-    console.log("\n📋 Step 9: Verifying Setup...");
+    console.log("\n📋 Step 9: Deploying TREXGateway...");
+    
+    // Deploy TREXGateway with public deployment enabled
+    const TREXGateway = await ethers.getContractFactory("TREXGateway");
+    const trexGateway = await TREXGateway.deploy(
+      trexFactory.address,  // factory address
+      true                  // publicDeploymentStatus - allow public deployments
+    );
+    await trexGateway.deployed();
+    console.log("✅ TREXGateway deployed:", trexGateway.address);
+    
+    console.log("\n📋 Step 10: Configuring TREXGateway...");
+    
+    // Check if deployment fees are already disabled before trying to disable them
+    const feesCurrentlyEnabled = await trexGateway.isDeploymentFeeEnabled();
+    if (feesCurrentlyEnabled) {
+      const disableFeeTx = await trexGateway.connect(signer).enableDeploymentFee(false);
+      await disableFeeTx.wait();
+      console.log("✅ Deployment fee collection disabled");
+    } else {
+      console.log("✅ Deployment fees already disabled");
+    }
+    
+    // Add the deployer as an approved deployer
+    const addDeployerTx = await trexGateway.connect(signer).addDeployer(deployerAddress);
+    await addDeployerTx.wait();
+    console.log("✅ Added deployer to approved list");
+
+    console.log("\n📋 Step 11: Setting Back-References...");
+    
+    // Set back-references in TREXImplementationAuthority
+    const setTREXFactoryTx = await trexImplementationAuthority.connect(signer).setTREXFactory(trexFactory.address);
+    await setTREXFactoryTx.wait();
+    console.log("✅ Set TREXFactory back-reference in Implementation Authority");
+    
+    const setIAFactoryTx = await trexImplementationAuthority.connect(signer).setIAFactory(identityFactory.address);
+    await setIAFactoryTx.wait();
+    console.log("✅ Set IAFactory back-reference in Implementation Authority");
+
+    console.log("\n📋 Step 12: Verifying Setup...");
     
     // Verify the setup
     const implAuthFromFactory = await trexFactory.getImplementationAuthority();
@@ -135,6 +174,23 @@ async function main() {
     console.log("✅ TREXFactory Owner:", owner);
     console.log("✅ TREXFactory Implementation Authority:", implAuthFromFactory);
     console.log("✅ TREXFactory ID Factory:", idFactoryFromFactory);
+    
+    // Verify TREXGateway configuration
+    const factoryFromGateway = await trexGateway.getFactory();
+    const publicDeploymentStatus = await trexGateway.getPublicDeploymentStatus();
+    const isDeployer = await trexGateway.isDeployer(deployerAddress);
+    const deploymentFee = await trexGateway.getDeploymentFee();
+    const isFeeEnabled = await trexGateway.isDeploymentFeeEnabled();
+    
+    console.log("✅ TREXGateway Factory:", factoryFromGateway);
+    console.log("✅ TREXGateway Public Deployment:", publicDeploymentStatus ? "Enabled" : "Disabled");
+    console.log("✅ TREXGateway Deployer Approved:", isDeployer ? "Yes" : "No");
+    console.log("✅ TREXGateway Fee Enabled:", isFeeEnabled ? "Yes" : "No");
+    console.log("✅ TREXGateway Fee Structure:", {
+      fee: deploymentFee.fee.toString(),
+      feeToken: deploymentFee.feeToken,
+      feeCollector: deploymentFee.feeCollector
+    });
     
     if (implAuthFromFactory !== trexImplementationAuthority.address) {
       throw new Error("Implementation Authority mismatch");
@@ -146,6 +202,14 @@ async function main() {
     
     if (owner !== deployerAddress) {
       throw new Error("Owner mismatch");
+    }
+    
+    if (factoryFromGateway !== trexFactory.address) {
+      throw new Error("TREXGateway factory address mismatch");
+    }
+    
+    if (!isDeployer) {
+      throw new Error("TREXGateway deployer not approved");
     }
 
     // Create deployment data
@@ -159,6 +223,18 @@ async function main() {
         owner: owner,
         implementationAuthority: implAuthFromFactory,
         idFactory: idFactoryFromFactory
+      },
+      gateway: {
+        address: trexGateway.address,
+        owner: await trexGateway.owner(),
+        factory: factoryFromGateway,
+        publicDeploymentStatus: publicDeploymentStatus,
+        deploymentFee: {
+          fee: deploymentFee.fee.toString(),
+          feeToken: deploymentFee.feeToken,
+          feeCollector: deploymentFee.feeCollector
+        },
+        feeEnabled: isFeeEnabled
       },
       implementations: {
         claimTopicsRegistry: claimTopicsRegistryImplementation.address,
@@ -175,7 +251,8 @@ async function main() {
       },
       factories: {
         identityFactory: identityFactory.address,
-        trexFactory: trexFactory.address
+        trexFactory: trexFactory.address,
+        trexGateway: trexGateway.address
       },
       tokens: [] // Will be populated when tokens are deployed
     };
@@ -191,12 +268,13 @@ async function main() {
     deployments.push(deploymentData);
     fs.writeFileSync(deploymentsPath, JSON.stringify(deployments, null, 2));
 
-    console.log("\n🎉 TREXFactory deployed successfully!");
+    console.log("\n🎉 TREXFactory and TREXGateway deployed successfully!");
     console.log("\n📋 Deployment saved to deployments.json");
     console.log("📋 Factory Address:", trexFactory.address);
+    console.log("📋 Gateway Address:", trexGateway.address);
     console.log("📋 Deployment ID:", deploymentData.deploymentId);
     
-    // Update addresses.js with the new factory
+    // Update addresses.js with the new factory and gateway
     const addressesPath = path.join(__dirname, '../trex-scaffold/packages/contracts/src/addresses.js');
     const addressesContent = `// T-REX Contract Addresses
 // Auto-updated from deployment
@@ -204,6 +282,7 @@ const addresses = {
   ceaErc20: "0xa6dF0C88916f3e2831A329CE46566dDfBe9E74b7",
   // T-REX Addresses
   TREXFactory: "${trexFactory.address}",
+  TREXGateway: "${trexGateway.address}",
   Token: "0x0000000000000000000000000000000000000000",
   ModularCompliance: "0x0000000000000000000000000000000000000000",
   IdentityRegistry: "0x0000000000000000000000000000000000000000",

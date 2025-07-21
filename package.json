@@ -39,7 +39,8 @@
     "size-contracts": "npx hardhat size-contracts",
     "gas-report": "REPORT_GAS=true npx hardhat test",
     "coverage": "npx hardhat coverage",
-    "coverage:report": "npx hardhat coverage && open coverage/index.html"
+    "coverage:report": "npx hardhat coverage && open coverage/index.html",
+    "stop": "node scripts/stop.js"
   },
   "keywords": [
     "ethereum",

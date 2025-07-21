@@ -1,284 +1,300 @@
-# T-REX: ERC-3643 Token and Compliance Suite
+# T-REX Suite - ERC-3643 Token & Compliance Platform
 
-A comprehensive full-stack solution for deploying and managing ERC-3643 compliant security tokens with built-in compliance features.
+A comprehensive full-stack ERC-3643 token and compliance suite with React frontend, Solidity contracts, backend API, and deployment scripts.
 
-## 🏗️ Project Structure
+## 🏗️ Architecture
 
-```
-T-REX/
-├── backend/                 # Express.js API server
-│   ├── server.js           # Main server with deployment endpoints
-│   ├── package.json        # Backend dependencies
-│   └── package-lock.json   # Locked dependencies
-├── contracts/              # Solidity smart contracts
-│   ├── token/             # ERC-3643 token implementation
-│   ├── compliance/        # Modular compliance system
-│   ├── registry/          # Identity and claim registries
-│   ├── factory/           # TREXFactory for token deployment
-│   ├── proxy/             # Upgradeable proxy contracts
-│   └── roles/             # Access control and permissions
-├── scripts/               # Deployment and utility scripts
-│   ├── deploy_factory_enhanced.js    # Factory deployment
-│   ├── deploy_token_enhanced.js      # Token deployment
-│   ├── deploy_*.js        # Individual contract deployments
-│   └── startup.js         # Development environment setup
-├── test/                  # Comprehensive test suite
-│   ├── compliance.test.ts # Compliance module tests
-│   ├── token/             # Token functionality tests
-│   └── registries/        # Registry tests
-├── trex-scaffold/         # React frontend application
-│   ├── packages/
-│   │   ├── contracts/     # Contract artifacts and ABIs
-│   │   ├── react-app/     # React frontend
-│   │   └── subgraph/      # The Graph subgraph (optional)
-└── docs/                  # Documentation and whitepaper
-```
+- **Frontend**: React.js with ethers.js for blockchain interaction
+- **Backend**: Node.js/Express API for deployment orchestration
+- **Smart Contracts**: Solidity contracts following ERC-3643 standard
+- **Deployment**: Hardhat-based deployment scripts with local account management
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 
-- Node.js 16+ and npm
-- Hardhat development environment
-- Local blockchain (Hardhat node)
+- Node.js 16+
+- Hardhat
+- Local blockchain (Hardhat Network)
 
-### 1. Install Dependencies
-
-```bash
-# Install root dependencies
-npm install
-
-# Install backend dependencies
-cd backend
-npm install
-
-# Install frontend dependencies
-cd ../trex-scaffold/packages/react-app
-npm install
-```
-
-### 2. Start Development Environment
+### Installation
 
 ```bash
-# Start local blockchain (in one terminal)
+# Install dependencies
+npm install
+
+# Start local blockchain
 npx hardhat node
 
-# Start backend server (in another terminal)
-cd backend
-npm start
+# In another terminal, deploy the factory
+npx hardhat run scripts/deploy_factory_enhanced.js --network localhost
 
-# Start frontend (in another terminal)
-cd trex-scaffold/packages/react-app
-npm start
+# TREXGateway is now automatically deployed with the factory
+
+# Start the backend server
+cd backend && npm start
+
+# Start the frontend
+cd trex-scaffold/packages/react-app && npm start
 ```
 
-### 3. Access the Application
+## 📋 Complete T-REX Flow
 
-- **Frontend**: http://localhost:3000
-- **Backend API**: http://localhost:3001
-- **Blockchain**: http://localhost:8545
+This implementation follows the official T-REX deployment flow:
 
-**Note**: The application uses Hardhat's local accounts. Click "Connect Local Account" to access the dashboard.
+### 1. 🏭 Deploy Implementation Contracts (Once)
 
-## 🎯 Deployment Workflows
+Deploy all implementation contracts that will be used by proxies:
 
-### Easy Deploy (Recommended for Beginners)
+```bash
+npx hardhat run scripts/deploy_factory_enhanced.js --network localhost
+```
 
-The Easy Deploy interface provides a streamlined workflow for deploying T-REX tokens:
+This deploys:
+- `ClaimTopicsRegistry.sol` (implementation)
+- `TrustedIssuersRegistry.sol` (implementation)
+- `IdentityRegistryStorage.sol` (implementation)
+- `IdentityRegistry.sol` (implementation)
+- `ModularCompliance.sol` (implementation)
+- `Token.sol` (ERC3643 implementation)
+- `TREXImplementationAuthority.sol`
+- `TREXFactory.sol`
+- `TREXGateway.sol` (automatically deployed for access control)
 
-1. **Deploy Factory**: Creates the TREXFactory and all implementation contracts
-2. **Configure Token**: Set token name, symbol, decimals, and total supply
-3. **Deploy Token**: Deploy the complete token suite with compliance
+### 2. 🧠 Configure TREXImplementationAuthority
 
-**Features:**
-- One-click factory deployment
-- Simple token configuration
-- Real-time deployment logs
-- Automatic contract selection
-- Deployment history tracking
+The factory deployment script automatically:
+- Sets implementation addresses in the authority
+- Configures version management
+- Links all components together
 
-### Advanced Deploy (For Power Users)
+### 3. 🏭 Deploy TREXFactory and TREXGateway
 
-The Advanced interface provides granular control over the deployment process:
+The factory deployment automatically:
+- Deploys TREXFactory with TREXImplementationAuthority reference
+- Deploys TREXGateway for access control and fee management
+- Configures Identity Factory (for OnchainID creation)
+- Sets up proper ownership and permissions
+- Configures public deployment access
+- Disables deployment fees by default
 
-1. **Individual Contract Deployment**: Deploy contracts one by one
-2. **Contract Initialization**: Initialize deployed contracts
-3. **Comprehensive Verification**: Run diagnostics and tests
-4. **User Management**: Add agents and configure permissions
-5. **Token Operations**: Mint, burn, transfer, and approve tokens
+### 4. 🧱 Create Full Stack: Identity + Token
 
-**Features:**
-- Step-by-step deployment control
-- Detailed verification diagnostics
-- Real-time logging and error reporting
-- Contract state inspection
-- Advanced testing capabilities
+Use the factory to deploy a complete token suite:
 
-## 🔧 Backend API Endpoints
+```bash
+npx hardhat run scripts/deploy_token_enhanced.js --network localhost
+```
 
-### Health and Status
-- `GET /api/health` - Server health check
-- `GET /api/test-network` - Test blockchain connection
+This creates:
+- Identity Registry (proxy)
+- Identity Registry Storage (proxy)
+- Modular Compliance (proxy)
+- Token (ERC3643 proxy)
+- Links them properly
+- Returns token address
 
-### Deployment Management
-- `GET /api/factories` - List deployed factories
-- `GET /api/deployments` - List all deployments
-- `GET /api/deployments/:id` - Get specific deployment details
+### 5. 👮 Add Agents (New Feature)
+
+After token creation, add agents to manage the contracts:
+
+**Token Agents**: Can mint/burn tokens, pause/unpause transfers
+**Identity Registry Agents**: Can register users, update user data, freeze/unfreeze users
+
+Use the **Agent Management** tab in the Easy Deploy interface or call directly:
+
+```javascript
+// Add token agent
+await tokenContract.addAgent(agentAddress);
+
+// Add identity registry agent  
+await identityRegistryContract.addAgent(agentAddress);
+```
+
+### 6. 📌 Add Claim Topics
+
+Add required claim topics to the ClaimTopicsRegistry:
+
+```javascript
+await claimTopicsRegistry.addClaimTopic(1); // KYC
+await claimTopicsRegistry.addClaimTopic(2); // AML
+await claimTopicsRegistry.addClaimTopic(3); // Accredited Investor
+```
+
+### 7. ✅ Add Trusted Issuers
+
+Create ClaimIssuer (OnchainID) and add to TrustedIssuersRegistry:
+
+```javascript
+await trustedIssuersRegistry.addTrustedIssuer(
+  claimIssuerAddress,
+  [1, 2, 3] // Topics it is trusted for
+);
+```
+
+### 8. 🧾 Issue Claims and Register Users
+
+Deploy OnchainID for users and register them:
+
+```javascript
+// Deploy user OnchainID
+const userIdentity = await identityFactory.createIdentity(userAddress, salt);
+
+// Register in IdentityRegistry
+await identityRegistry.registerIdentity(userAddress, userIdentity, countryCode);
+
+// Issue claims using ClaimIssuer
+await claimIssuer.addClaim(topic, scheme, issuer, signature, data, uri);
+```
+
+## 🎯 Easy Deploy Interface
+
+The React frontend provides an intuitive interface for the complete T-REX flow:
+
+### Tabs Overview
+
+1. **🏭 Factory Management**
+   - Deploy new factories
+   - Select existing factories
+   - View deployment details
+
+2. **🎯 Token Management**
+   - Deploy token suites
+   - Configure token parameters
+   - View deployed tokens
+
+3. **🏷️ Claims Management**
+   - Add claim topics to CTR
+   - View existing claim topics
+   - Manage claim requirements
+
+4. **🔐 Trusted Issuer Management**
+   - Deploy claim issuers
+   - Add trusted issuers to TIR
+   - Configure issuer permissions
+
+5. **👮 Agent Management** *(New)*
+   - Add agents to Token contracts
+   - Add agents to Identity Registry
+   - Manage agent permissions
+   - Quick-add common Hardhat accounts
+
+6. **👥 User Management**
+   - Create user OnchainIDs
+   - Register users in Identity Registry
+   - Issue claims to users
+
+### Flow Sequence
+
+The recommended flow follows the official T-REX pattern:
+
+```
+Factory Management → Token Management → Claims Management → 
+Trusted Issuer Management → Agent Management → User Management
+```
+
+## 🔧 Backend API
+
+The backend provides REST endpoints for deployment orchestration:
+
+### Endpoints
+
 - `POST /api/deploy/factory` - Deploy new factory
-- `POST /api/deploy/token` - Deploy new token
+- `POST /api/deploy/token` - Deploy token suite
+- `GET /api/deployments` - Get deployment history
 
-### Address Management
-- `GET /api/addresses` - Get deployed addresses
-- `POST /api/addresses` - Update deployed addresses
-- `DELETE /api/addresses` - Clear all addresses
+### Usage
 
-## 📋 Contract Architecture
-
-### Core Components
-
-1. **TREXFactory**: Main deployment contract that creates token suites
-2. **Token**: ERC-3643 compliant security token
-3. **ModularCompliance**: Configurable compliance rules
-4. **IdentityRegistry**: Manages user identities and verification
-5. **ClaimTopicsRegistry**: Manages claim topics for identity verification
-6. **TrustedIssuersRegistry**: Manages trusted claim issuers
-
-### Proxy Pattern
-
-All contracts use the OpenZeppelin proxy pattern for upgradeability:
-- Implementation contracts contain the logic
-- Proxy contracts delegate calls to implementations
-- Storage contracts maintain state across upgrades
-
-## 🧪 Testing
-
-### Run All Tests
 ```bash
-npm test
+# Start backend
+cd backend && npm start
+
+# Deploy factory via API
+curl -X POST http://localhost:3001/api/deploy/factory
+
+# Deploy token via API
+curl -X POST http://localhost:3001/api/deploy/token \
+  -H "Content-Type: application/json" \
+  -d '{"factoryAddress":"0x...","tokenDetails":{"name":"MyToken","symbol":"MTK","decimals":18}}'
 ```
 
-### Run Specific Test Suites
-```bash
-# Compliance tests
-npm run test:compliance
+## 📁 Project Structure
 
-# Token tests
-npm run test:token
-
-# Registry tests
-npm run test:registries
 ```
-
-### Test Coverage
-```bash
-npm run test:coverage
-```
-
-## 📚 Scripts Usage
-
-### Deployment Scripts
-
-```bash
-# Deploy factory and all implementations
-npm run deploy:factory
-
-# Deploy token using existing factory
-npm run deploy:token
-
-# Deploy individual contracts
-npm run deploy:compliance
-npm run deploy:registry
-npm run deploy:storage
-```
-
-### Utility Scripts
-
-```bash
-# Start development environment
-npm run start:dev
-
-# Clean deployment data
-npm run clean
-
-# Flatten contracts for verification
-npm run flatten
+T-REX/
+├── contracts/                 # Solidity smart contracts
+│   ├── factory/              # Factory contracts
+│   ├── token/                # Token contracts
+│   ├── registry/             # Registry contracts
+│   ├── compliance/           # Compliance contracts
+│   └── proxy/                # Proxy contracts
+├── scripts/                  # Deployment scripts
+│   ├── deploy_factory_enhanced.js
+│   ├── deploy_token_enhanced.js
+│   └── deploy_gateway.js
+├── backend/                  # Node.js API server
+│   └── server.js
+├── trex-scaffold/           # React frontend
+│   └── packages/
+│       └── react-app/
+└── test/                    # Test files
 ```
 
 ## 🔐 Security Features
 
-### Access Control
-- Role-based permissions (Owner, Agent, TokenAgent)
-- Upgradeable access control
-- Granular permission management
+- **Access Control**: Agent-based permissions for token and registry operations
+- **Compliance**: Modular compliance system with configurable rules
+- **Identity Management**: OnchainID-based identity verification
+- **Claim System**: Flexible claim issuance and verification
+- **Proxy Pattern**: Upgradeable contracts with implementation authority
 
-### Compliance
-- Modular compliance system
-- Country restrictions and whitelisting
-- Transfer approval workflows
-- Conditional transfer rules
+## 🧪 Testing
 
-### Identity Verification
-- OnchainID integration
-- Claim-based verification
-- Trusted issuer management
-- Multi-topic verification
+```bash
+# Run all tests
+npx hardhat test
 
-## 🌐 Network Support
+# Run specific test file
+npx hardhat test test/token/token-transfer.test.ts
 
-### Development
-- Hardhat Network (localhost:8545)
-- Anvil (Foundry)
-- Ganache
+# Run with coverage
+npx hardhat coverage
+```
 
-### Production
-- Ethereum Mainnet
-- Polygon
-- Arbitrum
-- Optimism
-- Other EVM-compatible networks
+## 📚 Key Features
 
-## 📖 Documentation
+### Agent Management
+- **Token Agents**: Mint/burn tokens, pause/unpause transfers
+- **Identity Registry Agents**: Register users, update data, freeze/unfreeze
+- **Quick Setup**: Pre-configured Hardhat accounts for testing
+- **Visual Interface**: Easy-to-use tab in the deployment interface
 
-- **Whitepaper**: `docs/TREX-WhitePaper.pdf`
-- **Component Diagrams**: `docs/img/`
-- **API Documentation**: See backend endpoints above
-- **Contract Documentation**: Inline comments in Solidity files
+### Factory Pattern
+- **CREATE2 Deployment**: Deterministic contract addresses
+- **Suite Deployment**: Single transaction deploys entire token stack
+- **Version Management**: Implementation authority for upgrades
+- **Access Control**: Gateway for deployment permissions
+
+### Compliance System
+- **Modular Design**: Pluggable compliance modules
+- **Flexible Rules**: Configurable transfer restrictions
+- **Country Codes**: Geographic compliance support
+- **Claim Integration**: KYC/AML claim verification
 
 ## 🤝 Contributing
 
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
-4. Add tests for new functionality
+4. Add tests
 5. Submit a pull request
-
-### Development Guidelines
-
-- Follow Solidity best practices
-- Write comprehensive tests
-- Update documentation
-- Use conventional commits
-- Ensure all tests pass
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License.
 
-## 🆘 Support
+## 🔗 Resources
 
-For support and questions:
-- Check the documentation
-- Review existing issues
-- Create a new issue with detailed information
-- Join the community discussions
-
-## 🔄 Version History
-
-- **v4.0.0**: Current version with enhanced deployment workflows
-- **v3.5.2**: Legacy version support
-- **v3.0.0**: Modular compliance system
-- **v2.0.0**: Initial release
-
----
-
-**Note**: This is a development version. For production use, ensure proper security audits and testing.
+- [ERC-3643 Standard](https://eips.ethereum.org/EIPS/eip-3643)
+- [T-REX Documentation](https://docs.trex.technology/)
+- [OnchainID](https://onchainid.com/)
