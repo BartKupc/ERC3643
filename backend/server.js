@@ -1209,8 +1209,6 @@ app.post('/api/add-claim-to-identity', async (req, res) => {
     
     // Load OnchainID artifacts
     const OnchainID = require('@onchain-id/solidity');
-    
-    // Get the OnchainID contract
     const onchainId = new ethers.Contract(onchainIdAddress, OnchainID.contracts.Identity.abi, wallet);
     
     // Convert claim topic string to uint256
@@ -1260,24 +1258,38 @@ app.post('/api/add-claim-to-identity', async (req, res) => {
     console.log(`🔍 Debug: Data hash: ${dataHash}`);
     console.log(`🔍 Debug: Signature: ${signature}`);
     
-    // Call ClaimIssuer.addClaim(identityAddress, topic, scheme, issuer, signature, data)
-    // Load ClaimIssuer ABI (assume custom contract with 6-arg addClaim)
-    const claimIssuerArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/contracts/src/@onchain-id/solidity/contracts/ClaimIssuer.sol/ClaimIssuer.json');
-    if (!fs.existsSync(claimIssuerArtifactsPath)) {
-      throw new Error('ClaimIssuer artifacts not found. Please compile contracts first.');
+    // 1. Ensure issuer is a management key on the OnchainID
+    const issuerKeyHash = ethers.utils.keccak256(
+      ethers.utils.defaultAbiCoder.encode(['address'], [finalIssuerAddress])
+    );
+    try {
+      const existingKey = await onchainId.getKey(issuerKeyHash);
+      const hasManagementKey = existingKey.purposes.some(p => p.toNumber() === 1);
+      if (!hasManagementKey) {
+        console.log(`Issuer does not have management key. Adding management key for issuer...`);
+        const addManagementKeyTx = await onchainId.addKey(issuerKeyHash, 1, 1); // purpose=1 (management), keyType=1 (ECDSA)
+        await addManagementKeyTx.wait();
+        console.log(`✅ Added issuer ${finalIssuerAddress} as management key to OnchainID`);
+      } else {
+        console.log(`✅ Issuer already has management key on OnchainID`);
+      }
+    } catch (e) {
+      console.log(`Issuer key not found. Adding management key for issuer...`);
+      const addManagementKeyTx = await onchainId.addKey(issuerKeyHash, 1, 1); // purpose=1 (management), keyType=1 (ECDSA)
+      await addManagementKeyTx.wait();
+      console.log(`✅ Added issuer ${finalIssuerAddress} as management key to OnchainID`);
     }
-    const claimIssuerArtifacts = JSON.parse(fs.readFileSync(claimIssuerArtifactsPath, 'utf8'));
-    const claimIssuer = new ethers.Contract(finalIssuerAddress, claimIssuerArtifacts.abi, wallet);
-    // Parameters: identityAddress, topic, scheme, issuer, signature, data
+    // 2. Add claim directly to the OnchainID
     const scheme = 1; // ECDSA
-    console.log(`Calling ClaimIssuer.addClaim(${onchainIdAddress}, ${topicId}, ${scheme}, ${finalIssuerAddress}, ${signature}, ${claimData})`);
-    const tx = await claimIssuer.addClaim(
-      onchainIdAddress,
+    const uri = "";
+    console.log(`Calling onchainId.addClaim(${topicId}, ${scheme}, ${finalIssuerAddress}, ${signature}, ${claimData}, "")`);
+    const tx = await onchainId.addClaim(
       topicId,
       scheme,
       finalIssuerAddress,
       signature,
-      claimData
+      claimData,
+      uri
     );
     const receipt = await tx.wait();
     console.log('Claim addition transaction receipt:', receipt);
