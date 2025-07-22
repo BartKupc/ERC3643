@@ -695,33 +695,47 @@ const DeploymentPhase = () => {
         throw new Error('Missing required contracts. Please deploy all required contracts first.');
       }
 
-      const signer = await getSigner();
-      const artifacts = getContractArtifacts('IdentityRegistry');
-      const contract = new ethers.Contract(identityRegistryAddress, artifacts.abi, signer);
-
-      // Configure Identity Registry with registries
       addLog(`Configuring Identity Registry at ${identityRegistryAddress}`, "info");
-      
-      const tx1 = await contract.setTrustedIssuersRegistry(trustedIssuersAddress);
-      await tx1.wait();
+      // Backend API for setTrustedIssuersRegistry
+      const tx1 = await hardhatInteraction('send', {
+        contractName: 'IdentityRegistry',
+        contractAddress: identityRegistryAddress,
+        method: 'setTrustedIssuersRegistry',
+        params: [trustedIssuersAddress]
+      });
       addLog(`TrustedIssuersRegistry at ${trustedIssuersAddress} connected to IdentityRegistry`, "success");
+      addLog(`Transaction hash: ${tx1.transactionHash}`, "info");
 
-      const tx2 = await contract.setClaimTopicsRegistry(claimTopicsAddress);
-      await tx2.wait();
+      // Backend API for setClaimTopicsRegistry
+      const tx2 = await hardhatInteraction('send', {
+        contractName: 'IdentityRegistry',
+        contractAddress: identityRegistryAddress,
+        method: 'setClaimTopicsRegistry',
+        params: [claimTopicsAddress]
+      });
       addLog(`ClaimTopicsRegistry at ${claimTopicsAddress} connected to IdentityRegistry`, "success");
+      addLog(`Transaction hash: ${tx2.transactionHash}`, "info");
 
-      const tx3 = await contract.setIdentityRegistryStorage(storageAddress);
-      await tx3.wait();
+      // Backend API for setIdentityRegistryStorage
+      const tx3 = await hardhatInteraction('send', {
+        contractName: 'IdentityRegistry',
+        contractAddress: identityRegistryAddress,
+        method: 'setIdentityRegistryStorage',
+        params: [storageAddress]
+      });
       addLog(`IdentityRegistryStorage at ${storageAddress} connected to IdentityRegistry`, "success");
+      addLog(`Transaction hash: ${tx3.transactionHash}`, "info");
 
       // BILATERAL BINDING: Bind IRS back to IR
       addLog(`Establishing bilateral binding between IR and IRS`, "info");
-      const storageArtifacts = getContractArtifacts('IdentityRegistryStorage');
-      const storageContract = new ethers.Contract(storageAddress, storageArtifacts.abi, signer);
-      
-      const tx4 = await storageContract.bindIdentityRegistry(identityRegistryAddress);
-      await tx4.wait();
+      const tx4 = await hardhatInteraction('send', {
+        contractName: 'IdentityRegistryStorage',
+        contractAddress: storageAddress,
+        method: 'bindIdentityRegistry',
+        params: [identityRegistryAddress]
+      });
       addLog(`IdentityRegistryStorage at ${storageAddress} bound to IdentityRegistry`, "success");
+      addLog(`Transaction hash: ${tx4.transactionHash}`, "info");
 
       setMessage('Identity Registry configured successfully with bilateral binding');
       addLog('Identity Registry configuration completed with bilateral binding', "success");
@@ -767,17 +781,16 @@ const DeploymentPhase = () => {
 
       addLog(`Selected token address: ${selectedContracts.Token}`, "info");
 
+      // Get agent address from input or use signer address
       const signer = await getSigner();
       const signerAddress = await signer.getAddress();
-      const artifacts = getContractArtifacts('Token');
-      const contract = new ethers.Contract(selectedContracts.Token, artifacts.abi, signer);
-      
-      // Get agent address from input or use signer address
       const agentAddressInput = tokenAgentInput.trim();
       const agentAddress = agentAddressInput || signerAddress;
-      
-      // Check if already an agent
+
+      // Check if already an agent (still uses frontend call for now)
       try {
+        const artifacts = getContractArtifacts('Token');
+        const contract = new ethers.Contract(selectedContracts.Token, artifacts.abi, signer);
         const isAgent = await contract.isAgent(agentAddress);
         if (isAgent) {
           setMessage('Address is already a token agent');
@@ -787,12 +800,17 @@ const DeploymentPhase = () => {
       } catch (e) {
         // isAgent function might not exist, continue with addition
       }
-      
-      const tx = await contract.addAgent(agentAddress);
-      await tx.wait();
-      
+
+      // Add agent using backend API
+      const result = await hardhatInteraction('send', {
+        contractName: 'Token',
+        contractAddress: selectedContracts.Token,
+        method: 'addAgent',
+        params: [agentAddress]
+      });
       setMessage('Token agent added successfully');
       addLog('Token agent added successfully', "success");
+      addLog(`Transaction hash: ${result.transactionHash}`, "info");
       setTokenAgentInput(""); // clear input
     } catch (error) {
       console.error('Error adding token agent:', error);
@@ -3720,38 +3738,35 @@ const DeploymentPhase = () => {
         return;
       }
       addLog(`Initializing ${contractName} at ${address}...`, "info");
-      const signer = await getSigner();
-      const artifacts = getContractArtifacts(contractName);
-      const contract = new ethers.Contract(address, artifacts.abi, signer);
+      let result;
       switch (contractName) {
         case 'ClaimTopicsRegistry':
-          const tx1 = await contract.init();
-          await tx1.wait();
-          addLog(`${contractName} initialized successfully`, "success");
-          break;
         case 'TrustedIssuersRegistry':
-          const tx2 = await contract.init();
-          await tx2.wait();
-          addLog(`${contractName} initialized successfully`, "success");
-          break;
         case 'IdentityRegistryStorage':
-          const tx3 = await contract.init();
-          await tx3.wait();
+        case 'ModularCompliance':
+          // No params for these
+          result = await hardhatInteraction('send', {
+            contractName,
+            contractAddress: address,
+            method: 'init',
+            params: []
+          });
           addLog(`${contractName} initialized successfully`, "success");
+          addLog(`Transaction hash: ${result.transactionHash}`, "info");
           break;
         case 'IdentityRegistry':
-          const tx4 = await contract.init(
-            deployedContracts.TrustedIssuersRegistry[0],
-            deployedContracts.ClaimTopicsRegistry[0],
-            deployedContracts.IdentityRegistryStorage[0]
-          );
-          await tx4.wait();
+          result = await hardhatInteraction('send', {
+            contractName,
+            contractAddress: address,
+            method: 'init',
+            params: [
+              deployedContracts.TrustedIssuersRegistry[0],
+              deployedContracts.ClaimTopicsRegistry[0],
+              deployedContracts.IdentityRegistryStorage[0]
+            ]
+          });
           addLog(`${contractName} initialized successfully`, "success");
-          break;
-        case 'ModularCompliance':
-          const tx5 = await contract.init();
-          await tx5.wait();
-          addLog(`${contractName} initialized successfully`, "success");
+          addLog(`Transaction hash: ${result.transactionHash}`, "info");
           break;
         default:
           throw new Error(`Unknown contract type: ${contractName}`);
@@ -4312,13 +4327,19 @@ const DeploymentPhase = () => {
               // Add to IR
               if (selectedContracts.IdentityRegistry) {
                 try {
+                  // Check if already an agent (still uses frontend call for now)
                   const irArtifacts = getContractArtifacts('IdentityRegistry');
                   const ir = new ethers.Contract(selectedContracts.IdentityRegistry, irArtifacts.abi, signer);
                   const isAgentIR = await ir.isAgent(signerAddress);
                   if (!isAgentIR) {
-                    const tx = await ir.addAgent(signerAddress);
-                    await tx.wait();
+                    const result = await hardhatInteraction('send', {
+                      contractName: 'IdentityRegistry',
+                      contractAddress: selectedContracts.IdentityRegistry,
+                      method: 'addAgent',
+                      params: [signerAddress]
+                    });
                     addLog('Agent added to Identity Registry', "success");
+                    addLog(`Transaction hash: ${result.transactionHash}`, "info");
                   } else {
                     addLog('Address is already an agent in Identity Registry', "info");
                   }
@@ -4334,13 +4355,19 @@ const DeploymentPhase = () => {
               // Add to IRS
               if (selectedContracts.IdentityRegistryStorage) {
                 try {
+                  // Check if already an agent (still uses frontend call for now)
                   const irsArtifacts = getContractArtifacts('IdentityRegistryStorage');
                   const irs = new ethers.Contract(selectedContracts.IdentityRegistryStorage, irsArtifacts.abi, signer);
                   const isAgentIRS = await irs.isAgent(signerAddress);
                   if (!isAgentIRS) {
-                    const tx = await irs.addAgent(signerAddress);
-                    await tx.wait();
+                    const result = await hardhatInteraction('send', {
+                      contractName: 'IdentityRegistryStorage',
+                      contractAddress: selectedContracts.IdentityRegistryStorage,
+                      method: 'addAgent',
+                      params: [signerAddress]
+                    });
                     addLog('Agent added to Identity Registry Storage', "success");
+                    addLog(`Transaction hash: ${result.transactionHash}`, "info");
                   } else {
                     addLog('Address is already an agent in Identity Registry Storage', "info");
                   }
