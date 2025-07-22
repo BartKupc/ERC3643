@@ -1548,90 +1548,119 @@ const DeploymentPhase = () => {
         setMessage('Please select a token and enter a user address');
         return;
       }
-
+  
       setCheckingVerification(true);
       setMessage('Inspecting OnchainID claims...');
       addLog(`Inspecting claims for user: ${userAddressToCheck}`, "info");
-
-      const signer = await getSigner();
-      const tokenArtifacts = getContractArtifacts('Token');
-      const token = new ethers.Contract(selectedContracts.Token, tokenArtifacts.abi, signer);
-      
-      // Get the Identity Registry from the token
-      const identityRegistryAddress = await token.identityRegistry();
-      const irArtifacts = getContractArtifacts('IdentityRegistry');
-      const ir = new ethers.Contract(identityRegistryAddress, irArtifacts.abi, signer);
-      
-      // Get user's OnchainID
-      const onchainIdAddress = await ir.identity(userAddressToCheck);
-      if (onchainIdAddress === '0x0000000000000000000000000000000000000000') {
+  
+      // 1. Get the Identity Registry from the token
+      const tokenResult = await hardhatInteraction('call', {
+        contractName: 'Token',
+        contractAddress: selectedContracts.Token,
+        method: 'identityRegistry',
+        params: []
+      });
+      const identityRegistryAddress = tokenResult.result;
+  
+      // 2. Get user's OnchainID
+      const irResult = await hardhatInteraction('call', {
+        contractName: 'IdentityRegistry',
+        contractAddress: identityRegistryAddress,
+        method: 'identity',
+        params: [userAddressToCheck]
+      });
+      const onchainIdAddress = irResult.result;
+      if (!onchainIdAddress || onchainIdAddress === '0x0000000000000000000000000000000000000000') {
         setMessage('User has no OnchainID registered');
         addLog('User has no OnchainID registered', "error");
         return;
       }
-      
       addLog(`OnchainID address: ${onchainIdAddress}`, "info");
-      
-      // Get the TrustedIssuersRegistry
-      const tirAddress = await ir.issuersRegistry();
-      const tirArtifacts = getContractArtifacts('TrustedIssuersRegistry');
-      const tir = new ethers.Contract(tirAddress, tirArtifacts.abi, signer);
-      
-      // Get the OnchainID contract
-      const onchainIdArtifacts = getContractArtifacts('Identity');
-      const onchainId = new ethers.Contract(onchainIdAddress, onchainIdArtifacts.abi, signer);
-      
-      // Get all claim topics
+  
+      // 3. Get the TrustedIssuersRegistry
+      const tirResult = await hardhatInteraction('call', {
+        contractName: 'IdentityRegistry',
+        contractAddress: identityRegistryAddress,
+        method: 'issuersRegistry',
+        params: []
+      });
+      const tirAddress = tirResult.result;
+  
+      // 4. Prepare to check claims for all topics
       const allTopics = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
-      
       let allClaims = [];
-      
-      // Check each topic for claims
+  
       for (const topicId of allTopics) {
+        // 5. Get claim IDs for this topic
+        let claimIds = [];
         try {
-          const claims = await onchainId.getClaimIdsByTopic(topicId);
-          addLog(`Topic ${topicId}: ${claims.length} claims found`, "info");
-          
-          for (const claimId of claims) {
-            try {
-              const claim = await onchainId.getClaim(claimId);
-              const trustedIssuers = await tir.getTrustedIssuersForClaimTopic(topicId);
-              const trustedIssuerAddresses = trustedIssuers.map(issuer => issuer.toString());
-              
-              const isFromTrustedIssuer = trustedIssuerAddresses.some(
-                trustedIssuerAddress => trustedIssuerAddress.toLowerCase() === claim.issuer.toLowerCase()
-              );
-              
-              allClaims.push({
-                topicId,
-                claimId: claimId.toString(),
-                issuer: claim.issuer,
-                scheme: claim.scheme,
-                signature: claim.signature,
-                data: claim.data,
-                uri: claim.uri,
-                trustedIssuers: trustedIssuerAddresses,
-                isFromTrustedIssuer,
-                isValid: true
-              });
-              
-              addLog(`Claim ${claimId}: issuer=${claim.issuer}, trusted=${isFromTrustedIssuer}`, "info");
-            } catch (claimError) {
-              allClaims.push({
-                topicId,
-                claimId: claimId.toString(),
-                error: claimError.message,
-                isValid: false
-              });
-              addLog(`Invalid claim ${claimId}: ${claimError.message}`, "error");
-            }
-          }
+          const claimIdsResult = await hardhatInteraction('call', {
+            contractName: 'Identity',
+            contractAddress: onchainIdAddress,
+            method: 'getClaimIdsByTopic',
+            params: [topicId]
+          });
+          claimIds = claimIdsResult.result;
+          addLog(`Topic ${topicId}: ${claimIds.length} claims found`, "info");
         } catch (topicError) {
           addLog(`Error checking topic ${topicId}: ${topicError.message}`, "warning");
+          continue;
+        }
+  
+        // 6. Get trusted issuers for this topic
+        let trustedIssuerAddresses = [];
+        try {
+          const trustedIssuersResult = await hardhatInteraction('call', {
+            contractName: 'TrustedIssuersRegistry',
+            contractAddress: tirAddress,
+            method: 'getTrustedIssuersForClaimTopic',
+            params: [topicId]
+          });
+          trustedIssuerAddresses = (trustedIssuersResult.result || []).map(addr => addr.toLowerCase());
+        } catch (e) {
+          addLog(`Error fetching trusted issuers for topic ${topicId}: ${e.message}`, "warning");
+        }
+  
+        // 7. For each claim, get details and check if from trusted issuer
+        for (const claimId of claimIds) {
+          try {
+            const claimResult = await hardhatInteraction('call', {
+              contractName: 'Identity',
+              contractAddress: onchainIdAddress,
+              method: 'getClaim',
+              params: [claimId]
+            });
+            const claim = claimResult.result;
+            const issuer = claim.issuer?.toLowerCase?.() || claim.issuer;
+            const isFromTrustedIssuer = trustedIssuerAddresses.includes(issuer);
+  
+            allClaims.push({
+              topicId,
+              claimId: claimId.toString(),
+              issuer: claim.issuer,
+              scheme: claim.scheme,
+              signature: claim.signature,
+              data: claim.data,
+              uri: claim.uri,
+              trustedIssuers: trustedIssuerAddresses,
+              isFromTrustedIssuer,
+              isValid: true
+            });
+  
+            addLog(`Claim ${claimId}: issuer=${claim.issuer}, trusted=${isFromTrustedIssuer}`, "info");
+          } catch (claimError) {
+            allClaims.push({
+              topicId,
+              claimId: claimId.toString(),
+              error: claimError.message,
+              isValid: false
+            });
+            addLog(`Invalid claim ${claimId}: ${claimError.message}`, "error");
+          }
         }
       }
-      
-      // Display detailed results
+  
+      // Display detailed results (same as before)
       const topicNames = {
         1: "KYC (Know Your Customer)",
         2: "AML (Anti-Money Laundering)", 
@@ -1644,11 +1673,11 @@ const DeploymentPhase = () => {
         9: "Nationality",
         10: "Accreditation"
       };
-      
+  
       let detailedMessage = `🔍 OnchainID Claims Inspection Results:\n\n`;
       detailedMessage += `OnchainID: ${onchainIdAddress}\n`;
       detailedMessage += `Total Claims Found: ${allClaims.length}\n\n`;
-      
+  
       // Group claims by topic
       const claimsByTopic = {};
       allClaims.forEach(claim => {
@@ -1657,22 +1686,25 @@ const DeploymentPhase = () => {
         }
         claimsByTopic[claim.topicId].push(claim);
       });
-      
+  
       Object.keys(claimsByTopic).forEach(topicId => {
         const topicName = topicNames[topicId] || `Custom Topic ${topicId}`;
         const claims = claimsByTopic[topicId];
         const validClaims = claims.filter(c => c.isValid);
         const trustedClaims = validClaims.filter(c => c.isFromTrustedIssuer);
-        
+  
         detailedMessage += `📋 Topic ${topicId} (${topicName}):\n`;
         detailedMessage += `   Claims: ${claims.length} total, ${validClaims.length} valid, ${trustedClaims.length} from trusted issuers\n`;
-        
+  
         claims.forEach(claim => {
           if (claim.isValid) {
             detailedMessage += `   ✅ Claim ${claim.claimId}: ${claim.issuer} ${claim.isFromTrustedIssuer ? '(TRUSTED)' : '(UNTRUSTED)'}\n`;
             if (claim.data) {
               try {
-                const decodedData = ethers.utils.toUtf8String(claim.data);
+                // Try to decode as UTF-8, fallback to hex
+                const decodedData = window.ethers
+                  ? window.ethers.utils.toUtf8String(claim.data)
+                  : claim.data;
                 detailedMessage += `      Data: "${decodedData}"\n`;
               } catch (e) {
                 detailedMessage += `      Data: ${claim.data} (hex)\n`;
@@ -1684,14 +1716,10 @@ const DeploymentPhase = () => {
         });
         detailedMessage += `\n`;
       });
-      
-      // Check verification status
-      const isVerified = await ir.isVerified(userAddressToCheck);
-      detailedMessage += `🔍 Verification Status: ${isVerified ? '✅ VERIFIED' : '❌ NOT VERIFIED'}\n`;
-      
+  
       setMessage(detailedMessage);
       addLog('OnchainID claims inspection completed', "success");
-      
+  
     } catch (error) {
       console.error('Error inspecting OnchainID claims:', error);
       const cleanError = extractCleanError(error);
