@@ -467,6 +467,67 @@ app.delete('/api/addresses', (req, res) => {
 
 
 
+// Get claim topics from a token's ClaimTopicsRegistry
+app.get('/api/claim-topics/:tokenAddress', async (req, res) => {
+  try {
+    const { tokenAddress } = req.params;
+    console.log(`🎯 Getting claim topics for token: ${tokenAddress}`);
+    
+    const provider = createProvider();
+    const wallet = new ethers.Wallet(process.env.PRIVATE_KEY || '0xdf57089febbacf7ba0bc227dafbffa9fc08a93fdc68e1e42411a14efcf23656e', provider);
+    
+    // Get the token contract to find the ClaimTopicsRegistry
+    const tokenArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/contracts/src/contracts/token/Token.sol/Token.json');
+    if (!fs.existsSync(tokenArtifactsPath)) {
+      throw new Error('Token artifacts not found. Please compile contracts first.');
+    }
+    const tokenArtifacts = JSON.parse(fs.readFileSync(tokenArtifactsPath, 'utf8'));
+    const token = new ethers.Contract(tokenAddress, tokenArtifacts.abi, wallet);
+    
+    // Get the Identity Registry from the token
+    const identityRegistry = await token.identityRegistry();
+    console.log('Identity Registry:', identityRegistry);
+    
+    // Get the Identity Registry contract to access CTR
+    const irArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/contracts/src/contracts/registries/IdentityRegistry.sol/IdentityRegistry.json');
+    if (!fs.existsSync(irArtifactsPath)) {
+      throw new Error('IdentityRegistry artifacts not found. Please compile contracts first.');
+    }
+    const irArtifacts = JSON.parse(fs.readFileSync(irArtifactsPath, 'utf8'));
+    const identityRegistryContract = new ethers.Contract(identityRegistry, irArtifacts.abi, wallet);
+    
+    // Get the ClaimTopicsRegistry from the Identity Registry
+    const claimTopicsRegistry = await identityRegistryContract.topicsRegistry();
+    console.log('ClaimTopicsRegistry:', claimTopicsRegistry);
+    
+    // Get claim topics from the ClaimTopicsRegistry
+    const ctrArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/contracts/src/contracts/registries/ClaimTopicsRegistry.sol/ClaimTopicsRegistry.json');
+    if (!fs.existsSync(ctrArtifactsPath)) {
+      throw new Error('ClaimTopicsRegistry artifacts not found. Please compile contracts first.');
+    }
+    const ctrArtifacts = JSON.parse(fs.readFileSync(ctrArtifactsPath, 'utf8'));
+    const ctr = new ethers.Contract(claimTopicsRegistry, ctrArtifacts.abi, wallet);
+    
+    // Get all claim topics
+    const topics = await ctr.getClaimTopics();
+    const claimTopics = topics.map(topic => topic.toNumber());
+    
+    console.log(`✅ Found ${claimTopics.length} claim topics:`, claimTopics);
+    
+    res.json({
+      success: true,
+      claimTopics: claimTopics,
+      claimTopicsRegistry: claimTopicsRegistry
+    });
+  } catch (error) {
+    console.error('❌ Error getting claim topics:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 // CORS Proxy for Hardhat node
 app.post('/api/hardhat', async (req, res) => {
   try {

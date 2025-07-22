@@ -63,31 +63,33 @@ const ClaimsManagementTab = ({ deploymentDetails, addLog, getSigner, factories }
     setLoading(true);
     setError(null);
     try {
-      const signer = await getSigner();
-      
-      // Get the ClaimTopicsRegistry address from the selected token's suite
-      const ctrAddress = selectedToken.suite?.claimTopicsRegistry;
-      if (!ctrAddress) {
-        throw new Error('No ClaimTopicsRegistry found for selected token');
+      const tokenAddress = selectedToken.token?.address;
+      if (!tokenAddress) {
+        throw new Error('No token address found for selected token');
       }
       
-      addLog && addLog(`Loading claim topics from ${ctrAddress}`, 'info');
+      addLog && addLog(`Loading claim topics for token ${tokenAddress} via backend...`, 'info');
       
-      const ctrArtifacts = getContractArtifacts('ClaimTopicsRegistry');
-      const ctr = new ethers.Contract(ctrAddress, ctrArtifacts.abi, signer);
+      // Use backend API instead of direct blockchain interaction
+      const response = await fetch(`/api/claim-topics/${tokenAddress}`);
+      if (!response.ok) {
+        throw new Error(`Backend request failed: ${response.status}`);
+      }
       
-      // Get all claim topics
-      const topics = await ctr.getClaimTopics();
-      setClaimTopics(topics.map(topic => topic.toNumber()));
+      const data = await response.json();
+      if (!data.success) {
+        throw new Error(data.error || 'Unknown error');
+      }
       
-      addLog && addLog(`Loaded ${topics.length} claim topics`, 'success');
+      setClaimTopics(data.claimTopics);
+      addLog && addLog(`Loaded ${data.claimTopics.length} claim topics via backend`, 'success');
     } catch (err) {
       console.error('Error loading claim topics:', err);
       setError(`Failed to load claim topics: ${err.message}`);
       addLog && addLog(`Error loading claim topics: ${err.message}`, 'error');
     }
     setLoading(false);
-  }, [selectedToken, addLog, getSigner]);
+  }, [selectedToken, addLog]);
 
   useEffect(() => {
     if (selectedToken) {
