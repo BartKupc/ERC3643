@@ -1584,7 +1584,7 @@ app.get('/api/token/verify-user/:tokenAddress/:userAddress', async (req, res) =>
         onchainIdAddress: onchainIdAddress,
         identityRegistry: identityRegistryAddress,
         isVerified: isVerified,
-        investorCountry: investorCountry.toNumber(),
+        investorCountry: typeof investorCountry === 'object' && investorCountry.toNumber ? investorCountry.toNumber() : Number(investorCountry),
         requiredTopics: requiredTopics.map(t => typeof t === 'object' && t.toNumber ? t.toNumber() : Number(t)),
         verificationDetails: verificationDetails
       }
