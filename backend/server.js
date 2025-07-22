@@ -919,8 +919,18 @@ app.post('/api/create-onchainid', async (req, res) => {
     
     console.log(`🔍 Creating OnchainID for ${userAddress}...`);
     
-    // Create OnchainID using the factory
-    const tx = await identityFactory.createIdentity(userAddress, true);
+    // Generate a unique salt for this user
+    const salt = ethers.utils.keccak256(
+      ethers.utils.defaultAbiCoder.encode(
+        ['address', 'uint256'], 
+        [userAddress, Date.now()]
+      )
+    );
+    
+    console.log(`🔍 Using salt: ${salt}`);
+    
+    // Create OnchainID using the factory with proper salt
+    const tx = await identityFactory.createIdentity(userAddress, salt);
     await tx.wait();
     
     console.log(`✅ OnchainID creation transaction confirmed: ${tx.hash}`);
