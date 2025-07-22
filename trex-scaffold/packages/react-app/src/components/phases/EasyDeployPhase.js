@@ -12,7 +12,7 @@ import AgentManagementTab from './easy-deploy/AgentManagementTab';
 import UserManagementTab from './easy-deploy/UserManagementTab';
 import TokenOperationsTab from './easy-deploy/TokenOperationsTab';
 import { CLAIM_TOPIC_LABELS } from './easy-deploy/constants';
-import config from '../../../../../../config.json';
+import config from '../../config.json';
 
 const EasyDeployPhase = () => {
   // State management
