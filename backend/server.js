@@ -1282,7 +1282,24 @@ app.post('/api/add-claim-to-identity', async (req, res) => {
       claimData,
       uri
     );
-    await tx.wait();
+    const receipt = await tx.wait();
+    console.log('Claim addition transaction receipt:', receipt);
+    if (receipt && receipt.logs) {
+      for (const log of receipt.logs) {
+        try {
+          // Try to parse the log as a ClaimAdded event
+          if (log.topics && log.topics.length > 0) {
+            // ERC-735 ClaimAdded event topic
+            const claimAddedTopic = '0x8c7f7c2e2b7e2e7e2e7e2e7e2e7e2e7e2e7e2e7e2e7e2e7e2e7e2e7e2e7e2e7'; // placeholder, replace with actual topic if needed
+            if (log.topics[0] === claimAddedTopic) {
+              console.log('ClaimAdded event found! Log:', log);
+            }
+          }
+        } catch (e) {
+          console.log('Error parsing log:', e);
+        }
+      }
+    }
     
     console.log(`✅ Successfully added claim to OnchainID via ClaimIssuer`);
     
