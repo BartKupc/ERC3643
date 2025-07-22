@@ -47,6 +47,15 @@ const config: HardhatUserConfig = {
     outputDir: "./docgen",
     freshOutput: true,
   },
+  networks: {
+    localhost: {
+      url: "http://127.0.0.1:8545",
+      chainId: 31337,
+    },
+  },
+  mocha: {
+    timeout: 40000,
+  },
 };
 
 export default config;

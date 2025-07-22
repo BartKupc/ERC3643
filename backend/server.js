@@ -463,6 +463,40 @@ app.delete('/api/addresses', (req, res) => {
   }
 });
 
+
+
+// CORS Proxy for Hardhat node
+app.post('/api/hardhat', async (req, res) => {
+  try {
+    const { method, params, id } = req.body;
+    
+    const response = await fetch('http://127.0.0.1:8545', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        method: method,
+        params: params || [],
+        id: id || 1
+      })
+    });
+    
+    const data = await response.json();
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({
+      jsonrpc: '2.0',
+      error: {
+        code: -32603,
+        message: error.message
+      },
+      id: req.body.id || 1
+    });
+  }
+});
+
 // Start server
 app.listen(PORT, () => {
   console.log(`🚀 T-REX Backend Server running on port ${PORT}`);
@@ -471,6 +505,7 @@ app.listen(PORT, () => {
   console.log(`🏭 Factory deployment: POST http://localhost:${PORT}/api/deploy/factory`);
   console.log(`🎯 Token deployment: POST http://localhost:${PORT}/api/deploy/token`);
   console.log(`🔐 ClaimIssuer deployment: POST http://localhost:${PORT}/api/deploy/claim-issuer`);
+  console.log(`🔗 Hardhat proxy: POST http://localhost:${PORT}/api/hardhat`);
 });
 
 module.exports = app; 
