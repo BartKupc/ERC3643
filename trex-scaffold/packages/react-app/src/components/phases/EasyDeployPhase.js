@@ -124,8 +124,7 @@ const EasyDeployPhase = () => {
       const provider = new ethers.providers.JsonRpcProvider('http://localhost:3001/api/hardhat');
       
       // Test the connection
-      await provider.getNetwork();
-      console.log('✅ Successfully connected to Hardhat node via CORS proxy');
+      // NOTE: For network info, block number, gas price, etc., use the shared rpcCall helpers from contractHelpers.js
       
       return new ethers.Wallet(privateKey, provider);
     } catch (error) {

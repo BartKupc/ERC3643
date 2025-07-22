@@ -216,14 +216,16 @@ const UserManagementTab = ({ deploymentDetails, addLog, getSigner, factories }) 
       addLog && addLog('Sending OnchainID creation request to backend...', "info");
       
       // Use backend API instead of direct blockchain interaction
-      const response = await fetch('/api/create-onchainid', {
+      const response = await fetch('/api/hardhat-interaction', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          userAddress: userAddress,
-          deploymentDetails: deploymentDetails
+          contractName: 'IdentityFactory',
+          contractAddress: deploymentDetails.factories.identityFactory,
+          method: 'createIdentity',
+          params: [userAddress, userCountry]
         })
       });
       
@@ -295,16 +297,16 @@ const UserManagementTab = ({ deploymentDetails, addLog, getSigner, factories }) 
       addLog && addLog('Sending identity registration request to backend...', "info");
       
       // Use backend API instead of direct blockchain interaction
-      const response = await fetch('/api/register-identity', {
+      const response = await fetch('/api/hardhat-interaction', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          userAddress: userAddress,
-          onchainIdAddress: onchainIdAddress,
-          userCountry: userCountry,
-          selectedIR: selectedIR
+          contractName: 'IdentityRegistry',
+          contractAddress: selectedIR,
+          method: 'registerIdentity',
+          params: [userAddress, onchainIdAddress, userCountry]
         })
       });
       
@@ -383,14 +385,16 @@ const UserManagementTab = ({ deploymentDetails, addLog, getSigner, factories }) 
       addLog && addLog('Sending ClaimIssuer keys request to backend...', "info");
       
       // Use backend API instead of direct blockchain interaction
-      const response = await fetch('/api/add-claim-issuer-keys', {
+      const response = await fetch('/api/hardhat-interaction', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          onchainIdAddress: onchainIdAddress,
-          finalIssuerAddress: finalIssuerAddress
+          contractName: 'ClaimIssuer',
+          contractAddress: finalIssuerAddress,
+          method: 'addClaimIssuerKeys',
+          params: [onchainIdAddress]
         })
       });
       
@@ -453,17 +457,16 @@ const UserManagementTab = ({ deploymentDetails, addLog, getSigner, factories }) 
       addLog && addLog('Sending claim addition request to backend...', "info");
       
       // Use backend API instead of direct blockchain interaction
-      const response = await fetch('/api/add-claim-to-identity', {
+      const response = await fetch('/api/hardhat-interaction', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          onchainIdAddress: onchainIdAddress,
-          claimTopic: claimTopic,
-          claimValue: claimValue,
-          finalIssuerAddress: finalIssuerAddress,
-          userAddress: userAddress
+          contractName: 'ClaimIssuer',
+          contractAddress: finalIssuerAddress,
+          method: 'addClaim',
+          params: [onchainIdAddress, claimTopic, claimValue]
         })
       });
       

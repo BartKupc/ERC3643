@@ -1,3 +1,5 @@
+// For any network info, block number, gas price, transaction count, or other provider-level calls,
+// use the rpcCall and shared helpers below instead of direct provider calls.
 import { ethers } from 'ethers';
 import { getContractArtifacts } from '../../../hooks/compiledContracts';
 
@@ -106,3 +108,23 @@ export const deployContractHelper = async (contractName, constructorArgs = []) =
     throw new Error(`Failed to deploy ${contractName}: ${error.message}`);
   }
 }; 
+
+// Helper to call backend for any JSON-RPC method
+export const rpcCall = async (method, params = []) => {
+  const response = await fetch('/api/hardhat-interaction', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'rpc', method, params })
+  });
+  const data = await response.json();
+  if (!data.success) throw new Error(data.error || 'Unknown error');
+  return data.result;
+}; 
+
+// Shared helpers for common RPC calls
+export const getChainId = async () => rpcCall('eth_chainId', []);
+export const getBlockNumber = async () => rpcCall('eth_blockNumber', []);
+export const getGasPrice = async () => rpcCall('eth_gasPrice', []);
+export const getTransactionCount = async (address, blockTag = 'latest') => rpcCall('eth_getTransactionCount', [address, blockTag]);
+export const estimateGas = async (txObject) => rpcCall('eth_estimateGas', [txObject]);
+export const sendRawTransaction = async (signedTx) => rpcCall('eth_sendRawTransaction', [signedTx]); 

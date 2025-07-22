@@ -443,14 +443,16 @@ const DeploymentPhase = () => {
         10: "Accreditation"
       };
       
-      const topics = topicIds.map(id => {
-        const num = (typeof id === 'object' && id.toNumber) ? id.toNumber() : Number(id);
-        return {
-          id: num,
-          name: standardTopics[num] || `Custom Topic ${num}`,
-          description: standardTopics[num] ? `Standard claim topic for ${standardTopics[num].split(' ')[0]}` : `Custom claim topic with ID ${num}`
-        };
-      });
+      const topics = topicIds
+        .filter(id => id !== undefined && id !== null && id !== '' && !Number.isNaN((typeof id === 'object' && id.toNumber) ? id.toNumber() : Number(id)))
+        .map(id => {
+          const num = (typeof id === 'object' && id.toNumber) ? id.toNumber() : Number(id);
+          return {
+            id: num,
+            name: standardTopics[num] || `Custom Topic ${num}`,
+            description: standardTopics[num] ? `Standard claim topic for ${standardTopics[num].split(' ')[0]}` : `Custom claim topic with ID ${num}`
+          };
+        });
       
       setAvailableClaimTopics(topics);
       addLog(`Loaded ${topics.length} claim topics from registry`, "info");

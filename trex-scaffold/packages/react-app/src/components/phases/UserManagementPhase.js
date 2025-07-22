@@ -153,8 +153,9 @@ const UserManagementPhase = ({ deployedContracts = {}, selectedContracts = {}, s
     return userIdentities.find(id => id.userAddress.toLowerCase() === walletAddress.toLowerCase());
   };
 
+  // NOTE: For network info, block number, gas price, etc., use the shared rpcCall helpers from contractHelpers.js
   const getSigner = async () => {
-          const provider = new ethers.providers.JsonRpcProvider('http://127.0.0.1:8545');
+    const provider = new ethers.providers.JsonRpcProvider('http://127.0.0.1:8545');
     const privateKey = '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80'; // Hardhat account 0
     return new ethers.Wallet(privateKey, provider);
   };
