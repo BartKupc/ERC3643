@@ -549,14 +549,20 @@ const UserManagementTab = ({ deploymentDetails, addLog, getSigner, factories }) 
       addLog && addLog(`Total claims found on contract: ${totalClaims}`, "success");
       setMessage(`Found ${totalClaims} claims on OnchainID contract`);
       
-      // Update the selected identity with actual claims from contract
-      if (selectedIdentity) {
+      // Update the correct identity with actual claims and set as selected
+      const identityIndex = userIdentities.findIndex(
+        id => id.onchainIdAddress && id.onchainIdAddress.toLowerCase() === onchainIdAddress.toLowerCase()
+      );
+      if (identityIndex !== -1) {
         const updatedIdentity = {
-          ...selectedIdentity,
+          ...userIdentities[identityIndex],
           actualClaims: claims
         };
-        saveUserIdentity(updatedIdentity);
+        const updatedIdentities = [...userIdentities];
+        updatedIdentities[identityIndex] = updatedIdentity;
+        setUserIdentities(updatedIdentities);
         setSelectedIdentity(updatedIdentity);
+        saveUserIdentity(updatedIdentity);
       }
       
     } catch (error) {
