@@ -970,17 +970,28 @@ app.post('/api/create-onchainid', async (req, res) => {
       const OnchainID = require('@onchain-id/solidity');
       const onchainId = new ethers.Contract(onchainIdAddress, OnchainID.contracts.Identity.abi, wallet);
       
-      // Add deployer as management key
+      // Check if deployer key already exists and what purposes it has
       const deployerKeyHash = ethers.utils.keccak256(
         ethers.utils.defaultAbiCoder.encode(['address'], [deployerAddress])
       );
       
       try {
+        const existingKey = await onchainId.getKey(deployerKeyHash);
+        const hasManagementKey = existingKey.purposes.some(p => p.toNumber() === 1);
+        
+        if (!hasManagementKey) {
+          console.log(`Deployer does not have management key. Adding management key for deployer...`);
+          const addManagementKeyTx = await onchainId.addKey(deployerKeyHash, 1, 1); // purpose=1 (management), keyType=1 (ECDSA)
+          await addManagementKeyTx.wait();
+          console.log(`✅ Added deployer ${deployerAddress} as management key to OnchainID`);
+        } else {
+          console.log(`✅ Deployer already has management key`);
+        }
+      } catch (e) {
+        console.log(`Deployer key not found. Adding management key for deployer...`);
         const addManagementKeyTx = await onchainId.addKey(deployerKeyHash, 1, 1); // purpose=1 (management), keyType=1 (ECDSA)
         await addManagementKeyTx.wait();
         console.log(`✅ Added deployer ${deployerAddress} as management key to OnchainID`);
-      } catch (keyError) {
-        console.log(`⚠️ Could not add deployer as management key: ${keyError.message}`);
       }
     }
     
