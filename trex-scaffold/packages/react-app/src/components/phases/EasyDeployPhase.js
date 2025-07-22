@@ -358,25 +358,37 @@ const EasyDeployPhase = () => {
 
     setMintingToken(true);
     setMessage("");
-    addLog("Starting token minting...", "info");
+    addLog("Starting token minting via backend...", "info");
 
     try {
-      const signer = await getSigner();
       const tokenAddress = selectedOperationsToken.token.address;
-      const tokenArtifacts = getContractArtifacts('Token');
-      const token = new ethers.Contract(tokenAddress, tokenArtifacts.abi, signer);
       
       addLog(`Minting ${mintAmount} tokens to ${mintRecipient}`, "info");
       
-      // Convert amount to wei based on token decimals
-      const decimals = await token.decimals();
-      const decimalsNumber = typeof decimals === 'object' && decimals.toNumber ? decimals.toNumber() : Number(decimals);
-      const amountInWei = ethers.utils.parseUnits(mintAmount, decimalsNumber);
+      // Use backend API instead of direct blockchain interaction
+      const response = await fetch('/api/token/mint', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          tokenAddress: tokenAddress,
+          amount: mintAmount,
+          recipient: mintRecipient
+        })
+      });
       
-      const tx = await token.mint(mintRecipient, amountInWei);
-      await tx.wait();
+      if (!response.ok) {
+        throw new Error(`Backend request failed: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      if (!data.success) {
+        throw new Error(data.error || 'Unknown error');
+      }
       
       addLog(`Successfully minted ${mintAmount} tokens to ${mintRecipient}`, "success");
+      addLog(`Transaction hash: ${data.transactionHash}`, "info");
       setMessage(`Successfully minted ${mintAmount} tokens to ${mintRecipient}`);
       
       // Clear form
@@ -408,25 +420,37 @@ const EasyDeployPhase = () => {
 
     setBurningToken(true);
     setMessage("");
-    addLog("Starting token burning...", "info");
+    addLog("Starting token burning via backend...", "info");
 
     try {
-      const signer = await getSigner();
       const tokenAddress = selectedOperationsToken.token.address;
-      const tokenArtifacts = getContractArtifacts('Token');
-      const token = new ethers.Contract(tokenAddress, tokenArtifacts.abi, signer);
       
       addLog(`Burning ${burnAmount} tokens from ${burnFrom}`, "info");
       
-      // Convert amount to wei based on token decimals
-      const decimals = await token.decimals();
-      const decimalsNumber = typeof decimals === 'object' && decimals.toNumber ? decimals.toNumber() : Number(decimals);
-      const amountInWei = ethers.utils.parseUnits(burnAmount, decimalsNumber);
+      // Use backend API instead of direct blockchain interaction
+      const response = await fetch('/api/token/burn', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          tokenAddress: tokenAddress,
+          amount: burnAmount,
+          fromAddress: burnFrom
+        })
+      });
       
-      const tx = await token.burn(burnFrom, amountInWei);
-      await tx.wait();
+      if (!response.ok) {
+        throw new Error(`Backend request failed: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      if (!data.success) {
+        throw new Error(data.error || 'Unknown error');
+      }
       
       addLog(`Successfully burned ${burnAmount} tokens from ${burnFrom}`, "success");
+      addLog(`Transaction hash: ${data.transactionHash}`, "info");
       setMessage(`Successfully burned ${burnAmount} tokens from ${burnFrom}`);
       
       // Clear form
@@ -458,27 +482,37 @@ const EasyDeployPhase = () => {
 
     setTransferringToken(true);
     setMessage("");
-    addLog("Starting token transfer...", "info");
+    addLog("Starting token transfer via backend...", "info");
 
     try {
-      const signer = await getSigner();
-      const signerAddress = await signer.getAddress();
       const tokenAddress = selectedOperationsToken.token.address;
-      const tokenArtifacts = getContractArtifacts('Token');
-      const token = new ethers.Contract(tokenAddress, tokenArtifacts.abi, signer);
       
-      // Always use transfer() - this transfers from the signer's address
-      addLog(`Using transfer() - transferring from signer (${signerAddress}) to ${transferTo}`, "info");
+      addLog(`Transferring ${transferAmount} tokens to ${transferTo}`, "info");
       
-      // Convert amount to wei based on token decimals
-      const decimals = await token.decimals();
-      const decimalsNumber = typeof decimals === 'object' && decimals.toNumber ? decimals.toNumber() : Number(decimals);
-      const amountInWei = ethers.utils.parseUnits(transferAmount, decimalsNumber);
+      // Use backend API instead of direct blockchain interaction
+      const response = await fetch('/api/token/transfer', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          tokenAddress: tokenAddress,
+          amount: transferAmount,
+          toAddress: transferTo
+        })
+      });
       
-      const tx = await token.transfer(transferTo, amountInWei);
-      await tx.wait();
+      if (!response.ok) {
+        throw new Error(`Backend request failed: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      if (!data.success) {
+        throw new Error(data.error || 'Unknown error');
+      }
       
       addLog(`Successfully transferred ${transferAmount} tokens to ${transferTo}`, "success");
+      addLog(`Transaction hash: ${data.transactionHash}`, "info");
       setMessage(`Successfully transferred ${transferAmount} tokens to ${transferTo}`);
       
       // Clear form
@@ -510,67 +544,40 @@ const EasyDeployPhase = () => {
 
     setTransferringToken(true);
     setMessage("");
-    addLog("Starting transferFrom operation with agent privileges", "info");
+    addLog("Starting transferFrom operation via backend...", "info");
 
     try {
-      const signer = await getSigner();
-      const signerAddress = await signer.getAddress();
       const tokenAddress = selectedOperationsToken.token.address;
-      const tokenArtifacts = getContractArtifacts('Token');
-      const token = new ethers.Contract(tokenAddress, tokenArtifacts.abi, signer);
       
-      const requiredAmount = ethers.utils.parseUnits(transferAmount, 18); // Assuming 18 decimals
+      addLog(`Transferring ${transferAmount} tokens from ${transferFrom} to ${transferTo}`, "info");
       
-      // Check if signer is an agent
-      addLog(`Checking if ${signerAddress} is a token agent...`, "info");
-      const isAgent = await token.isAgent(signerAddress);
-      addLog(`Is agent: ${isAgent}`, isAgent ? "success" : "error");
+      // Use backend API instead of direct blockchain interaction
+      const response = await fetch('/api/token/transfer-from', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          tokenAddress: tokenAddress,
+          amount: transferAmount,
+          fromAddress: transferFrom,
+          toAddress: transferTo
+        })
+      });
       
-      if (!isAgent) {
-        addLog(`❌ ${signerAddress} is not a token agent. Cannot perform this operation.`, "error");
-        setMessage(`Error: ${signerAddress} is not a token agent. Add yourself as an agent first.`);
-        return;
+      if (!response.ok) {
+        throw new Error(`Backend request failed: ${response.status}`);
       }
       
-      // Check if from address has sufficient balance
-      const fromBalance = await token.balanceOf(transferFrom);
-      addLog(`From address balance: ${ethers.utils.formatEther(fromBalance)} tokens`, "info");
-      
-      if (fromBalance.lt(requiredAmount)) {
-        addLog(`❌ Insufficient balance. Need ${transferAmount} tokens, but ${transferFrom} only has ${ethers.utils.formatEther(fromBalance)}`, "error");
-        setMessage(`Insufficient balance in ${transferFrom}.`);
-        return;
+      const data = await response.json();
+      if (!data.success) {
+        throw new Error(data.error || 'Unknown error');
       }
       
-      // Use two-step process like advanced tab:
-      // Step 1: Transfer tokens from source to agent (using forcedTransfer)
-      addLog(`Step 1: Transferring ${transferAmount} tokens from ${transferFrom} to agent (${signerAddress}) using forcedTransfer`, "info");
-      const tx1 = await token.forcedTransfer(transferFrom, signerAddress, requiredAmount);
-      await tx1.wait();
-      addLog(`✅ Step 1 complete: Tokens moved to agent`, "success");
-      
-      // Check agent's new balance
-      const agentBalance = await token.balanceOf(signerAddress);
-      addLog(`Agent balance after step 1: ${ethers.utils.formatEther(agentBalance)} tokens`, "info");
-      
-      // Step 2: Transfer tokens from agent to destination (using regular transfer with compliance)
-      addLog(`Step 2: Transferring ${transferAmount} tokens from agent to ${transferTo} (with compliance check)`, "info");
-      const tx2 = await token.transfer(transferTo, requiredAmount);
-      await tx2.wait();
-      addLog(`✅ Step 2 complete: Tokens transferred to destination with compliance`, "success");
-      
-      // Check final balances
-      const finalFromBalance = await token.balanceOf(transferFrom);
-      const finalToBalance = await token.balanceOf(transferTo);
-      const finalAgentBalance = await token.balanceOf(signerAddress);
-      
-      addLog(`Final balances:`, "info");
-      addLog(`  ${transferFrom}: ${ethers.utils.formatEther(finalFromBalance)} tokens`, "info");
-      addLog(`  ${transferTo}: ${ethers.utils.formatEther(finalToBalance)} tokens`, "info");
-      addLog(`  Agent: ${ethers.utils.formatEther(finalAgentBalance)} tokens`, "info");
-      
+      addLog(`Successfully transferred ${transferAmount} tokens from ${transferFrom} to ${transferTo}`, "success");
+      addLog(`Transaction hash 1: ${data.transactionHash1}`, "info");
+      addLog(`Transaction hash 2: ${data.transactionHash2}`, "info");
       setMessage(`Successfully transferred ${transferAmount} tokens from ${transferFrom} to ${transferTo} with compliance checks`);
-      addLog(`TransferFrom operation completed successfully with compliance validation`, "success");
       
       // Clear form
       setTransferAmount('');
