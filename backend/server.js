@@ -1231,24 +1231,17 @@ app.post('/api/add-claim-to-identity', async (req, res) => {
     console.log(`- User OnchainID: ${onchainIdAddress}`);
     
     // Create a proper signature for the claim
-    // The signature should be of: keccak256(abi.encode(address identityHolder_address, uint256 topic, bytes data))
+    // The signature should be of: keccak256(abi.encode(address identity_address, uint256 topic, bytes data))
     const claimData = ethers.utils.hexlify(ethers.utils.toUtf8Bytes(claimValue));
-    
-    // For the signature, we need to use the user address (the wallet owner of the OnchainID)
-    // Use the user address from the request for the signature
-    if (!userAddress) {
-      throw new Error('User address is required for claim signature');
-    }
-    
-    console.log(`🔍 Debug: Using user address for signature: ${userAddress}`);
-    
+
+    // For the signature, use the OnchainID contract address as the first parameter (NOT userAddress)
     const dataHash = ethers.utils.keccak256(
       ethers.utils.defaultAbiCoder.encode(
         ['address', 'uint256', 'bytes'],
-        [userAddress, topicId, claimData]
+        [onchainIdAddress, topicId, claimData]
       )
     );
-    
+
     // Sign the data hash with the wallet's private key
     const signature = await wallet.signMessage(ethers.utils.arrayify(dataHash));
     
