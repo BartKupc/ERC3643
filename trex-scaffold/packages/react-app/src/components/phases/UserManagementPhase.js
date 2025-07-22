@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { ethers } from 'ethers';
 import { getContractArtifacts } from '../../hooks/compiledContracts';
+import config from '../../../../../../config.json';
 
 const IDENTITIES_STORAGE_KEY = 'trex_user_identities';
 
@@ -155,8 +156,8 @@ const UserManagementPhase = ({ deployedContracts = {}, selectedContracts = {}, s
 
   // NOTE: For network info, block number, gas price, etc., use the shared rpcCall helpers from contractHelpers.js
   const getSigner = async () => {
-    const provider = new ethers.providers.JsonRpcProvider('http://127.0.0.1:8545');
-    const privateKey = '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80'; // Hardhat account 0
+    const privateKey = '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80';
+    const provider = new ethers.providers.JsonRpcProvider(config.RPC_URL);
     return new ethers.Wallet(privateKey, provider);
   };
 

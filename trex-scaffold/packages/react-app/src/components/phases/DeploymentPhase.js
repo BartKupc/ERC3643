@@ -8,6 +8,7 @@ import ConfigureIdentityRegistryTab from './advanced/steps/ConfigureIdentityRegi
 import AddClaimTopicsTab from './advanced/steps/AddClaimTopicsTab';
 import UserManagementTab from './advanced/steps/UserManagementTab';
 import TokenManagementTab from './advanced/steps/TokenManagementTab';
+import config from '../../../../../../config.json';
 
 const STORAGE_KEY = 'trex_deployment_state';
 
@@ -242,7 +243,7 @@ const DeploymentPhase = () => {
   // Keep getSigner for backward compatibility (but it's not used anymore)
   const getSigner = async () => {
     const privateKey = '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80';
-    const provider = new ethers.providers.JsonRpcProvider('http://13.250.2.49:8545');
+    const provider = new ethers.providers.JsonRpcProvider(config.RPC_URL);
     return new ethers.Wallet(privateKey, provider);
   };
 
@@ -3922,7 +3923,7 @@ const DeploymentPhase = () => {
           reloadDeploymentState={reloadDeploymentState}
           addLog={addLog}
           deploying={deploying}
-        />
+                />
       )
     },
     {
@@ -3931,11 +3932,11 @@ const DeploymentPhase = () => {
       description: "Create and manage user identities (do this BEFORE deploying tokens)",
       content: (
         <UserManagementTab
-          deployedContracts={deployedContracts}
-          selectedContracts={selectedContracts}
-          setSelectedContracts={setSelectedContracts}
+              deployedContracts={deployedContracts}
+              selectedContracts={selectedContracts}
+              setSelectedContracts={setSelectedContracts}
           // Add more user management props as needed
-        />
+            />
       )
     },
     {
