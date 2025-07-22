@@ -213,6 +213,27 @@ const DeploymentPhase = () => {
     }, 2000);
   };
 
+  // Generic Hardhat interaction helper function
+  const hardhatInteraction = async (action, options) => {
+    const response = await fetch('/api/hardhat-interaction', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action, ...options })
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Backend request failed: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    if (!data.success) {
+      throw new Error(data.error || 'Unknown error');
+    }
+    
+    return data;
+  };
+
+  // Keep getSigner for backward compatibility (but it's not used anymore)
   const getSigner = async () => {
     const privateKey = '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80';
     const provider = new ethers.providers.JsonRpcProvider('http://13.250.2.49:8545');
@@ -259,26 +280,20 @@ const DeploymentPhase = () => {
     try {
       setDeploying(true);
       setMessage(`Deploying ${contractName}...`);
-      addLog(`Starting deployment of ${contractName}`, "info");
+      addLog(`Starting deployment of ${contractName} via backend API`, "info");
 
-      const signer = await getSigner();
-      const artifacts = getContractArtifacts(contractName);
+      const result = await hardhatInteraction('deploy', { contractName });
       
-      console.log(`Deploying ${contractName} with artifacts:`, artifacts);
+      console.log(`${contractName} deployed at:`, result.contractAddress);
+      addLog(`${contractName} deployed successfully at ${result.contractAddress}`, "success");
+      addLog(`Transaction hash: ${result.transactionHash}`, "info");
       
-      const contractFactory = new ethers.ContractFactory(artifacts.abi, artifacts.bytecode, signer);
-      const contract = await contractFactory.deploy();
-      await contract.deployed();
-      
-      console.log(`${contractName} deployed at:`, contract.address);
-      addLog(`${contractName} deployed successfully at ${contract.address}`, "success");
-      
-      saveDeployedContract(contractName, contract.address);
-      setMessage(`${contractName} deployed successfully at ${contract.address}`);
+      saveDeployedContract(contractName, result.contractAddress);
+      setMessage(`${contractName} deployed successfully at ${result.contractAddress}`);
       
       reloadDeploymentState(); // <-- reload after deploy
       
-      return contract.address;
+      return result.contractAddress;
     } catch (error) {
       console.error(`Error deploying ${contractName}:`, error);
       const cleanError = extractCleanError(error);
@@ -296,7 +311,7 @@ const DeploymentPhase = () => {
     try {
       setDeploying(true);
       setMessage(`Adding claim topic ${topicId}...`);
-      addLog(`Starting claim topic ${topicId} addition`, "info");
+      addLog(`Starting claim topic ${topicId} addition via backend API`, "info");
 
       // Get the address to use (selected if available, otherwise latest deployed)
       const address = selectedContracts.ClaimTopicsRegistry || (deployedContracts.ClaimTopicsRegistry && deployedContracts.ClaimTopicsRegistry[0]);
@@ -305,33 +320,17 @@ const DeploymentPhase = () => {
         throw new Error('No ClaimTopicsRegistry found. Please deploy one first.');
       }
       
-      const signer = await getSigner();
-      const signerAddress = await signer.getAddress();
-      const artifacts = getContractArtifacts('ClaimTopicsRegistry');
-      const contract = new ethers.Contract(address, artifacts.abi, signer);
-      
-      // Check if we are the owner of this contract
-      try {
-        const owner = await contract.owner();
-        if (owner.toLowerCase() !== signerAddress.toLowerCase()) {
-          throw new Error(`Contract owner is ${owner}, but your address is ${signerAddress}. Please select a contract that you own.`);
-        }
-        addLog(`Verified ownership of ClaimTopicsRegistry at ${address}`, "info");
-      } catch (e) {
-        if (e.message.includes('Contract owner is')) {
-          throw e;
-        }
-        addLog(`Could not verify ownership, proceeding anyway`, "warning");
-      }
-      
-      // Note: We'll attempt addition directly since claimTopicExists might not work as expected
-      addLog(`Attempting to add claim topic ${topicId}`, "info");
-      
-      const tx = await contract.addClaimTopic(topicId);
-      await tx.wait();
+      // Add claim topic using backend API
+      const result = await hardhatInteraction('send', {
+        contractName: 'ClaimTopicsRegistry',
+        contractAddress: address,
+        method: 'addClaimTopic',
+        params: [topicId]
+      });
       
       setMessage(`Claim topic ${topicId} added successfully`);
       addLog(`Claim topic ${topicId} added successfully`, "success");
+      addLog(`Transaction hash: ${result.transactionHash}`, "info");
       
       // Reload claim topics to show the updated list
       await loadClaimTopics(address);
@@ -349,7 +348,7 @@ const DeploymentPhase = () => {
     try {
       setDeploying(true);
       setMessage(`Removing claim topic ${topicId}...`);
-      addLog(`Starting claim topic ${topicId} removal`, "info");
+      addLog(`Starting claim topic ${topicId} removal via backend API`, "info");
 
       // Get the address to use (selected if available, otherwise latest deployed)
       const address = selectedContracts.ClaimTopicsRegistry || (deployedContracts.ClaimTopicsRegistry && deployedContracts.ClaimTopicsRegistry[0]);
@@ -358,33 +357,17 @@ const DeploymentPhase = () => {
         throw new Error('No ClaimTopicsRegistry found. Please deploy one first.');
       }
       
-      const signer = await getSigner();
-      const signerAddress = await signer.getAddress();
-      const artifacts = getContractArtifacts('ClaimTopicsRegistry');
-      const contract = new ethers.Contract(address, artifacts.abi, signer);
-      
-      // Check if we are the owner of this contract
-      try {
-        const owner = await contract.owner();
-        if (owner.toLowerCase() !== signerAddress.toLowerCase()) {
-          throw new Error(`Contract owner is ${owner}, but your address is ${signerAddress}. Please select a contract that you own.`);
-        }
-        addLog(`Verified ownership of ClaimTopicsRegistry at ${address}`, "info");
-      } catch (e) {
-        if (e.message.includes('Contract owner is')) {
-          throw e;
-        }
-        addLog(`Could not verify ownership, proceeding anyway`, "warning");
-      }
-      
-      // Note: We'll attempt removal directly since claimTopicExists might not work as expected
-      addLog(`Attempting to remove claim topic ${topicId}`, "info");
-      
-      const tx = await contract.removeClaimTopic(topicId);
-      await tx.wait();
+      // Remove claim topic using backend API
+      const result = await hardhatInteraction('send', {
+        contractName: 'ClaimTopicsRegistry',
+        contractAddress: address,
+        method: 'removeClaimTopic',
+        params: [topicId]
+      });
       
       setMessage(`Claim topic ${topicId} removed successfully`);
       addLog(`Claim topic ${topicId} removed successfully`, "success");
+      addLog(`Transaction hash: ${result.transactionHash}`, "info");
       
       // Reload claim topics to show the updated list
       await loadClaimTopics(address);
@@ -436,11 +419,15 @@ const DeploymentPhase = () => {
   const loadClaimTopics = async (registryAddress) => {
     try {
       setLoadingClaimTopics(true);
-      const signer = await getSigner();
-      const artifacts = getContractArtifacts('ClaimTopicsRegistry');
-      const contract = new ethers.Contract(registryAddress, artifacts.abi, signer);
       
-      const topicIds = await contract.getClaimTopics();
+      const result = await hardhatInteraction('call', {
+        contractName: 'ClaimTopicsRegistry',
+        contractAddress: registryAddress,
+        method: 'getClaimTopics',
+        params: []
+      });
+      
+      const topicIds = result.result;
       
       // Map topic IDs to standard names
       const standardTopics = {
@@ -917,11 +904,17 @@ const DeploymentPhase = () => {
         addLog(`Could not check recipient verification: ${verificationError.message}`, "warning");
       }
       
-      const tx = await contract.mint(recipient, ethers.utils.parseEther(amount));
-      await tx.wait();
+      // Mint tokens using backend API
+      const result = await hardhatInteraction('send', {
+        contractName: 'Token',
+        contractAddress: selectedContracts.Token,
+        method: 'mint',
+        params: [recipient, ethers.utils.parseEther(amount)]
+      });
       
       setMessage(`Minted ${amount} tokens to ${recipient}`);
       addLog(`Minted ${amount} tokens to ${recipient}`, "success");
+      addLog(`Transaction hash: ${result.transactionHash}`, "info");
     } catch (error) {
       console.error('Error minting tokens:', error);
       const cleanError = extractCleanError(error);
@@ -953,10 +946,16 @@ const DeploymentPhase = () => {
       const artifacts = getContractArtifacts('Token');
       const contract = new ethers.Contract(selectedContracts.Token, artifacts.abi, signer);
       
-      const tx = await contract.burn(burnAddress, ethers.utils.parseEther(amount));
-      await tx.wait();
+      // Burn tokens using backend API
+      const result = await hardhatInteraction('send', {
+        contractName: 'Token',
+        contractAddress: selectedContracts.Token,
+        method: 'burn',
+        params: [burnAddress, ethers.utils.parseEther(amount)]
+      });
       
       setMessage(`Burned ${amount} tokens from ${burnAddress}`);
+      addLog(`Transaction hash: ${result.transactionHash}`, "info");
       addLog(`Burned ${amount} tokens from ${burnAddress}`, "success");
     } catch (error) {
       console.error('Error burning tokens:', error);
@@ -991,12 +990,19 @@ const DeploymentPhase = () => {
       const contract = new ethers.Contract(selectedContracts.Token, artifacts.abi, signer);
       
       // Always use transfer() - this transfers from the signer's address
-      addLog(`Using transfer() - transferring from signer (${signerAddress}) to ${toAddress}`, "info");
-      const tx = await contract.transfer(toAddress, ethers.utils.parseEther(amount));
-      await tx.wait();
+      addLog(`Using transfer() - transferring from signer to ${toAddress}`, "info");
+      
+      // Transfer tokens using backend API
+      const result = await hardhatInteraction('send', {
+        contractName: 'Token',
+        contractAddress: selectedContracts.Token,
+        method: 'transfer',
+        params: [toAddress, ethers.utils.parseEther(amount)]
+      });
       
       setMessage(`Transferred ${amount} tokens to ${toAddress}`);
       addLog(`Transferred ${amount} tokens to ${toAddress}`, "success");
+      addLog(`Transaction hash: ${result.transactionHash}`, "info");
     } catch (error) {
       console.error('Error transferring tokens:', error);
       const cleanError = extractCleanError(error);

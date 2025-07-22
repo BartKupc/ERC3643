@@ -2027,7 +2027,152 @@ app.post('/api/token/transfer-from', async (req, res) => {
   }
 });
 
-// CORS Proxy for Hardhat node
+// Generic Hardhat interaction endpoint
+app.post('/api/hardhat-interaction', async (req, res) => {
+  try {
+    const { action, contractName, contractAddress, method, params, value, privateKey } = req.body;
+    
+    console.log(`🎯 Hardhat interaction: ${action} - ${contractName || 'no contract'} - ${method || 'no method'}`);
+    
+    const provider = createProvider();
+    const wallet = new ethers.Wallet(privateKey || process.env.PRIVATE_KEY || '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80', provider);
+    const deployerAddress = await wallet.getAddress();
+    
+    console.log(`🔍 Using deployer address: ${deployerAddress}`);
+    
+    let result = {};
+    
+    switch (action) {
+      case 'deploy':
+        // Deploy a contract
+        if (!contractName) {
+          throw new Error('Contract name is required for deployment');
+        }
+        
+        const artifactsPath = path.join(__dirname, '../trex-scaffold/packages/contracts/src/contracts', `${contractName}.sol/${contractName}.json`);
+        if (!fs.existsSync(artifactsPath)) {
+          throw new Error(`Contract artifacts not found for ${contractName}. Please compile contracts first.`);
+        }
+        
+        const artifacts = JSON.parse(fs.readFileSync(artifactsPath, 'utf8'));
+        const contractFactory = new ethers.ContractFactory(artifacts.abi, artifacts.bytecode, wallet);
+        const contract = await contractFactory.deploy(...(params || []));
+        await contract.deployed();
+        
+        result = {
+          success: true,
+          action: 'deploy',
+          contractName: contractName,
+          contractAddress: contract.address,
+          deployerAddress: deployerAddress,
+          transactionHash: contract.deployTransaction.hash
+        };
+        break;
+        
+      case 'call':
+        // Call a contract method (read-only)
+        if (!contractAddress || !method) {
+          throw new Error('Contract address and method are required for contract calls');
+        }
+        
+        const callArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/contracts/src/contracts', `${contractName}.sol/${contractName}.json`);
+        if (!fs.existsSync(callArtifactsPath)) {
+          throw new Error(`Contract artifacts not found for ${contractName}. Please compile contracts first.`);
+        }
+        
+        const callArtifacts = JSON.parse(fs.readFileSync(callArtifactsPath, 'utf8'));
+        const callContract = new ethers.Contract(contractAddress, callArtifacts.abi, wallet);
+        const callResult = await callContract[method](...(params || []));
+        
+        result = {
+          success: true,
+          action: 'call',
+          contractAddress: contractAddress,
+          method: method,
+          result: callResult
+        };
+        break;
+        
+      case 'send':
+        // Send a transaction to a contract method
+        if (!contractAddress || !method) {
+          throw new Error('Contract address and method are required for contract transactions');
+        }
+        
+        const sendArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/contracts/src/contracts', `${contractName}.sol/${contractName}.json`);
+        if (!fs.existsSync(sendArtifactsPath)) {
+          throw new Error(`Contract artifacts not found for ${contractName}. Please compile contracts first.`);
+        }
+        
+        const sendArtifacts = JSON.parse(fs.readFileSync(sendArtifactsPath, 'utf8'));
+        const sendContract = new ethers.Contract(contractAddress, sendArtifacts.abi, wallet);
+        
+        const txOptions = {};
+        if (value) {
+          txOptions.value = ethers.utils.parseEther(value);
+        }
+        
+        const tx = await sendContract[method](...(params || []), txOptions);
+        await tx.wait();
+        
+        result = {
+          success: true,
+          action: 'send',
+          contractAddress: contractAddress,
+          method: method,
+          transactionHash: tx.hash
+        };
+        break;
+        
+      case 'rpc':
+        // Direct RPC call (for methods not covered above)
+        if (!method) {
+          throw new Error('Method is required for RPC calls');
+        }
+        
+        const rpcResponse = await fetch('http://13.250.2.49:8545', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            jsonrpc: '2.0',
+            method: method,
+            params: params || [],
+            id: Date.now()
+          })
+        });
+        
+        const rpcData = await rpcResponse.json();
+        if (rpcData.error) {
+          throw new Error(rpcData.error.message || 'RPC error');
+        }
+        
+        result = {
+          success: true,
+          action: 'rpc',
+          method: method,
+          result: rpcData.result
+        };
+        break;
+        
+      default:
+        throw new Error(`Unknown action: ${action}. Supported actions: deploy, call, send, rpc`);
+    }
+    
+    console.log(`✅ Hardhat interaction completed successfully`);
+    res.json(result);
+    
+  } catch (error) {
+    console.error('❌ Error in hardhat interaction:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// CORS Proxy for Hardhat node (keep for backward compatibility)
 app.post('/api/hardhat', async (req, res) => {
   try {
     const { method, params, id } = req.body;
@@ -2067,6 +2212,7 @@ app.listen(PORT, () => {
   console.log(`🏭 Factory deployment: POST http://localhost:${PORT}/api/deploy/factory`);
   console.log(`🎯 Token deployment: POST http://localhost:${PORT}/api/deploy/token`);
   console.log(`🔐 ClaimIssuer deployment: POST http://localhost:${PORT}/api/deploy/claim-issuer`);
+  console.log(`🔧 Generic Hardhat interaction: POST http://localhost:${PORT}/api/hardhat-interaction`);
   console.log(`🪙 Token operations:`);
   console.log(`   - Mint: POST http://localhost:${PORT}/api/token/mint`);
   console.log(`   - Burn: POST http://localhost:${PORT}/api/token/burn`);

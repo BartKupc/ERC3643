@@ -5,7 +5,7 @@ async function testMultipleRegistries() {
   console.log("🧪 Testing Multiple Registry Functionality");
   
   // Connect to Hardhat node
-  const provider = new ethers.providers.JsonRpcProvider("http://13.250.2.49:8545");
+  const provider = new ethers.providers.JsonRpcProvider("http://127.0.0.1:8545");
   const [deployer] = await ethers.getSigners();
   
   console.log("✅ Connected to Hardhat node");
