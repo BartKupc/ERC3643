@@ -1310,6 +1310,14 @@ app.post('/api/add-claim-to-identity', async (req, res) => {
       }
     }
     
+    // Debug: verify the signature before calling addClaim
+    const recovered = ethers.utils.verifyMessage(ethers.utils.arrayify(dataHash), signature);
+    console.log('Recovered address from signature:', recovered);
+    console.log('Expected issuer address:', finalIssuerAddress);
+    if (recovered.toLowerCase() !== finalIssuerAddress.toLowerCase()) {
+      throw new Error('Signature does not match issuer address!');
+    }
+    
     console.log(`✅ Successfully added claim to OnchainID via ClaimIssuer`);
     
     res.json({
