@@ -1179,7 +1179,11 @@ app.post('/api/add-claim-issuer-keys', async (req, res) => {
 // Add claim to identity
 app.post('/api/add-claim-to-identity', async (req, res) => {
   try {
-    const { onchainIdAddress, claimTopic, claimValue, finalIssuerAddress, userAddress } = req.body;
+    let { onchainIdAddress, claimTopic, claimValue, finalIssuerAddress, userAddress } = req.body;
+    // Normalize all addresses to lowercase
+    onchainIdAddress = onchainIdAddress && typeof onchainIdAddress === 'string' ? onchainIdAddress.toLowerCase() : onchainIdAddress;
+    finalIssuerAddress = finalIssuerAddress && typeof finalIssuerAddress === 'string' ? finalIssuerAddress.toLowerCase() : finalIssuerAddress;
+    userAddress = userAddress && typeof userAddress === 'string' ? userAddress.toLowerCase() : userAddress;
     // Debug logs for all addresses
     console.log('--- ADD CLAIM DEBUG ---');
     console.log('onchainIdAddress:', onchainIdAddress);
