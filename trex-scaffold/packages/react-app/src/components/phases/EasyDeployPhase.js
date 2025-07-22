@@ -71,19 +71,6 @@ const EasyDeployPhase = () => {
 
   // Additional state
   const [selectedOperationsToken, setSelectedOperationsToken] = useState(null);
-  const [selectedClaimIssuer, setSelectedClaimIssuer] = useState('');
-  const [availableClaimIssuers, setAvailableClaimIssuers] = useState(() => {
-    try {
-      const saved = localStorage.getItem('trex_available_claim_issuers');
-      return saved ? JSON.parse(saved) : [];
-    } catch (error) {
-      console.error('Error loading claim issuers from localStorage:', error);
-      return [];
-    }
-  });
-  const [selectedIdentityForClaims, setSelectedIdentityForClaims] = useState('');
-  const [selectedClaimTopics, setSelectedClaimTopics] = useState([]);
-  const [claimIssuers, setClaimIssuers] = useState([]);
 
   // Simple logging
   const addLog = useCallback((message, type = "info") => {
