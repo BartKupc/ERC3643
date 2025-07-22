@@ -121,14 +121,31 @@ const TokenOperationsTab = ({
       setPausingToken(true);
       addLog && addLog(`${paused ? 'Pausing' : 'Unpausing'} token...`, "info");
 
-      const signer = await getSigner();
-      const artifacts = getContractArtifacts('Token');
-      const contract = new ethers.Contract(selectedToken.token.address, artifacts.abi, signer);
+      addLog && addLog('Sending pause/unpause request to backend...', "info");
       
-      const tx = paused ? await contract.pause() : await contract.unpause();
-      await tx.wait();
+      // Use backend API instead of direct blockchain interaction
+      const response = await fetch('/api/token/pause', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          tokenAddress: selectedToken.token.address,
+          paused: paused
+        })
+      });
       
-      addLog && addLog(`Token ${paused ? 'paused' : 'unpaused'} successfully`, "success");
+      if (!response.ok) {
+        throw new Error(`Backend request failed: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      if (!data.success) {
+        throw new Error(data.error || 'Unknown error');
+      }
+      
+      addLog && addLog(`✅ Token ${paused ? 'paused' : 'unpaused'} successfully via backend`, "success");
+      addLog && addLog(`Transaction hash: ${data.transactionHash}`, "info");
       
       // Refresh token status
       await checkTokenStatus();
@@ -167,150 +184,29 @@ const TokenOperationsTab = ({
     addLog && addLog(`Checking verification for user: ${userAddressToCheck}`, "info");
 
     try {
-      const signer = await getSigner();
-      const tokenAddress = selectedToken.token.address;
-      const tokenArtifacts = getContractArtifacts('Token');
-      const token = new ethers.Contract(tokenAddress, tokenArtifacts.abi, signer);
+      addLog && addLog('Sending verification check request to backend...', "info");
       
-      // Get the Identity Registry from the token
-      const identityRegistryAddress = await token.identityRegistry();
-      const irArtifacts = getContractArtifacts('IdentityRegistry');
-      const ir = new ethers.Contract(identityRegistryAddress, irArtifacts.abi, signer);
+      // Use backend API instead of direct blockchain interaction
+      const response = await fetch(`/api/token/verify-user/${selectedToken.token.address}/${userAddressToCheck}`);
       
-      // Get user's OnchainID
-      const onchainIdAddress = await ir.identity(userAddressToCheck);
-      if (onchainIdAddress === '0x0000000000000000000000000000000000000000') {
-        setVerificationResults({
-          verified: false,
-          reason: 'User has no OnchainID registered',
-          details: {
-            userAddress: userAddressToCheck,
-            onchainIdAddress: null,
-            identityRegistry: identityRegistryAddress
-          }
-        });
-        addLog && addLog('User has no OnchainID registered', "error");
-        return;
+      if (!response.ok) {
+        throw new Error(`Backend request failed: ${response.status}`);
       }
       
-      // Check if user is verified
-      const isVerified = await ir.isVerified(userAddressToCheck);
-      
-      // Get investor country
-      const investorCountry = await ir.investorCountry(userAddressToCheck);
-      
-      // Get the TrustedIssuersRegistry
-      const tirAddress = await ir.issuersRegistry();
-      const tirArtifacts = getContractArtifacts('TrustedIssuersRegistry');
-      const tir = new ethers.Contract(tirAddress, tirArtifacts.abi, signer);
-      
-      // Get the ClaimTopicsRegistry
-      const ctrAddress = await ir.topicsRegistry();
-      const ctrArtifacts = getContractArtifacts('ClaimTopicsRegistry');
-      const ctr = new ethers.Contract(ctrAddress, ctrArtifacts.abi, signer);
-      
-      // Get required claim topics
-      let requiredTopics = [];
-      try {
-        requiredTopics = await ctr.getClaimTopics();
-        // Ensure requiredTopics is an array
-        if (!Array.isArray(requiredTopics)) {
-          requiredTopics = [];
-        }
-      } catch (topicError) {
-        addLog && addLog(`Warning: Could not get claim topics: ${topicError.message}`, "warning");
-        requiredTopics = [];
+      const data = await response.json();
+      if (!data.success) {
+        throw new Error(data.error || 'Unknown error');
       }
       
-      // Get the OnchainID contract
-      const onchainIdArtifacts = getContractArtifacts('Identity');
-      const onchainId = new ethers.Contract(onchainIdAddress, onchainIdArtifacts.abi, signer);
-      
-      // Check each required topic
-      let verificationDetails = [];
-      for (const topicId of requiredTopics) {
-        let topicNum;
-        try {
-          topicNum = typeof topicId === 'object' && topicId.toNumber ? topicId.toNumber() : Number(topicId);
-        } catch (numError) {
-          addLog && addLog(`Warning: Could not convert topic ID ${topicId}: ${numError.message}`, "warning");
-          continue;
-        }
-        
-        // Get trusted issuers for this topic
-        let trustedIssuers = [];
-        let trustedIssuerAddresses = [];
-        try {
-          trustedIssuers = await tir.getTrustedIssuersForClaimTopic(topicNum);
-          trustedIssuerAddresses = trustedIssuers.map(issuer => issuer.toString());
-        } catch (issuerError) {
-          addLog && addLog(`Warning: Could not get trusted issuers for topic ${topicNum}: ${issuerError.message}`, "warning");
-        }
-        
-        // Check if user has claims for this topic
-        let claims = [];
-        try {
-          claims = await onchainId.getClaimIdsByTopic(topicNum);
-          if (!Array.isArray(claims)) {
-            claims = [];
-          }
-        } catch (claimsError) {
-          addLog && addLog(`Warning: Could not get claims for topic ${topicNum}: ${claimsError.message}`, "warning");
-        }
-        
-        let hasValidClaim = false;
-        let claimDetails = [];
-        
-        if (claims.length > 0) {
-          for (const claimId of claims) {
-            try {
-              const claim = await onchainId.getClaim(claimId);
-              const isFromTrustedIssuer = trustedIssuerAddresses.some(
-                trustedIssuerAddress => trustedIssuerAddress.toLowerCase() === claim.issuer.toLowerCase()
-              );
-              
-              claimDetails.push({
-                claimId: claimId.toString(),
-                issuer: claim.issuer,
-                isFromTrustedIssuer,
-                data: claim.data
-              });
-              
-              if (isFromTrustedIssuer) {
-                hasValidClaim = true;
-              }
-            } catch (claimError) {
-              claimDetails.push({
-                claimId: claimId.toString(),
-                error: claimError.message
-              });
-            }
-          }
-        }
-        
-        verificationDetails.push({
-          topic: topicNum,
-          hasClaims: claims.length > 0,
-          hasValidClaim,
-          claimDetails,
-          trustedIssuers: trustedIssuerAddresses
-        });
-      }
+      addLog && addLog(`✅ Verification check completed via backend`, "success");
       
       setVerificationResults({
-        verified: isVerified,
-        reason: isVerified ? 'User is verified' : 'User verification failed',
-        details: {
-          userAddress: userAddressToCheck,
-          onchainIdAddress,
-          identityRegistry: identityRegistryAddress,
-          investorCountry: typeof investorCountry === 'object' && investorCountry.toNumber ? investorCountry.toNumber() : Number(investorCountry),
-          requiredTopics: Array.isArray(requiredTopics) ? requiredTopics.map(t => typeof t === 'object' && t.toNumber ? t.toNumber() : Number(t)) : [],
-          verificationDetails: Array.isArray(verificationDetails) ? verificationDetails : []
-        }
+        verified: data.verified,
+        reason: data.reason,
+        details: data.details
       });
       
-      addLog && addLog(`Verification check completed. User verified: ${isVerified}`, isVerified ? "success" : "error");
+      addLog && addLog(`Verification check completed. User verified: ${data.verified}`, data.verified ? "success" : "error");
       
     } catch (error) {
       console.error('Error checking verification:', error);

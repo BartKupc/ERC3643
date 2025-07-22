@@ -134,31 +134,13 @@ const UserManagementTab = ({ deploymentDetails, addLog, getSigner, factories }) 
         if (savedClaimIssuers) {
           const parsedClaimIssuers = JSON.parse(savedClaimIssuers);
           
-          // Get actual topics from contracts
-          const issuersWithActualTopics = await Promise.all(
-            parsedClaimIssuers.map(async (issuer) => {
-              try {
-                const signer = await getSigner();
-                const claimIssuerArtifacts = getContractArtifacts('ClaimIssuer');
-                const claimIssuer = new ethers.Contract(issuer.address, claimIssuerArtifacts.abi, signer);
-                
-                // Try to get topics from the contract (this might not be available on all ClaimIssuer contracts)
-                let actualTopics = issuer.claimTopics || [1, 2, 3]; // fallback to stored topics
-                
-                // For now, we'll use the stored topics but you can extend this to get from contract
-                return {
-                  ...issuer,
-                  actualTopics: actualTopics
-                };
-              } catch (error) {
-                // If we can't get topics from contract, use stored ones
-                return {
-                  ...issuer,
-                  actualTopics: issuer.claimTopics || [1, 2, 3]
-                };
-              }
-            })
-          );
+          // Use stored topics since direct contract access causes CORS issues
+          const issuersWithActualTopics = parsedClaimIssuers.map((issuer) => {
+            return {
+              ...issuer,
+              actualTopics: issuer.claimTopics || [1, 2, 3]
+            };
+          });
           
           setAvailableClaimIssuers(issuersWithActualTopics);
           addLog && addLog(`Loaded ${issuersWithActualTopics.length} Claim Issuers from storage`, "info");
@@ -231,72 +213,51 @@ const UserManagementTab = ({ deploymentDetails, addLog, getSigner, factories }) 
         throw new Error('Identity Factory not found in deployment details. Please deploy a factory first.');
       }
 
-      const signer = await getSigner();
-      const signerAddress = await signer.getAddress();
+      addLog && addLog('Sending OnchainID creation request to backend...', "info");
       
-      // Use the Identity Factory to create the OnchainID
-      const identityFactoryAddress = deploymentDetails.factories.identityFactory;
-      addLog && addLog(`Using Identity Factory at: ${identityFactoryAddress}`, "info");
+      // Use backend API instead of direct blockchain interaction
+      const response = await fetch('/api/create-onchainid', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userAddress: userAddress,
+          deploymentDetails: deploymentDetails
+        })
+      });
       
-      const identityFactoryArtifacts = getContractArtifacts('IIdFactory');
-      const identityFactory = new ethers.Contract(identityFactoryAddress, identityFactoryArtifacts.abi, signer);
+      if (!response.ok) {
+        throw new Error(`Backend request failed: ${response.status}`);
+      }
       
-      // Debug: Check available methods
-      addLog && addLog(`Debug - Available methods: ${Object.keys(identityFactory.functions).join(', ')}`, "info");
-      addLog && addLog(`Debug - Has createIdentity: ${typeof identityFactory.createIdentity === 'function'}`, "info");
+      const data = await response.json();
+      if (!data.success) {
+        throw new Error(data.error || 'Unknown error');
+      }
       
-      // Generate a unique salt for this user
-      const salt = ethers.utils.keccak256(
-        ethers.utils.defaultAbiCoder.encode(
-          ['address', 'uint256'], 
-          [userAddress, Date.now()]
-        )
-      );
+      const { onchainIdAddress, transactionHash } = data;
       
-      addLog && addLog(`Creating OnchainID for user ${userAddress} with salt ${salt}`, "info");
+      addLog && addLog(`✅ OnchainID created via backend at: ${onchainIdAddress}`, "success");
+      addLog && addLog(`Transaction hash: ${transactionHash}`, "info");
       
-      // Use createIdentityWithManagementKeys to give the signer (issuer) management keys
-      // The user address is already the wallet parameter, so we only add the issuer as management key
-      const signerKeyHash = ethers.utils.keccak256(
-        ethers.utils.defaultAbiCoder.encode(['address'], [signerAddress])
-      );
-      
-      // Only the signer (issuer) gets management keys - the user is already the wallet
-      const managementKeys = [signerKeyHash];
-      
-      addLog && addLog(`Creating OnchainID with management keys for issuer...`, "info");
-      addLog && addLog(`User wallet: ${userAddress}`, "info");
-      addLog && addLog(`Issuer key hash: ${signerKeyHash}`, "info");
-      
-      // Call createIdentityWithManagementKeys on the Identity Factory
-      const tx = await identityFactory.createIdentityWithManagementKeys(userAddress, salt, managementKeys);
-      const receipt = await tx.wait();
-      
-      // Get the identity address
-      const identityAddress = await identityFactory.getIdentity(userAddress);
-      
-      addLog && addLog(`Transaction completed. Identity address: ${identityAddress}`, "info");
-      addLog && addLog(`✅ OnchainID created with management keys for both user and issuer`, "success");
-      
-      setOnchainIdAddress(identityAddress);
+      setOnchainIdAddress(onchainIdAddress);
       
       // Save the new identity
       const newIdentity = {
         userAddress: userAddress,
-        onchainIdAddress: identityAddress,
+        onchainIdAddress: onchainIdAddress,
         country: userCountry,
         createdAt: new Date().toISOString(),
         status: 'created',
         claims: [],
-        salt: salt,
-        factoryAddress: identityFactoryAddress
+        factoryAddress: deploymentDetails.factories.identityFactory
       };
       saveUserIdentity(newIdentity);
       
-      addLog && addLog(`OnchainID created at ${identityAddress}`, "success");
-      addLog && addLog(`Created via Identity Factory: ${identityFactoryAddress}`, "info");
-      addLog && addLog(`Salt used: ${salt}`, "info");
-      setMessage(`OnchainID created successfully at ${identityAddress}`);
+      addLog && addLog(`OnchainID created at ${onchainIdAddress}`, "success");
+      addLog && addLog(`Created via Identity Factory: ${deploymentDetails.factories.identityFactory}`, "info");
+      setMessage(`OnchainID created successfully at ${onchainIdAddress}`);
     } catch (error) {
       console.error('Error creating OnchainID:', error);
       const cleanError = extractCleanError(error);
@@ -331,36 +292,35 @@ const UserManagementTab = ({ deploymentDetails, addLog, getSigner, factories }) 
         throw new Error('Please select an Identity Registry first');
       }
 
-      const signer = await getSigner();
-      const signerAddress = await signer.getAddress();
-      const identityRegistryAddress = selectedIR;
-      const artifacts = getContractArtifacts('IdentityRegistry');
-      const registry = new ethers.Contract(identityRegistryAddress, artifacts.abi, signer);
+      addLog && addLog('Sending identity registration request to backend...', "info");
       
-      // Pre-flight checks
-      addLog && addLog(`Pre-flight checks for registration:`, "info");
-      addLog && addLog(`- User Address: ${userAddress}`, "info");
-      addLog && addLog(`- OnchainID Address: ${onchainIdAddress}`, "info");
-      addLog && addLog(`- Country: ${userCountry}`, "info");
-      addLog && addLog(`- IR Address: ${identityRegistryAddress}`, "info");
-      addLog && addLog(`- Signer Address: ${signerAddress}`, "info");
+      // Use backend API instead of direct blockchain interaction
+      const response = await fetch('/api/register-identity', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userAddress: userAddress,
+          onchainIdAddress: onchainIdAddress,
+          userCountry: userCountry,
+          selectedIR: selectedIR
+        })
+      });
       
-      // In TREX Factory pattern, the signer should be an agent on the IR
-      const isAgentIR = await registry.isAgent(signerAddress);
-      addLog && addLog(`- Agent on IR: ${isAgentIR ? 'YES' : 'NO'}`, isAgentIR ? "success" : "error");
-      
-      if (!isAgentIR) {
-        addLog && addLog(`⚠️ You are not an agent on this IR. In TREX Factory pattern:`, "warning");
-        addLog && addLog(`1. The factory deployer is automatically added as an agent`, "info");
-        addLog && addLog(`2. You can add more agents using the Agent Management tab`, "info");
-        addLog && addLog(`3. Or use the factory deployer account to register users`, "info");
-        throw new Error('You are not an agent on this Identity Registry');
+      if (!response.ok) {
+        throw new Error(`Backend request failed: ${response.status}`);
       }
       
-      // registerIdentity requires: userAddress, identityAddress, country
-      addLog && addLog(`Calling registerIdentity(${userAddress}, ${onchainIdAddress}, ${userCountry})`, "info");
-      const tx = await registry.registerIdentity(userAddress, onchainIdAddress, userCountry);
-      await tx.wait();
+      const data = await response.json();
+      if (!data.success) {
+        throw new Error(data.error || 'Unknown error');
+      }
+      
+      const { transactionHash } = data;
+      
+      addLog && addLog(`✅ Identity registered via backend`, "success");
+      addLog && addLog(`Transaction hash: ${transactionHash}`, "info");
       
       // Update identity status
       const updatedIdentity = {
@@ -368,7 +328,7 @@ const UserManagementTab = ({ deploymentDetails, addLog, getSigner, factories }) 
         onchainIdAddress: onchainIdAddress,
         country: userCountry,
         identityRegistries: [...(selectedIdentity?.identityRegistries || []), {
-          address: identityRegistryAddress,
+          address: selectedIR,
           registeredAt: new Date().toISOString()
         }],
         status: 'registered',
@@ -420,80 +380,37 @@ const UserManagementTab = ({ deploymentDetails, addLog, getSigner, factories }) 
         throw new Error('No trusted issuer found. Please add a trusted issuer first.');
       }
 
-      const signer = await getSigner();
-      const signerAddress = await signer.getAddress();
+      addLog && addLog('Sending ClaimIssuer keys request to backend...', "info");
       
-      // Get the OnchainID contract
-      const onchainIdArtifacts = getContractArtifacts('Identity');
-      const onchainId = new ethers.Contract(onchainIdAddress, onchainIdArtifacts.abi, signer);
+      // Use backend API instead of direct blockchain interaction
+      const response = await fetch('/api/add-claim-issuer-keys', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          onchainIdAddress: onchainIdAddress,
+          finalIssuerAddress: finalIssuerAddress
+        })
+      });
       
-      // First, ensure the signer has management keys on this OnchainID
-      addLog && addLog(`Checking if signer ${signerAddress} has management keys on OnchainID...`, "info");
-      
-      const signerKeyHash = ethers.utils.keccak256(
-        ethers.utils.defaultAbiCoder.encode(['address'], [signerAddress])
-      );
-      
-      try {
-        const signerKey = await onchainId.getKey(signerKeyHash);
-        const hasManagementKey = signerKey.purposes.some(p => p.toNumber() === 1);
-        
-        if (!hasManagementKey) {
-          addLog && addLog(`Signer does not have management key. Adding management key for signer...`, "warning");
-          
-          // Add management key for the signer
-          const addManagementKeyTx = await onchainId.addKey(signerKeyHash, 1, 1); // purpose=1 (management), keyType=1 (ECDSA)
-          await addManagementKeyTx.wait();
-          addLog && addLog(`✅ Added management key for signer ${signerAddress}`, "success");
-        } else {
-          addLog && addLog(`✅ Signer already has management key`, "success");
-        }
-      } catch (e) {
-        addLog && addLog(`Signer key not found. Adding management key for signer...`, "warning");
-        
-        // Add management key for the signer
-        const addManagementKeyTx = await onchainId.addKey(signerKeyHash, 1, 1); // purpose=1 (management), keyType=1 (ECDSA)
-        await addManagementKeyTx.wait();
-        addLog && addLog(`✅ Added management key for signer ${signerAddress}`, "success");
+      if (!response.ok) {
+        throw new Error(`Backend request failed: ${response.status}`);
       }
       
-      // Add the ClaimIssuer as keys to the OnchainID
-      addLog && addLog(`Adding ClaimIssuer ${finalIssuerAddress} as keys to OnchainID...`, "info");
-      
-      try {
-        // Create the key hash for the ClaimIssuer
-        const claimIssuerKeyHash = ethers.utils.keccak256(
-          ethers.utils.defaultAbiCoder.encode(['address'], [finalIssuerAddress])
-        );
-        
-        // Check if key already exists
-        try {
-          const existingKey = await onchainId.getKey(claimIssuerKeyHash);
-          if (existingKey.purposes.length > 0) {
-            addLog && addLog(`ClaimIssuer ${finalIssuerAddress} keys already exist, skipping...`, "info");
-            setMessage('ClaimIssuer keys already exist on this OnchainID');
-            return;
-          }
-        } catch (e) {
-          // Key doesn't exist, proceed to add it
-        }
-        
-        // Add the ClaimIssuer as a management key (purpose=1) and signing key (purpose=3)
-        addLog && addLog(`Adding ClaimIssuer ${finalIssuerAddress} as management key...`, "info");
-        const addManagementKeyTx = await onchainId.addKey(claimIssuerKeyHash, 1, 1); // purpose=1 (management), keyType=1 (ECDSA)
-        await addManagementKeyTx.wait();
-        
-        addLog && addLog(`Adding ClaimIssuer ${finalIssuerAddress} as signing key...`, "info");
-        const addSigningKeyTx = await onchainId.addKey(claimIssuerKeyHash, 3, 1); // purpose=3 (signing), keyType=1 (ECDSA)
-        await addSigningKeyTx.wait();
-        
-        addLog && addLog(`✅ Successfully added ClaimIssuer ${finalIssuerAddress} keys to OnchainID`, "success");
-        setMessage(`Successfully added ClaimIssuer ${finalIssuerAddress} keys to OnchainID`);
-        
-      } catch (keyError) {
-        addLog && addLog(`⚠️ Could not add keys for ClaimIssuer ${finalIssuerAddress}: ${extractCleanError(keyError)}`, "warning");
-        setMessage(`Error adding ClaimIssuer keys: ${extractCleanError(keyError)}`);
+      const data = await response.json();
+      if (!data.success) {
+        throw new Error(data.error || 'Unknown error');
       }
+      
+      addLog && addLog(`✅ Successfully added ClaimIssuer ${finalIssuerAddress} keys to OnchainID via backend`, "success");
+      if (data.managementKeyTx) {
+        addLog && addLog(`Management key transaction: ${data.managementKeyTx}`, "info");
+      }
+      if (data.signingKeyTx) {
+        addLog && addLog(`Signing key transaction: ${data.signingKeyTx}`, "info");
+      }
+      setMessage(data.message || `Successfully added ClaimIssuer ${finalIssuerAddress} keys to OnchainID`);
       
     } catch (error) {
       console.error('Error adding ClaimIssuer keys:', error);
@@ -533,132 +450,54 @@ const UserManagementTab = ({ deploymentDetails, addLog, getSigner, factories }) 
         throw new Error('No trusted issuer found. Please add a trusted issuer first.');
       }
 
-      const signer = await getSigner();
-      const artifacts = getContractArtifacts('Identity');
-      const onchainId = new ethers.Contract(onchainIdAddress, artifacts.abi, signer);
+      addLog && addLog('Sending claim addition request to backend...', "info");
       
-      // Convert claim topic string to uint256
-      let topicId;
-      if (claimTopic === 'KYC (Know Your Customer)') topicId = 1;
-      else if (claimTopic === 'AML (Anti-Money Laundering)') topicId = 2;
-      else if (claimTopic === 'Accredited Investor') topicId = 3;
-      else if (claimTopic === 'EU Nationality Confirmed') topicId = 4;
-      else if (claimTopic === 'US Nationality Confirmed') topicId = 5;
-      else if (claimTopic === 'Blacklist') topicId = 6;
-      else {
-        const parsed = parseInt(claimTopic);
-        topicId = isNaN(parsed) ? ethers.BigNumber.from(ethers.utils.keccak256(ethers.utils.toUtf8Bytes(claimTopic))) : parsed;
+      // Use backend API instead of direct blockchain interaction
+      const response = await fetch('/api/add-claim-to-identity', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          onchainIdAddress: onchainIdAddress,
+          claimTopic: claimTopic,
+          claimValue: claimValue,
+          finalIssuerAddress: finalIssuerAddress
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Backend request failed: ${response.status}`);
       }
       
-      addLog && addLog(`Adding claim with parameters:`, "info");
-      addLog && addLog(`- Topic: ${claimTopic} (ID: ${topicId})`, "info");
-      addLog && addLog(`- Value: ${claimValue}`, "info");
-      addLog && addLog(`- Final issuer: ${finalIssuerAddress}`, "info");
-      addLog && addLog(`- User OnchainID: ${onchainIdAddress}`, "info");
-      
-      // Check if the issuer is trusted for this claim topic
-      const selectedIssuer = trustedIssuers.find(issuer => issuer.address === finalIssuerAddress);
-      if (selectedIssuer && !selectedIssuer.topics.includes(topicId)) {
-        addLog && addLog(`- WARNING: Selected trusted issuer does not support topic ${topicId}`, "warning");
-        addLog && addLog(`- Selected issuer supports topics: ${selectedIssuer.topics.join(', ')}`, "warning");
-      } else if (selectedIssuer) {
-        addLog && addLog(`- ✅ Selected trusted issuer supports topic ${topicId}`, "success");
+      const data = await response.json();
+      if (!data.success) {
+        throw new Error(data.error || 'Unknown error');
       }
       
-      // Create a proper signature for the claim
-      // The signature should be of: keccak256(abi.encode(address identityHolder_address, uint256 topic, bytes data))
-      const claimData = ethers.utils.hexlify(ethers.utils.toUtf8Bytes(claimValue));
-      
-      addLog && addLog(`🔍 SIGNATURE DEBUG:`, "info");
-      addLog && addLog(`  Raw claimValue: "${claimValue}"`, "info");
-      addLog && addLog(`  claimData (hex): ${claimData}`, "info");
-      addLog && addLog(`  onchainIdAddress: ${onchainIdAddress}`, "info");
-      addLog && addLog(`  topicId: ${topicId} (type: ${typeof topicId})`, "info");
-      
-      const dataHash = ethers.utils.keccak256(
-        ethers.utils.defaultAbiCoder.encode(
-          ['address', 'uint256', 'bytes'],
-          [onchainIdAddress, topicId, claimData]
-        )
-      );
-      
-      addLog && addLog(`  dataHash: ${dataHash}`, "info");
-      
-      // Sign the data hash with the signer's private key
-      const signature = await signer.signMessage(ethers.utils.arrayify(dataHash));
-      
-      addLog && addLog(`  signature: ${signature}`, "info");
-      
-      // Verify the signature can be recovered
-      try {
-        const recoveredAddress = ethers.utils.verifyMessage(ethers.utils.arrayify(dataHash), signature);
-        addLog && addLog(`  recovered address: ${recoveredAddress}`, "info");
-        addLog && addLog(`  signer address: ${await signer.getAddress()}`, "info");
-        addLog && addLog(`  signature valid: ${recoveredAddress.toLowerCase() === (await signer.getAddress()).toLowerCase()}`, "info");
-      } catch (e) {
-        addLog && addLog(`  signature verification failed: ${e.message}`, "error");
-      }
-      
-      // Add claim to the OnchainID
-      // Parameters: topic, scheme, issuer, signature, data, uri
-      const scheme = 1; // ECDSA
-      const uri = '';
-      
-      addLog && addLog(`Calling addClaim(${topicId}, ${scheme}, ${finalIssuerAddress}, ${signature}, ${claimData}, ${uri})`, "info");
-      const tx = await onchainId.addClaim(topicId, scheme, finalIssuerAddress, signature, claimData, uri);
-      await tx.wait();
+      addLog && addLog(`✅ Successfully added claim to identity via backend`, "success");
+      addLog && addLog(`Transaction hash: ${data.transactionHash}`, "info");
       
       // Update identity with new claim
       const updatedIdentity = {
         userAddress: userAddress,
         onchainIdAddress: onchainIdAddress,
         claims: [...(selectedIdentity?.claims || []), {
-          topic: topicId,
-          value: claimValue,
-          issuer: finalIssuerAddress,
+          topic: data.topic,
+          value: data.value,
+          issuer: data.issuer,
           addedAt: new Date().toISOString()
         }]
       };
       saveUserIdentity(updatedIdentity);
       
-      // Verify the claim was actually added by checking the contract
-      try {
-        addLog && addLog(`Verifying claim was added to contract...`, "info");
-        const claimId = ethers.utils.keccak256(
-          ethers.utils.defaultAbiCoder.encode(
-            ['address', 'uint256', 'bytes'],
-            [onchainIdAddress, topicId, claimData]
-          )
-        );
-        
-        const claim = await onchainId.getClaim(claimId);
-        addLog && addLog(`Claim verification:`, "info");
-        addLog && addLog(`  Claim ID: ${claimId}`, "info");
-        addLog && addLog(`  Topic: ${claim.topic.toNumber()}`, "info");
-        addLog && addLog(`  Scheme: ${claim.scheme.toNumber()}`, "info");
-        addLog && addLog(`  Issuer: ${claim.issuer}`, "info");
-        addLog && addLog(`  Signature: ${claim.signature}`, "info");
-        addLog && addLog(`  Data: ${claim.data}`, "info");
-        addLog && addLog(`  URI: ${claim.uri}`, "info");
-        addLog && addLog(`✅ Claim verified on contract`, "success");
-      } catch (verifyError) {
-        addLog && addLog(`❌ Claim verification failed: ${verifyError.message}`, "error");
-        addLog && addLog(`This means the claim was not properly added to the contract`, "error");
-      }
-      
-      addLog && addLog(`Claim added successfully for ${userAddress}`, "success");
-      setMessage(`Claim added successfully for ${userAddress}`);
-      
-      // Clear form
-      setClaimTopic('');
-      setClaimValue('');
-      setSelectedTrustedIssuer('');
+      setMessage(`Successfully added claim to identity. Transaction: ${data.transactionHash}`);
       
     } catch (error) {
-      console.error('Error adding claim:', error);
+      console.error('Error adding claim to identity:', error);
       const cleanError = extractCleanError(error);
-      setMessage(`Error adding claim: ${cleanError}`);
-      addLog && addLog(`Error adding claim: ${cleanError}`, "error");
+      setMessage(`Error adding claim to identity: ${cleanError}`);
+      addLog && addLog(`Error adding claim to identity: ${cleanError}`, "error");
     } finally {
       setAddingClaim(false);
     }
@@ -682,78 +521,29 @@ const UserManagementTab = ({ deploymentDetails, addLog, getSigner, factories }) 
     
     try {
       addLog && addLog(`Checking claims on OnchainID: ${onchainIdAddress}`, "info");
-      const signer = await getSigner();
-      const artifacts = getContractArtifacts('Identity');
-      const onchainId = new ethers.Contract(onchainIdAddress, artifacts.abi, signer);
       
-      // Check for claims on common topics (1-10) - expanded to catch more topics
-      const commonTopics = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20];
-      const claims = [];
-      const processedClaimIds = new Set(); // To avoid duplicates
+      // Use backend API instead of direct blockchain interaction
+      const response = await fetch(`/api/check-onchainid-claims/${onchainIdAddress}`);
       
-      addLog && addLog(`Checking ${commonTopics.length} common claim topics...`, "info");
-      
-      for (const topicId of commonTopics) {
-        try {
-          // Get claim IDs for this topic
-          const claimIds = await onchainId.getClaimIdsByTopic(topicId);
-          
-          if (claimIds.length > 0) {
-            addLog && addLog(`Topic ${topicId}: Found ${claimIds.length} claims`, "info");
-            
-            for (const claimId of claimIds) {
-              const claimIdStr = claimId.toString();
-              
-              // Skip if we've already processed this claim ID
-              if (processedClaimIds.has(claimIdStr)) {
-                addLog && addLog(`  Skipping duplicate claim ID: ${claimIdStr}`, "info");
-                continue;
-              }
-              
-              try {
-                const claim = await onchainId.getClaim(claimId);
-                let claimData = '';
-                try {
-                  claimData = ethers.utils.toUtf8String(claim.data);
-                } catch (e) {
-                  claimData = claim.data; // Keep as hex if not UTF8
-                }
-                
-                addLog && addLog(`  Claim ID: ${claimIdStr}`, "info");
-                addLog && addLog(`    - Issuer: ${claim.issuer}`, "info");
-                addLog && addLog(`    - Topic: ${claim.topic.toString()}`, "info");
-                addLog && addLog(`    - Data: ${claimData}`, "info");
-                addLog && addLog(`    - Scheme: ${claim.scheme.toString()}`, "info");
-                
-                claims.push({
-                  id: claimIdStr,
-                  topic: claim.topic.toNumber(),
-                  issuer: claim.issuer,
-                  data: claimData,
-                  scheme: claim.scheme.toNumber()
-                });
-                
-                processedClaimIds.add(claimIdStr);
-              } catch (claimError) {
-                addLog && addLog(`Error getting claim ${claimIdStr}: ${claimError.message}`, "error");
-              }
-            }
-          }
-        } catch (topicError) {
-          // Topic might not exist or other error, continue to next topic
-          addLog && addLog(`Topic ${topicId}: No claims or error - ${topicError.message}`, "warning");
-        }
+      if (!response.ok) {
+        throw new Error(`Backend request failed: ${response.status}`);
       }
       
-      if (claims.length === 0) {
+      const data = await response.json();
+      if (!data.success) {
+        throw new Error(data.error || 'Unknown error');
+      }
+      
+      const { claims, totalClaims } = data;
+      
+      if (totalClaims === 0) {
         addLog && addLog('No claims found on this OnchainID', "info");
         setMessage('No claims found on OnchainID contract');
         return;
       }
       
-      addLog && addLog(`Total claims found on contract: ${claims.length}`, "success");
-      addLog && addLog(`Unique claim IDs processed: ${processedClaimIds.size}`, "info");
-      setMessage(`Found ${claims.length} claims on OnchainID contract`);
+      addLog && addLog(`Total claims found on contract: ${totalClaims}`, "success");
+      setMessage(`Found ${totalClaims} claims on OnchainID contract`);
       
       // Update the selected identity with actual claims from contract
       if (selectedIdentity) {

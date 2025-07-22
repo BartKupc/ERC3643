@@ -883,6 +883,656 @@ app.get('/api/identity-registries', async (req, res) => {
   }
 });
 
+// Create OnchainID using TREX Factory
+app.post('/api/create-onchainid', async (req, res) => {
+  try {
+    const { userAddress, deploymentDetails } = req.body;
+    console.log(`🎯 Creating OnchainID for user: ${userAddress}`);
+    
+    if (!userAddress) {
+      throw new Error('User address is required');
+    }
+    
+    if (!deploymentDetails || !deploymentDetails.factories || !deploymentDetails.factories.identityFactory) {
+      throw new Error('Identity Factory not found in deployment details');
+    }
+    
+    const provider = createProvider();
+    const wallet = new ethers.Wallet(process.env.PRIVATE_KEY || '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80', provider);
+    const deployerAddress = await wallet.getAddress();
+    
+    console.log(`🔍 Using deployer address: ${deployerAddress}`);
+    console.log(`🔍 Identity Factory: ${deploymentDetails.factories.identityFactory}`);
+    
+    // Get the Identity Factory contract
+    const identityFactoryAddress = deploymentDetails.factories.identityFactory;
+    
+    // Load OnchainID artifacts
+    const OnchainID = require('@onchain-id/solidity');
+    
+    // Create Identity Factory contract instance
+    const identityFactory = new ethers.Contract(
+      identityFactoryAddress,
+      OnchainID.contracts.Factory.abi,
+      wallet
+    );
+    
+    console.log(`🔍 Creating OnchainID for ${userAddress}...`);
+    
+    // Create OnchainID using the factory
+    const tx = await identityFactory.createIdentity(userAddress, true);
+    await tx.wait();
+    
+    console.log(`✅ OnchainID creation transaction confirmed: ${tx.hash}`);
+    
+    // Get the created OnchainID address
+    const onchainIdAddress = await identityFactory.identityOf(userAddress);
+    
+    console.log(`✅ OnchainID created at: ${onchainIdAddress}`);
+    
+    res.json({
+      success: true,
+      onchainIdAddress: onchainIdAddress,
+      userAddress: userAddress,
+      transactionHash: tx.hash
+    });
+    
+  } catch (error) {
+    console.error('❌ Error creating OnchainID:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Register identity in Identity Registry
+app.post('/api/register-identity', async (req, res) => {
+  try {
+    const { userAddress, onchainIdAddress, userCountry, selectedIR } = req.body;
+    console.log(`🎯 Registering identity for user: ${userAddress}`);
+    
+    if (!userAddress || !onchainIdAddress || !selectedIR) {
+      throw new Error('User address, OnchainID address, and Identity Registry are required');
+    }
+    
+    const provider = createProvider();
+    const wallet = new ethers.Wallet(process.env.PRIVATE_KEY || '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80', provider);
+    const deployerAddress = await wallet.getAddress();
+    
+    console.log(`🔍 Using deployer address: ${deployerAddress}`);
+    console.log(`🔍 Identity Registry: ${selectedIR}`);
+    
+    // Get the Identity Registry contract
+    const irArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/contracts/src/contracts/registry/implementation/IdentityRegistry.sol/IdentityRegistry.json');
+    if (!fs.existsSync(irArtifactsPath)) {
+      throw new Error('IdentityRegistry artifacts not found. Please compile contracts first.');
+    }
+    const irArtifacts = JSON.parse(fs.readFileSync(irArtifactsPath, 'utf8'));
+    const registry = new ethers.Contract(selectedIR, irArtifacts.abi, wallet);
+    
+    // Check if deployer is an agent
+    const isAgentIR = await registry.isAgent(deployerAddress);
+    console.log(`🔍 Is deployer agent on IR: ${isAgentIR}`);
+    
+    if (!isAgentIR) {
+      throw new Error('Deployer is not an agent on this Identity Registry');
+    }
+    
+    console.log(`🔍 Registering identity: ${userAddress}, ${onchainIdAddress}, ${userCountry}`);
+    
+    // Register the identity
+    const tx = await registry.registerIdentity(userAddress, onchainIdAddress, userCountry);
+    await tx.wait();
+    
+    console.log(`✅ Identity registration transaction confirmed: ${tx.hash}`);
+    
+    res.json({
+      success: true,
+      userAddress: userAddress,
+      onchainIdAddress: onchainIdAddress,
+      identityRegistry: selectedIR,
+      transactionHash: tx.hash
+    });
+    
+  } catch (error) {
+    console.error('❌ Error registering identity:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Add claim issuer keys to OnchainID
+app.post('/api/add-claim-issuer-keys', async (req, res) => {
+  try {
+    const { onchainIdAddress, finalIssuerAddress } = req.body;
+    console.log(`🎯 Adding ClaimIssuer keys to OnchainID: ${onchainIdAddress}`);
+    
+    if (!onchainIdAddress || !finalIssuerAddress) {
+      throw new Error('OnchainID address and ClaimIssuer address are required');
+    }
+    
+    const provider = createProvider();
+    const wallet = new ethers.Wallet(process.env.PRIVATE_KEY || '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80', provider);
+    const deployerAddress = await wallet.getAddress();
+    
+    console.log(`🔍 Using deployer address: ${deployerAddress}`);
+    
+    // Load OnchainID artifacts
+    const OnchainID = require('@onchain-id/solidity');
+    
+    // Get the OnchainID contract
+    const onchainId = new ethers.Contract(onchainIdAddress, OnchainID.contracts.Identity.abi, wallet);
+    
+    // First, ensure the signer has management keys on this OnchainID
+    console.log(`🔍 Checking if signer ${deployerAddress} has management keys on OnchainID...`);
+    
+    const signerKeyHash = ethers.utils.keccak256(
+      ethers.utils.defaultAbiCoder.encode(['address'], [deployerAddress])
+    );
+    
+    try {
+      const signerKey = await onchainId.getKey(signerKeyHash);
+      const hasManagementKey = signerKey.purposes.some(p => p.toNumber() === 1);
+      
+      if (!hasManagementKey) {
+        console.log(`Signer does not have management key. Adding management key for signer...`);
+        
+        // Add management key for the signer
+        const addManagementKeyTx = await onchainId.addKey(signerKeyHash, 1, 1); // purpose=1 (management), keyType=1 (ECDSA)
+        await addManagementKeyTx.wait();
+        console.log(`✅ Added management key for signer ${deployerAddress}`);
+      } else {
+        console.log(`✅ Signer already has management key`);
+      }
+    } catch (e) {
+      console.log(`Signer key not found. Adding management key for signer...`);
+      
+      // Add management key for the signer
+      const addManagementKeyTx = await onchainId.addKey(signerKeyHash, 1, 1); // purpose=1 (management), keyType=1 (ECDSA)
+      await addManagementKeyTx.wait();
+      console.log(`✅ Added management key for signer ${deployerAddress}`);
+    }
+    
+    // Add the ClaimIssuer as keys to the OnchainID
+    console.log(`Adding ClaimIssuer ${finalIssuerAddress} as keys to OnchainID...`);
+    
+    // Create the key hash for the ClaimIssuer
+    const claimIssuerKeyHash = ethers.utils.keccak256(
+      ethers.utils.defaultAbiCoder.encode(['address'], [finalIssuerAddress])
+    );
+    
+    // Check if key already exists
+    try {
+      const existingKey = await onchainId.getKey(claimIssuerKeyHash);
+      if (existingKey.purposes.length > 0) {
+        console.log(`ClaimIssuer ${finalIssuerAddress} keys already exist, skipping...`);
+        res.json({
+          success: true,
+          message: 'ClaimIssuer keys already exist on this OnchainID',
+          onchainIdAddress: onchainIdAddress,
+          claimIssuerAddress: finalIssuerAddress
+        });
+        return;
+      }
+    } catch (e) {
+      // Key doesn't exist, proceed to add it
+    }
+    
+    // Add the ClaimIssuer as a management key (purpose=1) and signing key (purpose=3)
+    console.log(`Adding ClaimIssuer ${finalIssuerAddress} as management key...`);
+    const addManagementKeyTx = await onchainId.addKey(claimIssuerKeyHash, 1, 1); // purpose=1 (management), keyType=1 (ECDSA)
+    await addManagementKeyTx.wait();
+    
+    console.log(`Adding ClaimIssuer ${finalIssuerAddress} as signing key...`);
+    const addSigningKeyTx = await onchainId.addKey(claimIssuerKeyHash, 3, 1); // purpose=3 (signing), keyType=1 (ECDSA)
+    await addSigningKeyTx.wait();
+    
+    console.log(`✅ Successfully added ClaimIssuer ${finalIssuerAddress} keys to OnchainID`);
+    
+    res.json({
+      success: true,
+      message: `Successfully added ClaimIssuer ${finalIssuerAddress} keys to OnchainID`,
+      onchainIdAddress: onchainIdAddress,
+      claimIssuerAddress: finalIssuerAddress,
+      managementKeyTx: addManagementKeyTx.hash,
+      signingKeyTx: addSigningKeyTx.hash
+    });
+    
+  } catch (error) {
+    console.error('❌ Error adding ClaimIssuer keys:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Add claim to identity
+app.post('/api/add-claim-to-identity', async (req, res) => {
+  try {
+    const { onchainIdAddress, claimTopic, claimValue, finalIssuerAddress } = req.body;
+    console.log(`🎯 Adding claim to identity: ${onchainIdAddress}`);
+    
+    if (!onchainIdAddress || !claimTopic || !claimValue || !finalIssuerAddress) {
+      throw new Error('OnchainID address, claim topic, claim value, and issuer address are required');
+    }
+    
+    const provider = createProvider();
+    const wallet = new ethers.Wallet(process.env.PRIVATE_KEY || '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80', provider);
+    
+    console.log(`🔍 Using deployer address: ${await wallet.getAddress()}`);
+    
+    // Load OnchainID artifacts
+    const OnchainID = require('@onchain-id/solidity');
+    
+    // Get the OnchainID contract
+    const onchainId = new ethers.Contract(onchainIdAddress, OnchainID.contracts.Identity.abi, wallet);
+    
+    // Convert claim topic string to uint256
+    let topicId;
+    if (claimTopic === 'KYC (Know Your Customer)') topicId = 1;
+    else if (claimTopic === 'AML (Anti-Money Laundering)') topicId = 2;
+    else if (claimTopic === 'Accredited Investor') topicId = 3;
+    else if (claimTopic === 'EU Nationality Confirmed') topicId = 4;
+    else if (claimTopic === 'US Nationality Confirmed') topicId = 5;
+    else if (claimTopic === 'Blacklist') topicId = 6;
+    else {
+      const parsed = parseInt(claimTopic);
+      topicId = isNaN(parsed) ? ethers.BigNumber.from(ethers.utils.keccak256(ethers.utils.toUtf8Bytes(claimTopic))) : parsed;
+    }
+    
+    console.log(`Adding claim with parameters:`);
+    console.log(`- Topic: ${claimTopic} (ID: ${topicId})`);
+    console.log(`- Value: ${claimValue}`);
+    console.log(`- Final issuer: ${finalIssuerAddress}`);
+    console.log(`- User OnchainID: ${onchainIdAddress}`);
+    
+    // Create a proper signature for the claim
+    // The signature should be of: keccak256(abi.encode(address identityHolder_address, uint256 topic, bytes data))
+    const claimData = ethers.utils.hexlify(ethers.utils.toUtf8Bytes(claimValue));
+    
+    const dataHash = ethers.utils.keccak256(
+      ethers.utils.defaultAbiCoder.encode(
+        ['address', 'uint256', 'bytes'],
+        [onchainIdAddress, topicId, claimData]
+      )
+    );
+    
+    // Sign the data hash with the wallet's private key
+    const signature = await wallet.signMessage(ethers.utils.arrayify(dataHash));
+    
+    // Add claim to the OnchainID
+    // Parameters: topic, scheme, issuer, signature, data, uri
+    const scheme = 1; // ECDSA
+    const uri = '';
+    
+    console.log(`Calling addClaim(${topicId}, ${scheme}, ${finalIssuerAddress}, ${signature}, ${claimData}, ${uri})`);
+    const tx = await onchainId.addClaim(topicId, scheme, finalIssuerAddress, signature, claimData, uri);
+    await tx.wait();
+    
+    console.log(`✅ Successfully added claim to OnchainID`);
+    
+    res.json({
+      success: true,
+      message: 'Successfully added claim to identity',
+      onchainIdAddress: onchainIdAddress,
+      topic: topicId,
+      value: claimValue,
+      issuer: finalIssuerAddress,
+      transactionHash: tx.hash
+    });
+    
+  } catch (error) {
+    console.error('❌ Error adding claim to identity:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Check OnchainID claims
+app.get('/api/check-onchainid-claims/:onchainIdAddress', async (req, res) => {
+  try {
+    const { onchainIdAddress } = req.params;
+    console.log(`🎯 Checking claims on OnchainID: ${onchainIdAddress}`);
+    
+    if (!onchainIdAddress) {
+      throw new Error('OnchainID address is required');
+    }
+    
+    const provider = createProvider();
+    const wallet = new ethers.Wallet(process.env.PRIVATE_KEY || '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80', provider);
+    
+    // Load OnchainID artifacts
+    const OnchainID = require('@onchain-id/solidity');
+    
+    // Get the OnchainID contract
+    const onchainId = new ethers.Contract(onchainIdAddress, OnchainID.contracts.Identity.abi, wallet);
+    
+    // Check for claims on common topics (1-20)
+    const commonTopics = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20];
+    const claims = [];
+    const processedClaimIds = new Set(); // To avoid duplicates
+    
+    console.log(`Checking ${commonTopics.length} common claim topics...`);
+    
+    for (const topicId of commonTopics) {
+      try {
+        // Get claim IDs for this topic
+        const claimIds = await onchainId.getClaimIdsByTopic(topicId);
+        
+        if (claimIds.length > 0) {
+          console.log(`Topic ${topicId}: Found ${claimIds.length} claims`);
+          
+          for (const claimId of claimIds) {
+            const claimIdStr = claimId.toString();
+            
+            // Skip if we've already processed this claim ID
+            if (processedClaimIds.has(claimIdStr)) {
+              console.log(`  Skipping duplicate claim ID: ${claimIdStr}`);
+              continue;
+            }
+            
+            try {
+              const claim = await onchainId.getClaim(claimId);
+              let claimData = '';
+              try {
+                claimData = ethers.utils.toUtf8String(claim.data);
+              } catch (e) {
+                claimData = claim.data; // Keep as hex if not UTF8
+              }
+              
+              claims.push({
+                id: claimIdStr,
+                topic: claim.topic.toNumber(),
+                issuer: claim.issuer,
+                data: claimData,
+                scheme: claim.scheme.toNumber()
+              });
+              
+              processedClaimIds.add(claimIdStr);
+            } catch (claimError) {
+              console.log(`Error getting claim ${claimIdStr}: ${claimError.message}`);
+            }
+          }
+        }
+      } catch (topicError) {
+        // Topic might not exist or other error, continue to next topic
+        console.log(`Topic ${topicId}: No claims or error - ${topicError.message}`);
+      }
+    }
+    
+    console.log(`Total claims found on contract: ${claims.length}`);
+    
+    res.json({
+      success: true,
+      claims: claims,
+      totalClaims: claims.length,
+      onchainIdAddress: onchainIdAddress
+    });
+    
+  } catch (error) {
+    console.error('❌ Error checking OnchainID claims:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Pause/Unpause token
+app.post('/api/token/pause', async (req, res) => {
+  try {
+    const { tokenAddress, paused } = req.body;
+    console.log(`🎯 ${paused ? 'Pausing' : 'Unpausing'} token: ${tokenAddress}`);
+    
+    if (!tokenAddress) {
+      throw new Error('Token address is required');
+    }
+    
+    const provider = createProvider();
+    const wallet = new ethers.Wallet(process.env.PRIVATE_KEY || '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80', provider);
+    
+    console.log(`🔍 Using deployer address: ${await wallet.getAddress()}`);
+    
+    // Get the Token contract
+    const tokenArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/contracts/src/contracts/token/Token.sol/Token.json');
+    if (!fs.existsSync(tokenArtifactsPath)) {
+      throw new Error('Token artifacts not found. Please compile contracts first.');
+    }
+    const tokenArtifacts = JSON.parse(fs.readFileSync(tokenArtifactsPath, 'utf8'));
+    const token = new ethers.Contract(tokenAddress, tokenArtifacts.abi, wallet);
+    
+    // Check if deployer is an agent
+    const deployerAddress = await wallet.getAddress();
+    const isAgent = await token.isAgent(deployerAddress);
+    console.log(`🔍 Is deployer agent on token: ${isAgent}`);
+    
+    if (!isAgent) {
+      throw new Error('Deployer is not an agent on this token');
+    }
+    
+    // Pause or unpause the token
+    const tx = paused ? await token.pause() : await token.unpause();
+    await tx.wait();
+    
+    console.log(`✅ Token ${paused ? 'paused' : 'unpaused'} successfully`);
+    
+    res.json({
+      success: true,
+      message: `Token ${paused ? 'paused' : 'unpaused'} successfully`,
+      tokenAddress: tokenAddress,
+      paused: paused,
+      transactionHash: tx.hash
+    });
+    
+  } catch (error) {
+    console.error(`❌ Error ${req.body.paused ? 'pausing' : 'unpausing'} token:`, error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Check user verification
+app.get('/api/token/verify-user/:tokenAddress/:userAddress', async (req, res) => {
+  try {
+    const { tokenAddress, userAddress } = req.params;
+    console.log(`🎯 Checking verification for user: ${userAddress} on token: ${tokenAddress}`);
+    
+    if (!tokenAddress || !userAddress) {
+      throw new Error('Token address and user address are required');
+    }
+    
+    const provider = createProvider();
+    const wallet = new ethers.Wallet(process.env.PRIVATE_KEY || '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80', provider);
+    
+    // Get the Token contract
+    const tokenArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/contracts/src/contracts/token/Token.sol/Token.json');
+    if (!fs.existsSync(tokenArtifactsPath)) {
+      throw new Error('Token artifacts not found. Please compile contracts first.');
+    }
+    const tokenArtifacts = JSON.parse(fs.readFileSync(tokenArtifactsPath, 'utf8'));
+    const token = new ethers.Contract(tokenAddress, tokenArtifacts.abi, wallet);
+    
+    // Get the Identity Registry from the token
+    const identityRegistryAddress = await token.identityRegistry();
+    console.log(`🔍 Identity Registry: ${identityRegistryAddress}`);
+    
+    const irArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/contracts/src/contracts/registry/implementation/IdentityRegistry.sol/IdentityRegistry.json');
+    if (!fs.existsSync(irArtifactsPath)) {
+      throw new Error('IdentityRegistry artifacts not found. Please compile contracts first.');
+    }
+    const irArtifacts = JSON.parse(fs.readFileSync(irArtifactsPath, 'utf8'));
+    const ir = new ethers.Contract(identityRegistryAddress, irArtifacts.abi, wallet);
+    
+    // Get user's OnchainID
+    const onchainIdAddress = await ir.identity(userAddress);
+    if (onchainIdAddress === '0x0000000000000000000000000000000000000000') {
+      res.json({
+        success: true,
+        verified: false,
+        reason: 'User has no OnchainID registered',
+        details: {
+          userAddress: userAddress,
+          onchainIdAddress: null,
+          identityRegistry: identityRegistryAddress
+        }
+      });
+      return;
+    }
+    
+    // Check if user is verified
+    const isVerified = await ir.isVerified(userAddress);
+    
+    // Get investor country
+    const investorCountry = await ir.investorCountry(userAddress);
+    
+    // Get the TrustedIssuersRegistry
+    const tirAddress = await ir.issuersRegistry();
+    const tirArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/contracts/src/contracts/registry/implementation/TrustedIssuersRegistry.sol/TrustedIssuersRegistry.json');
+    if (!fs.existsSync(tirArtifactsPath)) {
+      throw new Error('TrustedIssuersRegistry artifacts not found. Please compile contracts first.');
+    }
+    const tirArtifacts = JSON.parse(fs.readFileSync(tirArtifactsPath, 'utf8'));
+    const tir = new ethers.Contract(tirAddress, tirArtifacts.abi, wallet);
+    
+    // Get the ClaimTopicsRegistry
+    const ctrAddress = await ir.topicsRegistry();
+    const ctrArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/contracts/src/contracts/registry/implementation/ClaimTopicsRegistry.sol/ClaimTopicsRegistry.json');
+    if (!fs.existsSync(ctrArtifactsPath)) {
+      throw new Error('ClaimTopicsRegistry artifacts not found. Please compile contracts first.');
+    }
+    const ctrArtifacts = JSON.parse(fs.readFileSync(ctrArtifactsPath, 'utf8'));
+    const ctr = new ethers.Contract(ctrAddress, ctrArtifacts.abi, wallet);
+    
+    // Get required claim topics
+    let requiredTopics = [];
+    try {
+      requiredTopics = await ctr.getClaimTopics();
+      if (!Array.isArray(requiredTopics)) {
+        requiredTopics = [];
+      }
+    } catch (topicError) {
+      console.log(`Warning: Could not get claim topics: ${topicError.message}`);
+      requiredTopics = [];
+    }
+    
+    // Load OnchainID artifacts
+    const OnchainID = require('@onchain-id/solidity');
+    
+    // Get the OnchainID contract
+    const onchainId = new ethers.Contract(onchainIdAddress, OnchainID.contracts.Identity.abi, wallet);
+    
+    // Check each required topic
+    let verificationDetails = [];
+    for (const topicId of requiredTopics) {
+      let topicNum;
+      try {
+        topicNum = typeof topicId === 'object' && topicId.toNumber ? topicId.toNumber() : Number(topicId);
+      } catch (numError) {
+        console.log(`Warning: Could not convert topic ID ${topicId}: ${numError.message}`);
+        continue;
+      }
+      
+      // Get trusted issuers for this topic
+      let trustedIssuers = [];
+      let trustedIssuerAddresses = [];
+      try {
+        trustedIssuers = await tir.getTrustedIssuersForClaimTopic(topicNum);
+        trustedIssuerAddresses = trustedIssuers.map(issuer => issuer.toString());
+      } catch (issuerError) {
+        console.log(`Warning: Could not get trusted issuers for topic ${topicNum}: ${issuerError.message}`);
+      }
+      
+      // Check if user has claims for this topic
+      let claims = [];
+      try {
+        claims = await onchainId.getClaimIdsByTopic(topicNum);
+        if (!Array.isArray(claims)) {
+          claims = [];
+        }
+      } catch (claimsError) {
+        console.log(`Warning: Could not get claims for topic ${topicNum}: ${claimsError.message}`);
+      }
+      
+      let hasValidClaim = false;
+      let claimDetails = [];
+      
+      if (claims.length > 0) {
+        // Check each claim
+        for (const claimId of claims) {
+          try {
+            const claim = await onchainId.getClaim(claimId);
+            const claimIssuer = claim.issuer;
+            
+            // Check if the claim issuer is trusted for this topic
+            if (trustedIssuerAddresses.includes(claimIssuer.toLowerCase())) {
+              hasValidClaim = true;
+              let claimData = '';
+              try {
+                claimData = ethers.utils.toUtf8String(claim.data);
+              } catch (e) {
+                claimData = claim.data; // Keep as hex if not UTF8
+              }
+              
+              claimDetails.push({
+                claimId: claimId.toString(),
+                issuer: claimIssuer,
+                data: claimData,
+                scheme: claim.scheme.toNumber()
+              });
+            }
+          } catch (claimError) {
+            console.log(`Warning: Could not get claim ${claimId}: ${claimError.message}`);
+          }
+        }
+      }
+      
+      verificationDetails.push({
+        topic: topicNum,
+        required: true,
+        hasValidClaim: hasValidClaim,
+        trustedIssuers: trustedIssuerAddresses,
+        claims: claimDetails
+      });
+    }
+    
+    // Determine overall verification status
+    const allTopicsVerified = verificationDetails.every(detail => detail.hasValidClaim);
+    const verified = isVerified && allTopicsVerified;
+    
+    console.log(`✅ Verification check completed for user: ${userAddress}`);
+    
+    res.json({
+      success: true,
+      verified: verified,
+      reason: verified ? 'User is fully verified' : 'User verification incomplete',
+      details: {
+        userAddress: userAddress,
+        onchainIdAddress: onchainIdAddress,
+        identityRegistry: identityRegistryAddress,
+        isVerified: isVerified,
+        investorCountry: investorCountry.toNumber(),
+        requiredTopics: requiredTopics.map(t => typeof t === 'object' && t.toNumber ? t.toNumber() : Number(t)),
+        verificationDetails: verificationDetails
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Error checking user verification:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 // CORS Proxy for Hardhat node
 app.post('/api/hardhat', async (req, res) => {
   try {
