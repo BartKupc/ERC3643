@@ -60,79 +60,37 @@ const AgentManagementTab = ({ deploymentDetails, addLog, getSigner, factories })
     setLoading(true);
     setError(null);
     try {
-      const signer = await getSigner();
-      const newAgents = { token: [], ir: [] };
-
-      // Get contract addresses from the selected token
-      const tokenAddress = selectedToken.token.address;
-      const irAddress = selectedToken.suite?.identityRegistry;
+      const tokenAddress = selectedToken.token?.address;
+      if (!tokenAddress) {
+        throw new Error('No token address found for selected token');
+      }
       
-      addLog && addLog(`Found addresses - Token: ${tokenAddress}, IR: ${irAddress}`, 'info');
-
-      // Get the deployer address (account 0)
-      const deployerAddress = await signer.getAddress();
-      addLog && addLog(`Checking agent status for deployer: ${deployerAddress}`, 'info');
-
-      // Check Token agents using isAgent() method
-      if (tokenAddress) {
-        try {
-          const tokenArtifacts = getContractArtifacts('Token');
-          const token = new ethers.Contract(tokenAddress, tokenArtifacts.abi, signer);
-          
-          // Check if deployer is a token agent
-          const isTokenAgent = await token.isAgent(deployerAddress);
-          if (isTokenAgent) {
-            newAgents.token.push(deployerAddress);
-            addLog && addLog(`✅ Deployer is Token Agent`, 'success');
-          } else {
-            addLog && addLog(`❌ Deployer is NOT Token Agent`, 'warning');
-          }
-        } catch (err) {
-          addLog && addLog(`Error checking token agents: ${err.message}`, 'warning');
-        }
+      addLog && addLog(`Loading agents for token ${tokenAddress} via backend...`, 'info');
+      
+      // Use backend API instead of direct blockchain interaction
+      const response = await fetch(`/api/agents/${tokenAddress}`);
+      if (!response.ok) {
+        throw new Error(`Backend request failed: ${response.status}`);
       }
-
-      // Check Identity Registry agents using isAgent() method
-      if (irAddress) {
-        try {
-          const irArtifacts = getContractArtifacts('IdentityRegistry');
-          const ir = new ethers.Contract(irAddress, irArtifacts.abi, signer);
-          
-          // Check if deployer is an IR agent
-          const isIRAgent = await ir.isAgent(deployerAddress);
-          if (isIRAgent) {
-            newAgents.ir.push(deployerAddress);
-            addLog && addLog(`✅ Deployer is IR Agent`, 'success');
-          } else {
-            addLog && addLog(`❌ Deployer is NOT IR Agent`, 'warning');
-          }
-          
-          // Check if token contract is an IR agent (should be automatic)
-          if (tokenAddress) {
-            const isTokenIRAgent = await ir.isAgent(tokenAddress);
-            if (isTokenIRAgent) {
-              newAgents.ir.push(tokenAddress);
-              addLog && addLog(`✅ Token contract is IR Agent`, 'info');
-            }
-          }
-        } catch (err) {
-          addLog && addLog(`Error checking IR agents: ${err.message}`, 'warning');
-        }
+      
+      const data = await response.json();
+      if (!data.success) {
+        throw new Error(data.error || 'Unknown error');
       }
-
-      setAgents(newAgents);
-      const totalAgents = newAgents.token.length + newAgents.ir.length;
-      addLog && addLog(`Loaded ${totalAgents} total agents`, 'success');
-      addLog && addLog(`Token agents: ${newAgents.token.length}, IR agents: ${newAgents.ir.length}`, 'info');
-      addLog && addLog(`Token agents: ${JSON.stringify(newAgents.token)}`, 'info');
-      addLog && addLog(`IR agents: ${JSON.stringify(newAgents.ir)}`, 'info');
-      addLog && addLog(`Final agents state: ${JSON.stringify(newAgents)}`, 'info');
+      
+      setAgents(data.agents);
+      const totalAgents = data.agents.token.length + data.agents.ir.length;
+      addLog && addLog(`Loaded ${totalAgents} total agents via backend`, 'success');
+      addLog && addLog(`Token agents: ${data.agents.token.length}, IR agents: ${data.agents.ir.length}`, 'info');
+      addLog && addLog(`Token agents: ${JSON.stringify(data.agents.token)}`, 'info');
+      addLog && addLog(`IR agents: ${JSON.stringify(data.agents.ir)}`, 'info');
+      addLog && addLog(`Final agents state: ${JSON.stringify(data.agents)}`, 'info');
     } catch (err) {
       setError(`Failed to load agents: ${err.message}`);
       addLog && addLog(`Failed to load agents: ${err.message}`, 'error');
     }
     setLoading(false);
-  }, [selectedToken, addLog, getSigner]);
+  }, [selectedToken, addLog]);
 
   useEffect(() => {
     if (selectedToken) {

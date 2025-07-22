@@ -61,53 +61,26 @@ const TrustedIssuerManagementTab = ({ deploymentDetails, addLog, getSigner, fact
     setLoading(true);
     setError(null);
     try {
-      const signer = await getSigner();
-      
-      // Get the TrustedIssuersRegistry address from the selected token's suite
-      const tirAddress = selectedToken.suite?.trustedIssuersRegistry;
-      if (!tirAddress) {
-        throw new Error('No TrustedIssuersRegistry found for selected token');
+      const tokenAddress = selectedToken.token?.address;
+      if (!tokenAddress) {
+        throw new Error('No token address found for selected token');
       }
       
-      addLog && addLog(`Loading trusted issuers from ${tirAddress}`, 'info');
+      addLog && addLog(`Loading trusted issuers for token ${tokenAddress} via backend...`, 'info');
       
-      const tirArtifacts = getContractArtifacts('TrustedIssuersRegistry');
-      const tir = new ethers.Contract(tirAddress, tirArtifacts.abi, signer);
-      
-      // Check if the contract is initialized
-      try {
-        const owner = await tir.owner();
-        addLog && addLog(`TrustedIssuersRegistry owner: ${owner}`, 'info');
-      } catch (err) {
-        addLog && addLog(`Warning: Could not get owner - contract may not be initialized: ${err.message}`, 'warning');
+      // Use backend API instead of direct blockchain interaction
+      const response = await fetch(`/api/trusted-issuers/${tokenAddress}`);
+      if (!response.ok) {
+        throw new Error(`Backend request failed: ${response.status}`);
       }
       
-      // Use the correct method: getTrustedIssuers() returns all trusted issuers
-      addLog && addLog('Calling getTrustedIssuers()...', 'info');
-      const trustedIssuers = await tir.getTrustedIssuers();
-      
-      addLog && addLog(`Found ${trustedIssuers.length} trusted issuers`, 'success');
-      
-      // Get additional details for each trusted issuer
-      const issuersWithDetails = [];
-      for (const issuerAddress of trustedIssuers) {
-        try {
-          const claimTopics = await tir.getTrustedIssuerClaimTopics(issuerAddress);
-          issuersWithDetails.push({
-            address: issuerAddress,
-            claimTopics: claimTopics.map(topic => topic.toNumber())
-          });
-          addLog && addLog(`Trusted issuer ${issuerAddress} has claim topics: ${claimTopics.map(t => t.toNumber()).join(', ')}`, 'info');
-        } catch (err) {
-          addLog && addLog(`Warning: Could not get claim topics for ${issuerAddress}: ${err.message}`, 'warning');
-          issuersWithDetails.push({
-            address: issuerAddress,
-            claimTopics: []
-          });
-        }
+      const data = await response.json();
+      if (!data.success) {
+        throw new Error(data.error || 'Unknown error');
       }
       
-      setDeployedClaimIssuers(issuersWithDetails);
+      setDeployedClaimIssuers(data.trustedIssuers);
+      addLog && addLog(`Loaded ${data.trustedIssuers.length} trusted issuers via backend`, 'success');
       
     } catch (err) {
       console.error('Error loading trusted issuers:', err);
@@ -115,7 +88,7 @@ const TrustedIssuerManagementTab = ({ deploymentDetails, addLog, getSigner, fact
       addLog && addLog(`Error loading trusted issuers: ${err.message}`, 'error');
     }
     setLoading(false);
-  }, [selectedToken, addLog, getSigner]);
+  }, [selectedToken, addLog]);
 
   useEffect(() => {
     if (selectedToken) {

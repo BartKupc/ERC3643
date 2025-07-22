@@ -93,115 +93,28 @@ const UserManagementTab = ({ deploymentDetails, addLog, getSigner, factories }) 
       
       setLoadingIRs(true);
       try {
-        const irs = [];
-        const irToTokenMap = new Map(); // Map IR address to token info
+        addLog && addLog('Loading Identity Registries from all factories via backend...', 'info');
         
-        // Collect IRs from ALL factories with their associated token info
-        for (const factory of factories) {
-          try {
-            addLog && addLog(`Loading IRs from factory: ${factory.address}`, "info");
-            
-            // Get deployment details for this factory
-            const response = await fetch(`/api/deployments/${factory.deploymentId}`);
-            if (response.ok) {
-              const factoryDeploymentDetails = await response.json();
-              
-              // Map IRs to their tokens
-              if (factoryDeploymentDetails.tokens) {
-                for (const token of factoryDeploymentDetails.tokens) {
-                  if (token.suite?.identityRegistry) {
-                    irToTokenMap.set(token.suite.identityRegistry, {
-                      tokenName: token.token.name,
-                      tokenSymbol: token.token.symbol,
-                      timestamp: token.timestamp,
-                      deploymentId: token.deploymentId
-                    });
-                    addLog && addLog(`Mapped IR ${token.suite.identityRegistry} to token ${token.token.name} (${token.token.symbol}) - ${new Date(token.timestamp).toLocaleString()}`, "info");
-                  }
-                }
-              }
-              
-              // Also check for IR in suite and latestToken
-              if (factoryDeploymentDetails.suite?.identityRegistry) {
-                if (!irToTokenMap.has(factoryDeploymentDetails.suite.identityRegistry)) {
-                  irToTokenMap.set(factoryDeploymentDetails.suite.identityRegistry, {
-                    tokenName: 'Factory Suite',
-                    tokenSymbol: 'SUITE',
-                    timestamp: factoryDeploymentDetails.timestamp || Date.now(),
-                    deploymentId: factoryDeploymentDetails.deploymentId
-                  });
-                }
-              }
-              
-              if (factoryDeploymentDetails.latestToken?.suite?.identityRegistry) {
-                if (!irToTokenMap.has(factoryDeploymentDetails.latestToken.suite.identityRegistry)) {
-                  irToTokenMap.set(factoryDeploymentDetails.latestToken.suite.identityRegistry, {
-                    tokenName: factoryDeploymentDetails.latestToken.token.name,
-                    tokenSymbol: factoryDeploymentDetails.latestToken.token.symbol,
-                    timestamp: factoryDeploymentDetails.latestToken.timestamp,
-                    deploymentId: factoryDeploymentDetails.latestToken.deploymentId
-                  });
-                }
-              }
-              
-              addLog && addLog(`Factory ${factory.address}: Found ${irToTokenMap.size} IR mappings`, "info");
-            }
-          } catch (error) {
-            addLog && addLog(`Error loading IRs from factory ${factory.address}: ${error.message}`, "warning");
-          }
+        // Use backend API instead of direct blockchain interaction
+        const response = await fetch('/api/identity-registries');
+        if (!response.ok) {
+          throw new Error(`Backend request failed: ${response.status}`);
         }
         
-        addLog && addLog(`Total IRs found across all factories: ${irToTokenMap.size}`, "info");
-        
-        // Process each IR with its token info
-        for (const [irAddress, tokenInfo] of irToTokenMap) {
-          try {
-            const signer = await getSigner();
-            const irArtifacts = getContractArtifacts('IdentityRegistry');
-            const ir = new ethers.Contract(irAddress, irArtifacts.abi, signer);
-            
-            // Get the TrustedIssuersRegistry for this IR
-            const tirAddress = await ir.issuersRegistry();
-            const tirArtifacts = getContractArtifacts('TrustedIssuersRegistry');
-            const tir = new ethers.Contract(tirAddress, tirArtifacts.abi, signer);
-            
-            // Get trusted issuers for this IR
-            const issuers = await tir.getTrustedIssuers();
-            const issuersWithTopics = await Promise.all(
-              issuers.map(async (issuer) => {
-                const topics = await tir.getTrustedIssuerClaimTopics(issuer);
-                return {
-                  address: issuer,
-                  topics: topics.map(t => t.toNumber())
-                };
-              })
-            );
-            
-            irs.push({
-              address: irAddress,
-              trustedIssuers: issuersWithTopics,
-              tirAddress: tirAddress,
-              timestamp: tokenInfo.timestamp,
-              tokenName: tokenInfo.tokenName,
-              tokenSymbol: tokenInfo.tokenSymbol,
-              deploymentId: tokenInfo.deploymentId
-            });
-            
-            addLog && addLog(`IR ${irAddress} (${tokenInfo.tokenName}): ${issuersWithTopics.length} trusted issuers - ${new Date(tokenInfo.timestamp).toLocaleString()}`, "info");
-          } catch (error) {
-            addLog && addLog(`Error loading IR ${irAddress}: ${error.message}`, "error");
-          }
+        const data = await response.json();
+        if (!data.success) {
+          throw new Error(data.error || 'Unknown error');
         }
         
-        setAvailableIRs(irs);
+        setAvailableIRs(data.identityRegistries);
         
         // Auto-select first IR if none selected
-        if (irs.length > 0 && !selectedIR) {
-          setSelectedIR(irs[0].address);
-          addLog && addLog(`Auto-selected IR: ${irs[0].address}`, "info");
+        if (data.identityRegistries.length > 0 && !selectedIR) {
+          setSelectedIR(data.identityRegistries[0].address);
+          addLog && addLog(`Auto-selected IR: ${data.identityRegistries[0].address}`, "info");
         }
         
-        addLog && addLog(`Loaded ${irs.length} Identity Registries`, "success");
+        addLog && addLog(`Loaded ${data.identityRegistries.length} Identity Registries via backend`, "success");
       } catch (error) {
         console.error('Error loading IRs:', error);
         addLog && addLog(`Error loading IRs: ${error.message}`, "error");

@@ -53,33 +53,21 @@ const TokenOperationsTab = ({
     setLoading(true);
     setError(null);
     try {
-      const signer = await getSigner();
-      const tokenArtifacts = getContractArtifacts('Token');
-      const token = new ethers.Contract(tokenAddress, tokenArtifacts.abi, signer);
+      addLog && addLog(`Loading token information from ${tokenAddress} via backend...`, 'info');
       
-      addLog && addLog(`Loading token information from ${tokenAddress}`, 'info');
+      // Use backend API instead of direct blockchain interaction
+      const response = await fetch(`/api/token-info/${tokenAddress}`);
+      if (!response.ok) {
+        throw new Error(`Backend request failed: ${response.status}`);
+      }
       
-      const [name, symbol, decimals, totalSupply, owner] = await Promise.all([
-        token.name(),
-        token.symbol(),
-        token.decimals(),
-        token.totalSupply(),
-        token.owner()
-      ]);
+      const data = await response.json();
+      if (!data.success) {
+        throw new Error(data.error || 'Unknown error');
+      }
       
-      // Handle BigNumber conversion properly
-      const decimalsNumber = typeof decimals === 'object' && decimals.toNumber ? decimals.toNumber() : Number(decimals);
-      
-      setTokenInfo({
-        name,
-        symbol,
-        decimals: decimalsNumber,
-        totalSupply: ethers.utils.formatUnits(totalSupply, decimalsNumber),
-        owner,
-        address: tokenAddress
-      });
-      
-      addLog && addLog(`Token loaded: ${name} (${symbol})`, 'success');
+      setTokenInfo(data.tokenInfo);
+      addLog && addLog(`Token loaded via backend: ${data.tokenInfo.name} (${data.tokenInfo.symbol})`, 'success');
     } catch (err) {
       console.error('Error loading token info:', err);
       setError(`Failed to load token information: ${err.message}`);
@@ -87,7 +75,7 @@ const TokenOperationsTab = ({
     } finally {
       setLoading(false);
     }
-  }, [addLog, getSigner]);
+  }, [addLog]);
 
   // Check token status (paused/active)
   const checkTokenStatus = async () => {
@@ -99,44 +87,22 @@ const TokenOperationsTab = ({
     try {
       setTokenStatus('Checking...');
       
-      const signer = await getSigner();
-      const artifacts = getContractArtifacts('Token');
-      const contract = new ethers.Contract(selectedToken.token.address, artifacts.abi, signer);
+      const tokenAddress = selectedToken.token.address;
+      addLog && addLog(`Checking token status for ${tokenAddress} via backend...`, 'info');
       
-      // First, let's verify the contract exists and is valid
-      try {
-        const code = await signer.provider.getCode(selectedToken.token.address);
-        if (code === '0x') {
-          setTokenStatus('❌ Invalid contract address');
-          addLog && addLog('Token contract address is invalid or empty', "error");
-          return;
-        }
-      } catch (error) {
-        setTokenStatus('❌ Cannot verify contract');
-        addLog && addLog(`Error verifying contract: ${error.message}`, "error");
-        return;
+      // Use backend API instead of direct blockchain interaction
+      const response = await fetch(`/api/token-status/${tokenAddress}`);
+      if (!response.ok) {
+        throw new Error(`Backend request failed: ${response.status}`);
       }
       
-      // Check if the contract has the paused function
-      const hasPausedFunction = artifacts.abi.some(item => 
-        item.type === 'function' && item.name === 'paused'
-      );
-      
-      if (!hasPausedFunction) {
-        setTokenStatus('⚠️ No pause function found');
-        addLog && addLog('Token contract does not have paused() function', "warning");
-        return;
+      const data = await response.json();
+      if (!data.success) {
+        throw new Error(data.error || 'Unknown error');
       }
       
-      const isPaused = await contract.paused();
-      
-      if (isPaused) {
-        setTokenStatus('⏸️ PAUSED');
-        addLog && addLog('Token status checked: PAUSED', "info");
-      } else {
-        setTokenStatus('▶️ ACTIVE');
-        addLog && addLog('Token status checked: ACTIVE', "info");
-      }
+      setTokenStatus(data.status);
+      addLog && addLog(`Token status checked via backend: ${data.status}`, "info");
     } catch (error) {
       console.error('Error checking token status:', error);
       setTokenStatus('❌ Error checking status');

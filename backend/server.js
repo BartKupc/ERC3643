@@ -528,6 +528,358 @@ app.get('/api/claim-topics/:tokenAddress', async (req, res) => {
   }
 });
 
+// Get agents for a token
+app.get('/api/agents/:tokenAddress', async (req, res) => {
+  try {
+    const { tokenAddress } = req.params;
+    console.log(`🎯 Getting agents for token: ${tokenAddress}`);
+    
+    const provider = createProvider();
+    const wallet = new ethers.Wallet(process.env.PRIVATE_KEY || '0xdf57089febbacf7ba0bc227dafbffa9fc08a93fdc68e1e42411a14efcf23656e', provider);
+    const deployerAddress = await wallet.getAddress();
+    
+    // Get the token contract to find the Identity Registry
+    const tokenArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/contracts/src/contracts/token/Token.sol/Token.json');
+    if (!fs.existsSync(tokenArtifactsPath)) {
+      throw new Error('Token artifacts not found. Please compile contracts first.');
+    }
+    const tokenArtifacts = JSON.parse(fs.readFileSync(tokenArtifactsPath, 'utf8'));
+    const token = new ethers.Contract(tokenAddress, tokenArtifacts.abi, wallet);
+    
+    // Get the Identity Registry from the token
+    const identityRegistry = await token.identityRegistry();
+    console.log('Identity Registry:', identityRegistry);
+    
+    const agents = { token: [], ir: [] };
+    
+    // Check Token agents
+    try {
+      const isTokenAgent = await token.isAgent(deployerAddress);
+      if (isTokenAgent) {
+        agents.token.push(deployerAddress);
+        console.log(`✅ Deployer is Token Agent`);
+      } else {
+        console.log(`❌ Deployer is NOT Token Agent`);
+      }
+    } catch (err) {
+      console.log(`Error checking token agents: ${err.message}`);
+    }
+    
+    // Check Identity Registry agents
+    try {
+      const irArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/contracts/src/contracts/registry/implementation/IdentityRegistry.sol/IdentityRegistry.json');
+      if (!fs.existsSync(irArtifactsPath)) {
+        throw new Error('IdentityRegistry artifacts not found. Please compile contracts first.');
+      }
+      const irArtifacts = JSON.parse(fs.readFileSync(irArtifactsPath, 'utf8'));
+      const ir = new ethers.Contract(identityRegistry, irArtifacts.abi, wallet);
+      
+      const isIRAgent = await ir.isAgent(deployerAddress);
+      if (isIRAgent) {
+        agents.ir.push(deployerAddress);
+        console.log(`✅ Deployer is IR Agent`);
+      } else {
+        console.log(`❌ Deployer is NOT IR Agent`);
+      }
+      
+      // Check if token contract is an IR agent
+      const isTokenIRAgent = await ir.isAgent(tokenAddress);
+      if (isTokenIRAgent) {
+        agents.ir.push(tokenAddress);
+        console.log(`✅ Token contract is IR Agent`);
+      }
+    } catch (err) {
+      console.log(`Error checking IR agents: ${err.message}`);
+    }
+    
+    console.log(`✅ Found agents - Token: ${agents.token.length}, IR: ${agents.ir.length}`);
+    
+    res.json({
+      success: true,
+      agents: agents,
+      deployerAddress: deployerAddress
+    });
+  } catch (error) {
+    console.error('❌ Error getting agents:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Get trusted issuers for a token
+app.get('/api/trusted-issuers/:tokenAddress', async (req, res) => {
+  try {
+    const { tokenAddress } = req.params;
+    console.log(`🎯 Getting trusted issuers for token: ${tokenAddress}`);
+    
+    const provider = createProvider();
+    const wallet = new ethers.Wallet(process.env.PRIVATE_KEY || '0xdf57089febbacf7ba0bc227dafbffa9fc08a93fdc68e1e42411a14efcf23656e', provider);
+    
+    // Get the token contract to find the TrustedIssuersRegistry
+    const tokenArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/contracts/src/contracts/token/Token.sol/Token.json');
+    if (!fs.existsSync(tokenArtifactsPath)) {
+      throw new Error('Token artifacts not found. Please compile contracts first.');
+    }
+    const tokenArtifacts = JSON.parse(fs.readFileSync(tokenArtifactsPath, 'utf8'));
+    const token = new ethers.Contract(tokenAddress, tokenArtifacts.abi, wallet);
+    
+    // Get the Identity Registry from the token
+    const identityRegistry = await token.identityRegistry();
+    console.log('Identity Registry:', identityRegistry);
+    
+    // Get the Identity Registry contract to access TIR
+    const irArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/contracts/src/contracts/registry/implementation/IdentityRegistry.sol/IdentityRegistry.json');
+    if (!fs.existsSync(irArtifactsPath)) {
+      throw new Error('IdentityRegistry artifacts not found. Please compile contracts first.');
+    }
+    const irArtifacts = JSON.parse(fs.readFileSync(irArtifactsPath, 'utf8'));
+    const identityRegistryContract = new ethers.Contract(identityRegistry, irArtifacts.abi, wallet);
+    
+    // Get the TrustedIssuersRegistry from the Identity Registry
+    const trustedIssuersRegistry = await identityRegistryContract.issuersRegistry();
+    console.log('TrustedIssuersRegistry:', trustedIssuersRegistry);
+    
+    // Get trusted issuers from the TrustedIssuersRegistry
+    const tirArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/contracts/src/contracts/registry/implementation/TrustedIssuersRegistry.sol/TrustedIssuersRegistry.json');
+    if (!fs.existsSync(tirArtifactsPath)) {
+      throw new Error('TrustedIssuersRegistry artifacts not found. Please compile contracts first.');
+    }
+    const tirArtifacts = JSON.parse(fs.readFileSync(tirArtifactsPath, 'utf8'));
+    const tir = new ethers.Contract(trustedIssuersRegistry, tirArtifacts.abi, wallet);
+    
+    // Get all trusted issuers
+    const trustedIssuers = await tir.getTrustedIssuers();
+    console.log(`Found ${trustedIssuers.length} trusted issuers`);
+    
+    // Get additional details for each trusted issuer
+    const issuersWithDetails = [];
+    for (const issuerAddress of trustedIssuers) {
+      try {
+        const claimTopics = await tir.getTrustedIssuerClaimTopics(issuerAddress);
+        issuersWithDetails.push({
+          address: issuerAddress,
+          claimTopics: claimTopics.map(topic => topic.toNumber())
+        });
+        console.log(`Trusted issuer ${issuerAddress} has claim topics: ${claimTopics.map(t => t.toNumber()).join(', ')}`);
+      } catch (err) {
+        console.log(`Warning: Could not get claim topics for ${issuerAddress}: ${err.message}`);
+        issuersWithDetails.push({
+          address: issuerAddress,
+          claimTopics: []
+        });
+      }
+    }
+    
+    console.log(`✅ Found ${issuersWithDetails.length} trusted issuers with details`);
+    
+    res.json({
+      success: true,
+      trustedIssuers: issuersWithDetails,
+      trustedIssuersRegistry: trustedIssuersRegistry
+    });
+  } catch (error) {
+    console.error('❌ Error getting trusted issuers:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Get token information
+app.get('/api/token-info/:tokenAddress', async (req, res) => {
+  try {
+    const { tokenAddress } = req.params;
+    console.log(`🎯 Getting token info for: ${tokenAddress}`);
+    
+    const provider = createProvider();
+    const wallet = new ethers.Wallet(process.env.PRIVATE_KEY || '0xdf57089febbacf7ba0bc227dafbffa9fc08a93fdc68e1e42411a14efcf23656e', provider);
+    
+    // Get the token contract
+    const tokenArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/contracts/src/contracts/token/Token.sol/Token.json');
+    if (!fs.existsSync(tokenArtifactsPath)) {
+      throw new Error('Token artifacts not found. Please compile contracts first.');
+    }
+    const tokenArtifacts = JSON.parse(fs.readFileSync(tokenArtifactsPath, 'utf8'));
+    const token = new ethers.Contract(tokenAddress, tokenArtifacts.abi, wallet);
+    
+    // Get token information
+    const [name, symbol, decimals, totalSupply, owner] = await Promise.all([
+      token.name(),
+      token.symbol(),
+      token.decimals(),
+      token.totalSupply(),
+      token.owner()
+    ]);
+    
+    // Handle BigNumber conversion properly
+    const decimalsNumber = typeof decimals === 'object' && decimals.toNumber ? decimals.toNumber() : Number(decimals);
+    
+    const tokenInfo = {
+      name,
+      symbol,
+      decimals: decimalsNumber,
+      totalSupply: ethers.utils.formatUnits(totalSupply, decimalsNumber),
+      owner,
+      address: tokenAddress
+    };
+    
+    console.log(`✅ Token info loaded: ${name} (${symbol})`);
+    
+    res.json({
+      success: true,
+      tokenInfo: tokenInfo
+    });
+  } catch (error) {
+    console.error('❌ Error getting token info:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Check token status (paused/active)
+app.get('/api/token-status/:tokenAddress', async (req, res) => {
+  try {
+    const { tokenAddress } = req.params;
+    console.log(`🎯 Checking token status for: ${tokenAddress}`);
+    
+    const provider = createProvider();
+    const wallet = new ethers.Wallet(process.env.PRIVATE_KEY || '0xdf57089febbacf7ba0bc227dafbffa9fc08a93fdc68e1e42411a14efcf23656e', provider);
+    
+    // Get the token contract
+    const tokenArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/contracts/src/contracts/token/Token.sol/Token.json');
+    if (!fs.existsSync(tokenArtifactsPath)) {
+      throw new Error('Token artifacts not found. Please compile contracts first.');
+    }
+    const tokenArtifacts = JSON.parse(fs.readFileSync(tokenArtifactsPath, 'utf8'));
+    const token = new ethers.Contract(tokenAddress, tokenArtifacts.abi, wallet);
+    
+    // Check if the contract has the paused function
+    const hasPausedFunction = tokenArtifacts.abi.some(item => 
+      item.type === 'function' && item.name === 'paused'
+    );
+    
+    if (!hasPausedFunction) {
+      res.json({
+        success: true,
+        status: '⚠️ No pause function found',
+        hasPauseFunction: false
+      });
+      return;
+    }
+    
+    const isPaused = await token.paused();
+    const status = isPaused ? '⏸️ PAUSED' : '▶️ ACTIVE';
+    
+    console.log(`✅ Token status: ${status}`);
+    
+    res.json({
+      success: true,
+      status: status,
+      isPaused: isPaused,
+      hasPauseFunction: true
+    });
+  } catch (error) {
+    console.error('❌ Error checking token status:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Get Identity Registries with trusted issuers
+app.get('/api/identity-registries', async (req, res) => {
+  try {
+    console.log(`🎯 Getting Identity Registries from all factories`);
+    
+    const provider = createProvider();
+    const wallet = new ethers.Wallet(process.env.PRIVATE_KEY || '0xdf57089febbacf7ba0bc227dafbffa9fc08a93fdc68e1e42411a14efcf23656e', provider);
+    
+    // Load deployments to get all factories
+    const deploymentsPath = path.join(__dirname, '../deployments.json');
+    if (!fs.existsSync(deploymentsPath)) {
+      throw new Error('No deployments found. Please deploy factory first.');
+    }
+    
+    const deployments = JSON.parse(fs.readFileSync(deploymentsPath, 'utf8'));
+    const factoryDeployments = deployments.filter(d => d.factory && d.factory.address);
+    
+    const irs = [];
+    
+    for (const factoryDeployment of factoryDeployments) {
+      const tokens = factoryDeployment.tokens || [];
+      
+      for (const token of tokens) {
+        try {
+          const irAddress = token.suite?.identityRegistry;
+          if (!irAddress) continue;
+          
+          // Get the Identity Registry contract
+          const irArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/contracts/src/contracts/registry/implementation/IdentityRegistry.sol/IdentityRegistry.json');
+          if (!fs.existsSync(irArtifactsPath)) {
+            throw new Error('IdentityRegistry artifacts not found. Please compile contracts first.');
+          }
+          const irArtifacts = JSON.parse(fs.readFileSync(irArtifactsPath, 'utf8'));
+          const ir = new ethers.Contract(irAddress, irArtifacts.abi, wallet);
+          
+          // Get the TrustedIssuersRegistry for this IR
+          const tirAddress = await ir.issuersRegistry();
+          const tirArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/contracts/src/contracts/registry/implementation/TrustedIssuersRegistry.sol/TrustedIssuersRegistry.json');
+          if (!fs.existsSync(tirArtifactsPath)) {
+            throw new Error('TrustedIssuersRegistry artifacts not found. Please compile contracts first.');
+          }
+          const tirArtifacts = JSON.parse(fs.readFileSync(tirArtifactsPath, 'utf8'));
+          const tir = new ethers.Contract(tirAddress, tirArtifacts.abi, wallet);
+          
+          // Get trusted issuers for this IR
+          const issuers = await tir.getTrustedIssuers();
+          const issuersWithTopics = await Promise.all(
+            issuers.map(async (issuer) => {
+              const topics = await tir.getTrustedIssuerClaimTopics(issuer);
+              return {
+                address: issuer,
+                topics: topics.map(t => t.toNumber())
+              };
+            })
+          );
+          
+          irs.push({
+            address: irAddress,
+            trustedIssuers: issuersWithTopics,
+            tirAddress: tirAddress,
+            timestamp: token.timestamp,
+            tokenName: token.token.name,
+            tokenSymbol: token.token.symbol,
+            deploymentId: token.deploymentId
+          });
+          
+          console.log(`IR ${irAddress} (${token.token.name}): ${issuersWithTopics.length} trusted issuers`);
+        } catch (error) {
+          console.log(`Error loading IR ${token.suite?.identityRegistry}: ${error.message}`);
+        }
+      }
+    }
+    
+    console.log(`✅ Found ${irs.length} Identity Registries`);
+    
+    res.json({
+      success: true,
+      identityRegistries: irs
+    });
+  } catch (error) {
+    console.error('❌ Error getting Identity Registries:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 // CORS Proxy for Hardhat node
 app.post('/api/hardhat', async (req, res) => {
   try {
