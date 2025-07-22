@@ -1242,11 +1242,12 @@ app.post('/api/add-claim-to-identity', async (req, res) => {
       )
     );
 
-    // Sign the data hash with the wallet's private key
+    // Sign the data hash with the deployer's private key (since the ClaimIssuer is owned by the deployer)
+    // The ClaimIssuer contract will validate this signature
     const signature = await wallet.signMessage(ethers.utils.arrayify(dataHash));
     
     console.log(`🔍 Debug: Signer address: ${await wallet.getAddress()}`);
-    console.log(`🔍 Debug: User address for signature: ${userAddress}`);
+    console.log(`🔍 Debug: OnchainID address for signature: ${onchainIdAddress}`);
     console.log(`🔍 Debug: Claim data: ${claimData}`);
     console.log(`🔍 Debug: Data hash: ${dataHash}`);
     console.log(`🔍 Debug: Signature: ${signature}`);
@@ -1306,9 +1307,9 @@ app.post('/api/add-claim-to-identity', async (req, res) => {
     // Debug: verify the signature before calling addClaim
     const recovered = ethers.utils.verifyMessage(ethers.utils.arrayify(dataHash), signature);
     console.log('Recovered address from signature:', recovered);
-    console.log('Expected issuer address:', finalIssuerAddress);
-    if (recovered.toLowerCase() !== finalIssuerAddress.toLowerCase()) {
-      throw new Error('Signature does not match issuer address!');
+    console.log('Expected signer address (deployer):', await wallet.getAddress());
+    if (recovered.toLowerCase() !== (await wallet.getAddress()).toLowerCase()) {
+      throw new Error('Signature does not match deployer address!');
     }
     
     console.log(`✅ Successfully added claim to OnchainID via ClaimIssuer`);
