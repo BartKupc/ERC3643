@@ -16,6 +16,61 @@ const createProvider = () => {
   return new ethers.providers.JsonRpcProvider('http://13.250.2.49:8545');
 };
 
+// Helper function to get contract artifacts (matching frontend approach)
+const getContractArtifacts = (contractName) => {
+  console.log(`🔍 Getting artifacts for contract: ${contractName}`);
+  
+  // Define the artifact paths based on the frontend structure
+  const artifactPaths = {
+    // T-REX Contracts
+    'TREXFactory': '../trex-scaffold/packages/react-app/src/contracts/TREXFactory.json',
+    'Token': '../trex-scaffold/packages/react-app/src/contracts/Token.json',
+    'ModularCompliance': '../trex-scaffold/packages/react-app/src/contracts/ModularCompliance.json',
+    'IdentityRegistry': '../trex-scaffold/packages/react-app/src/contracts/IdentityRegistry.json',
+    'IdentityRegistryStorage': '../trex-scaffold/packages/react-app/src/contracts/IdentityRegistryStorage.json',
+    'ClaimTopicsRegistry': '../trex-scaffold/packages/react-app/src/contracts/ClaimTopicsRegistry.json',
+    'TrustedIssuersRegistry': '../trex-scaffold/packages/react-app/src/contracts/TrustedIssuersRegistry.json',
+    'IAFactory': '../trex-scaffold/packages/react-app/src/contracts/IAFactory.json',
+    'TokenProxy': '../trex-scaffold/packages/react-app/src/contracts/TokenProxy.json',
+    'ModularComplianceProxy': '../trex-scaffold/packages/react-app/src/contracts/ModularComplianceProxy.json',
+    'TREXImplementationAuthority': '../trex-scaffold/packages/react-app/src/contracts/TREXImplementationAuthority.json',
+    
+    // OnchainID Contracts
+    'Identity': '../trex-scaffold/packages/react-app/src/contracts/Identity.json',
+    'IImplementationAuthority': '../trex-scaffold/packages/react-app/src/contracts/IImplementationAuthority.json',
+    'IIdFactory': '../trex-scaffold/packages/react-app/src/contracts/IIdFactory.json',
+    'ClaimIssuer': '../trex-scaffold/packages/react-app/src/contracts/ClaimIssuer.json'
+  };
+  
+  const artifactPath = artifactPaths[contractName];
+  if (!artifactPath) {
+    console.log(`❌ Contract ${contractName} not found in artifact paths`);
+    console.log(`📋 Available contracts: ${Object.keys(artifactPaths).join(', ')}`);
+    throw new Error(`Contract artifacts not found for: ${contractName}. Available contracts: ${Object.keys(artifactPaths).join(', ')}`);
+  }
+  
+  const fullPath = path.join(__dirname, artifactPath);
+  console.log(`🔍 Looking for artifact at: ${fullPath}`);
+  
+  if (!fs.existsSync(fullPath)) {
+    console.log(`❌ Artifact file not found at: ${fullPath}`);
+    throw new Error(`Contract artifact file not found: ${fullPath}. Please ensure contracts are compiled and copied to the frontend contracts directory.`);
+  }
+  
+  try {
+    const artifact = JSON.parse(fs.readFileSync(fullPath, 'utf8'));
+    console.log(`✅ Successfully loaded artifacts for ${contractName}`);
+    return {
+      abi: artifact.abi,
+      bytecode: artifact.bytecode,
+      contractName: artifact.contractName
+    };
+  } catch (error) {
+    console.log(`❌ Error reading artifact file: ${error.message}`);
+    throw new Error(`Error reading contract artifact for ${contractName}: ${error.message}`);
+  }
+};
+
 // Middleware
 app.use(cors());
 app.use(express.json());
@@ -2033,6 +2088,7 @@ app.post('/api/hardhat-interaction', async (req, res) => {
     const { action, contractName, contractAddress, method, params, value, privateKey } = req.body;
     
     console.log(`🎯 Hardhat interaction: ${action} - ${contractName || 'no contract'} - ${method || 'no method'}`);
+    console.log(`📋 Request details:`, { action, contractName, contractAddress, method, params: params ? params.length : 0, value });
     
     const provider = createProvider();
     const wallet = new ethers.Wallet(privateKey || process.env.PRIVATE_KEY || '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80', provider);
@@ -2049,12 +2105,7 @@ app.post('/api/hardhat-interaction', async (req, res) => {
           throw new Error('Contract name is required for deployment');
         }
         
-        const artifactsPath = path.join(__dirname, '../trex-scaffold/packages/contracts/src/contracts', `${contractName}.sol/${contractName}.json`);
-        if (!fs.existsSync(artifactsPath)) {
-          throw new Error(`Contract artifacts not found for ${contractName}. Please compile contracts first.`);
-        }
-        
-        const artifacts = JSON.parse(fs.readFileSync(artifactsPath, 'utf8'));
+        const artifacts = getContractArtifacts(contractName);
         const contractFactory = new ethers.ContractFactory(artifacts.abi, artifacts.bytecode, wallet);
         const contract = await contractFactory.deploy(...(params || []));
         await contract.deployed();
@@ -2075,12 +2126,7 @@ app.post('/api/hardhat-interaction', async (req, res) => {
           throw new Error('Contract address and method are required for contract calls');
         }
         
-        const callArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/contracts/src/contracts', `${contractName}.sol/${contractName}.json`);
-        if (!fs.existsSync(callArtifactsPath)) {
-          throw new Error(`Contract artifacts not found for ${contractName}. Please compile contracts first.`);
-        }
-        
-        const callArtifacts = JSON.parse(fs.readFileSync(callArtifactsPath, 'utf8'));
+        const callArtifacts = getContractArtifacts(contractName);
         const callContract = new ethers.Contract(contractAddress, callArtifacts.abi, wallet);
         const callResult = await callContract[method](...(params || []));
         
@@ -2099,12 +2145,7 @@ app.post('/api/hardhat-interaction', async (req, res) => {
           throw new Error('Contract address and method are required for contract transactions');
         }
         
-        const sendArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/contracts/src/contracts', `${contractName}.sol/${contractName}.json`);
-        if (!fs.existsSync(sendArtifactsPath)) {
-          throw new Error(`Contract artifacts not found for ${contractName}. Please compile contracts first.`);
-        }
-        
-        const sendArtifacts = JSON.parse(fs.readFileSync(sendArtifactsPath, 'utf8'));
+        const sendArtifacts = getContractArtifacts(contractName);
         const sendContract = new ethers.Contract(contractAddress, sendArtifacts.abi, wallet);
         
         const txOptions = {};
@@ -2219,6 +2260,9 @@ app.listen(PORT, () => {
   console.log(`   - Transfer: POST http://localhost:${PORT}/api/token/transfer`);
   console.log(`   - TransferFrom: POST http://localhost:${PORT}/api/token/transfer-from`);
   console.log(`🔗 Hardhat proxy: POST http://localhost:${PORT}/api/hardhat`);
+  console.log(`📋 Available contracts for hardhat-interaction:`);
+  console.log(`   T-REX: TREXFactory, Token, ModularCompliance, IdentityRegistry, IdentityRegistryStorage, ClaimTopicsRegistry, TrustedIssuersRegistry, IAFactory, TokenProxy, ModularComplianceProxy, TREXImplementationAuthority`);
+  console.log(`   OnchainID: Identity, IImplementationAuthority, IIdFactory, ClaimIssuer`);
 });
 
 module.exports = app; 
