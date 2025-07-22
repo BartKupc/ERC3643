@@ -1180,13 +1180,25 @@ app.post('/api/add-claim-issuer-keys', async (req, res) => {
 app.post('/api/add-claim-to-identity', async (req, res) => {
   try {
     const { onchainIdAddress, claimTopic, claimValue, finalIssuerAddress, userAddress } = req.body;
+    // Debug logs for all addresses
+    console.log('--- ADD CLAIM DEBUG ---');
+    console.log('onchainIdAddress:', onchainIdAddress);
+    console.log('claimTopic:', claimTopic);
+    console.log('claimValue:', claimValue);
+    console.log('finalIssuerAddress:', finalIssuerAddress);
+    console.log('userAddress:', userAddress);
+    const provider = createProvider(); // Only declare once here
+    // Check that finalIssuerAddress is a contract
+    const code = await provider.getCode(finalIssuerAddress);
+    console.log('ClaimIssuer contract code at', finalIssuerAddress, ':', code);
+    if (code === '0x') throw new Error('No contract deployed at finalIssuerAddress');
+    console.log('-----------------------');
     console.log(`🎯 Adding claim to identity: ${onchainIdAddress}`);
     
     if (!onchainIdAddress || !claimTopic || !claimValue || !finalIssuerAddress || !userAddress) {
       throw new Error('OnchainID address, claim topic, claim value, issuer address, and user address are required');
     }
     
-    const provider = createProvider();
     const wallet = new ethers.Wallet(process.env.PRIVATE_KEY || '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80', provider);
     
     console.log(`🔍 Using deployer address: ${await wallet.getAddress()}`);
