@@ -954,49 +954,42 @@ app.post('/api/create-onchainid', async (req, res) => {
       
       console.log(`🔍 Using salt: ${salt}`);
       
-      // Create OnchainID using regular createIdentity method first
-      // This creates the OnchainID with the user as the wallet
-      console.log(`🔍 Creating OnchainID with wallet: ${userAddress}`);
-      const tx = await identityFactory.createIdentity(userAddress, salt);
-      await tx.wait();
-      
-      console.log(`✅ OnchainID creation transaction confirmed: ${tx.hash}`);
-      transactionHash = tx.hash;
-      isNewOnchainId = true;
-      
-      // Get the created OnchainID address
-      onchainIdAddress = await identityFactory.getIdentity(userAddress);
-      
-      // Now add the deployer (Account 0) as a management key to the OnchainID
-      // This allows the deployer to add claims later
-      console.log(`🔍 Adding deployer ${deployerAddress} as management key to OnchainID...`);
-      
-      // Load OnchainID artifacts
-      const OnchainID = require('@onchain-id/solidity');
-      const onchainId = new ethers.Contract(onchainIdAddress, OnchainID.contracts.Identity.abi, wallet);
-      
-      // Check if deployer key already exists and what purposes it has
-      const deployerKeyHash = ethers.utils.keccak256(
-        ethers.utils.defaultAbiCoder.encode(['address'], [deployerAddress])
-      );
-      
-      try {
-        const existingKey = await onchainId.getKey(deployerKeyHash);
-        const hasManagementKey = existingKey.purposes.some(p => p.toNumber() === 1);
+      // Check if this is Account 0 (deployer) to handle differently
+      if (userAddress.toLowerCase() === deployerAddress.toLowerCase()) {
+        // For Account 0, use regular createIdentity and then add management keys manually
+        console.log(`🔍 Creating OnchainID for Account 0 (deployer) using regular method`);
+        const tx = await identityFactory.createIdentity(userAddress, salt);
+        await tx.wait();
         
-        if (!hasManagementKey) {
-          console.log(`Deployer does not have management key. Adding management key for deployer...`);
-          const addManagementKeyTx = await onchainId.addKey(deployerKeyHash, 1, 1); // purpose=1 (management), keyType=1 (ECDSA)
-          await addManagementKeyTx.wait();
-          console.log(`✅ Added deployer ${deployerAddress} as management key to OnchainID`);
-        } else {
-          console.log(`✅ Deployer already has management key`);
-        }
-      } catch (e) {
-        console.log(`Deployer key not found. Adding management key for deployer...`);
-        const addManagementKeyTx = await onchainId.addKey(deployerKeyHash, 1, 1); // purpose=1 (management), keyType=1 (ECDSA)
-        await addManagementKeyTx.wait();
-        console.log(`✅ Added deployer ${deployerAddress} as management key to OnchainID`);
+        console.log(`✅ OnchainID creation transaction confirmed: ${tx.hash}`);
+        transactionHash = tx.hash;
+        isNewOnchainId = true;
+        
+        // Get the created OnchainID address
+        onchainIdAddress = await identityFactory.getIdentity(userAddress);
+        
+        // Account 0 is already the wallet, so it automatically has management keys
+        console.log(`✅ Account 0 (deployer) is the wallet owner and has management keys`);
+      } else {
+        // For other accounts, use createIdentityWithManagementKeys
+        // This gives Account 0 management keys to the OnchainID owned by the user
+        console.log(`🔍 Creating OnchainID with wallet: ${userAddress} and management keys for Account 0`);
+        
+        // Use Account 0 (deployer) as the management key holder
+        const deployerKeyHash = ethers.utils.keccak256(
+          ethers.utils.defaultAbiCoder.encode(['address'], [deployerAddress])
+        );
+        const managementKeys = [deployerKeyHash];
+        
+        const tx = await identityFactory.createIdentityWithManagementKeys(userAddress, salt, managementKeys);
+        await tx.wait();
+        
+        console.log(`✅ OnchainID creation transaction confirmed: ${tx.hash}`);
+        transactionHash = tx.hash;
+        isNewOnchainId = true;
+        
+        // Get the created OnchainID address
+        onchainIdAddress = await identityFactory.getIdentity(userAddress);
       }
     }
     
