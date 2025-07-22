@@ -1179,11 +1179,11 @@ app.post('/api/add-claim-issuer-keys', async (req, res) => {
 // Add claim to identity
 app.post('/api/add-claim-to-identity', async (req, res) => {
   try {
-    const { onchainIdAddress, claimTopic, claimValue, finalIssuerAddress } = req.body;
+    const { onchainIdAddress, claimTopic, claimValue, finalIssuerAddress, userAddress } = req.body;
     console.log(`🎯 Adding claim to identity: ${onchainIdAddress}`);
     
-    if (!onchainIdAddress || !claimTopic || !claimValue || !finalIssuerAddress) {
-      throw new Error('OnchainID address, claim topic, claim value, and issuer address are required');
+    if (!onchainIdAddress || !claimTopic || !claimValue || !finalIssuerAddress || !userAddress) {
+      throw new Error('OnchainID address, claim topic, claim value, issuer address, and user address are required');
     }
     
     const provider = createProvider();
@@ -1220,14 +1220,18 @@ app.post('/api/add-claim-to-identity', async (req, res) => {
     // The signature should be of: keccak256(abi.encode(address identityHolder_address, uint256 topic, bytes data))
     const claimData = ethers.utils.hexlify(ethers.utils.toUtf8Bytes(claimValue));
     
-    // Get the wallet address of the OnchainID (the user who owns it)
-    const onchainIdWallet = await onchainId.wallet();
-    console.log(`🔍 Debug: OnchainID wallet: ${onchainIdWallet}`);
+    // For the signature, we need to use the user address (the wallet owner of the OnchainID)
+    // Use the user address from the request for the signature
+    if (!userAddress) {
+      throw new Error('User address is required for claim signature');
+    }
+    
+    console.log(`🔍 Debug: Using user address for signature: ${userAddress}`);
     
     const dataHash = ethers.utils.keccak256(
       ethers.utils.defaultAbiCoder.encode(
         ['address', 'uint256', 'bytes'],
-        [onchainIdWallet, topicId, claimData]
+        [userAddress, topicId, claimData]
       )
     );
     
@@ -1551,7 +1555,8 @@ app.get('/api/token/verify-user/:tokenAddress/:userAddress', async (req, res) =>
             console.log(`🔍 Debug: Claim ${claimId} issuer: ${claimIssuer}, trusted issuers: ${trustedIssuerAddresses.join(', ')}`);
             
             // Check if the claim issuer is trusted for this topic
-            if (trustedIssuerAddresses.includes(claimIssuer.toLowerCase())) {
+            console.log(`🔍 Debug: Comparing claim issuer ${claimIssuer.toLowerCase()} with trusted issuers: ${trustedIssuerAddresses.map(addr => addr.toLowerCase())}`);
+            if (trustedIssuerAddresses.map(addr => addr.toLowerCase()).includes(claimIssuer.toLowerCase())) {
               hasValidClaim = true;
               let claimData = '';
               try {
