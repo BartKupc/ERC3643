@@ -907,13 +907,17 @@ app.post('/api/create-onchainid', async (req, res) => {
     // Get the Identity Factory contract
     const identityFactoryAddress = deploymentDetails.factories.identityFactory;
     
-    // Load OnchainID artifacts
-    const OnchainID = require('@onchain-id/solidity');
+    // Load IIdFactory artifacts (the correct interface)
+    const iidFactoryArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/contracts/src/@onchain-id/solidity/contracts/factory/IIdFactory.sol/IIdFactory.json');
+    if (!fs.existsSync(iidFactoryArtifactsPath)) {
+      throw new Error('IIdFactory artifacts not found. Please compile contracts first.');
+    }
+    const iidFactoryArtifacts = JSON.parse(fs.readFileSync(iidFactoryArtifactsPath, 'utf8'));
     
-    // Create Identity Factory contract instance
+    // Create Identity Factory contract instance using IIdFactory interface
     const identityFactory = new ethers.Contract(
       identityFactoryAddress,
-      OnchainID.contracts.Factory.abi,
+      iidFactoryArtifacts.abi,
       wallet
     );
     
@@ -929,14 +933,21 @@ app.post('/api/create-onchainid', async (req, res) => {
     
     console.log(`🔍 Using salt: ${salt}`);
     
-    // Create OnchainID using the factory with proper salt
-    const tx = await identityFactory.createIdentity(userAddress, salt);
+    // Create OnchainID using createIdentityWithManagementKeys (as admin)
+    // This gives the deployer management keys to the OnchainID
+    const deployerKeyHash = ethers.utils.keccak256(
+      ethers.utils.defaultAbiCoder.encode(['address'], [deployerAddress])
+    );
+    const managementKeys = [deployerKeyHash];
+    
+    console.log(`🔍 Creating OnchainID with management keys for deployer...`);
+    const tx = await identityFactory.createIdentityWithManagementKeys(userAddress, salt, managementKeys);
     await tx.wait();
     
     console.log(`✅ OnchainID creation transaction confirmed: ${tx.hash}`);
     
-    // Get the created OnchainID address
-    const onchainIdAddress = await identityFactory.identityOf(userAddress);
+    // Get the created OnchainID address using the correct method
+    const onchainIdAddress = await identityFactory.getIdentity(userAddress);
     
     console.log(`✅ OnchainID created at: ${onchainIdAddress}`);
     
