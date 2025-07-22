@@ -951,21 +951,37 @@ app.post('/api/create-onchainid', async (req, res) => {
       
       console.log(`🔍 Using salt: ${salt}`);
       
-      // Create OnchainID using createIdentityWithManagementKeys (as admin)
-      // This gives the deployer management keys to the OnchainID
-      const deployerKeyHash = ethers.utils.keccak256(
-        ethers.utils.defaultAbiCoder.encode(['address'], [deployerAddress])
-      );
-      const managementKeys = [deployerKeyHash];
-      
-      console.log(`🔍 Creating OnchainID with management keys for deployer...`);
-      const tx = await identityFactory.createIdentityWithManagementKeys(userAddress, salt, managementKeys);
+      // Create OnchainID using regular createIdentity method first
+      // This creates the OnchainID with the user as the wallet
+      console.log(`🔍 Creating OnchainID with wallet: ${userAddress}`);
+      const tx = await identityFactory.createIdentity(userAddress, salt);
       await tx.wait();
       
       console.log(`✅ OnchainID creation transaction confirmed: ${tx.hash}`);
       
-      // Get the created OnchainID address using the correct method
+      // Get the created OnchainID address
       onchainIdAddress = await identityFactory.getIdentity(userAddress);
+      
+      // Now add the deployer (Account 0) as a management key to the OnchainID
+      // This allows the deployer to add claims later
+      console.log(`🔍 Adding deployer ${deployerAddress} as management key to OnchainID...`);
+      
+      // Load OnchainID artifacts
+      const OnchainID = require('@onchain-id/solidity');
+      const onchainId = new ethers.Contract(onchainIdAddress, OnchainID.contracts.Identity.abi, wallet);
+      
+      // Add deployer as management key
+      const deployerKeyHash = ethers.utils.keccak256(
+        ethers.utils.defaultAbiCoder.encode(['address'], [deployerAddress])
+      );
+      
+      try {
+        const addManagementKeyTx = await onchainId.addKey(deployerKeyHash, 1, 1); // purpose=1 (management), keyType=1 (ECDSA)
+        await addManagementKeyTx.wait();
+        console.log(`✅ Added deployer ${deployerAddress} as management key to OnchainID`);
+      } catch (keyError) {
+        console.log(`⚠️ Could not add deployer as management key: ${keyError.message}`);
+      }
     }
     
     console.log(`✅ OnchainID created at: ${onchainIdAddress}`);
