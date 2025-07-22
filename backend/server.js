@@ -1260,26 +1260,24 @@ app.post('/api/add-claim-to-identity', async (req, res) => {
     console.log(`🔍 Debug: Data hash: ${dataHash}`);
     console.log(`🔍 Debug: Signature: ${signature}`);
     
-    // Call ClaimIssuer.addClaim(identityAddress, topic, scheme, issuer, signature, data, uri)
-    // Load ClaimIssuer ABI (assume custom contract with 7-arg addClaim)
+    // Call ClaimIssuer.addClaim(identityAddress, topic, scheme, issuer, signature, data)
+    // Load ClaimIssuer ABI (assume custom contract with 6-arg addClaim)
     const claimIssuerArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/contracts/src/@onchain-id/solidity/contracts/ClaimIssuer.sol/ClaimIssuer.json');
     if (!fs.existsSync(claimIssuerArtifactsPath)) {
       throw new Error('ClaimIssuer artifacts not found. Please compile contracts first.');
     }
     const claimIssuerArtifacts = JSON.parse(fs.readFileSync(claimIssuerArtifactsPath, 'utf8'));
     const claimIssuer = new ethers.Contract(finalIssuerAddress, claimIssuerArtifacts.abi, wallet);
-    // Parameters: identityAddress, topic, scheme, issuer, signature, data, uri
+    // Parameters: identityAddress, topic, scheme, issuer, signature, data
     const scheme = 1; // ECDSA
-    const uri = '';
-    console.log(`Calling ClaimIssuer.addClaim(${onchainIdAddress}, ${topicId}, ${scheme}, ${finalIssuerAddress}, ${signature}, ${claimData}, ${uri})`);
+    console.log(`Calling ClaimIssuer.addClaim(${onchainIdAddress}, ${topicId}, ${scheme}, ${finalIssuerAddress}, ${signature}, ${claimData})`);
     const tx = await claimIssuer.addClaim(
       onchainIdAddress,
       topicId,
       scheme,
       finalIssuerAddress,
       signature,
-      claimData,
-      uri
+      claimData
     );
     const receipt = await tx.wait();
     console.log('Claim addition transaction receipt:', receipt);
