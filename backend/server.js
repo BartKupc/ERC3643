@@ -904,6 +904,9 @@ app.post('/api/create-onchainid', async (req, res) => {
     console.log(`🔍 Using deployer address: ${deployerAddress}`);
     console.log(`🔍 Identity Factory: ${deploymentDetails.factories.identityFactory}`);
     
+    // Variable to store the OnchainID address
+    let onchainIdAddress;
+    
     // Get the Identity Factory contract
     const identityFactoryAddress = deploymentDetails.factories.identityFactory;
     
@@ -921,33 +924,49 @@ app.post('/api/create-onchainid', async (req, res) => {
       wallet
     );
     
-    console.log(`🔍 Creating OnchainID for ${userAddress}...`);
+    console.log(`🔍 Checking if OnchainID already exists for ${userAddress}...`);
     
-    // Generate a unique salt for this user
-    const salt = ethers.utils.keccak256(
-      ethers.utils.defaultAbiCoder.encode(
-        ['address', 'uint256'], 
-        [userAddress, Date.now()]
-      )
-    );
+    // Check if user already has an OnchainID
+    let existingOnchainIdAddress;
+    try {
+      existingOnchainIdAddress = await identityFactory.getIdentity(userAddress);
+      if (existingOnchainIdAddress && existingOnchainIdAddress !== '0x0000000000000000000000000000000000000000') {
+        console.log(`✅ OnchainID already exists for ${userAddress}: ${existingOnchainIdAddress}`);
+        onchainIdAddress = existingOnchainIdAddress;
+      }
+    } catch (error) {
+      console.log(`🔍 No existing OnchainID found, will create new one`);
+    }
     
-    console.log(`🔍 Using salt: ${salt}`);
-    
-    // Create OnchainID using createIdentityWithManagementKeys (as admin)
-    // This gives the deployer management keys to the OnchainID
-    const deployerKeyHash = ethers.utils.keccak256(
-      ethers.utils.defaultAbiCoder.encode(['address'], [deployerAddress])
-    );
-    const managementKeys = [deployerKeyHash];
-    
-    console.log(`🔍 Creating OnchainID with management keys for deployer...`);
-    const tx = await identityFactory.createIdentityWithManagementKeys(userAddress, salt, managementKeys);
-    await tx.wait();
-    
-    console.log(`✅ OnchainID creation transaction confirmed: ${tx.hash}`);
-    
-    // Get the created OnchainID address using the correct method
-    const onchainIdAddress = await identityFactory.getIdentity(userAddress);
+    if (!existingOnchainIdAddress || existingOnchainIdAddress === '0x0000000000000000000000000000000000000000') {
+      console.log(`🔍 Creating new OnchainID for ${userAddress}...`);
+      
+      // Generate a unique salt for this user
+      const salt = ethers.utils.keccak256(
+        ethers.utils.defaultAbiCoder.encode(
+          ['address', 'uint256'], 
+          [userAddress, Date.now()]
+        )
+      );
+      
+      console.log(`🔍 Using salt: ${salt}`);
+      
+      // Create OnchainID using createIdentityWithManagementKeys (as admin)
+      // This gives the deployer management keys to the OnchainID
+      const deployerKeyHash = ethers.utils.keccak256(
+        ethers.utils.defaultAbiCoder.encode(['address'], [deployerAddress])
+      );
+      const managementKeys = [deployerKeyHash];
+      
+      console.log(`🔍 Creating OnchainID with management keys for deployer...`);
+      const tx = await identityFactory.createIdentityWithManagementKeys(userAddress, salt, managementKeys);
+      await tx.wait();
+      
+      console.log(`✅ OnchainID creation transaction confirmed: ${tx.hash}`);
+      
+      // Get the created OnchainID address using the correct method
+      onchainIdAddress = await identityFactory.getIdentity(userAddress);
+    }
     
     console.log(`✅ OnchainID created at: ${onchainIdAddress}`);
     
