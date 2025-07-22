@@ -462,7 +462,8 @@ const UserManagementTab = ({ deploymentDetails, addLog, getSigner, factories }) 
           onchainIdAddress: onchainIdAddress,
           claimTopic: claimTopic,
           claimValue: claimValue,
-          finalIssuerAddress: finalIssuerAddress
+          finalIssuerAddress: finalIssuerAddress,
+          userAddress: userAddress
         })
       });
       
