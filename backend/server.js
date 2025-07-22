@@ -13,7 +13,7 @@ const PORT = process.env.PORT || 3001;
 
 // Helper function to create provider
 const createProvider = () => {
-  return new ethers.providers.JsonRpcProvider('http://127.0.0.1:8545');
+  return new ethers.providers.JsonRpcProvider('http://13.250.2.49:8545');
 };
 
 // Middleware
@@ -2032,7 +2032,7 @@ app.post('/api/hardhat', async (req, res) => {
   try {
     const { method, params, id } = req.body;
     
-    const response = await fetch('http://127.0.0.1:8545', {
+    const response = await fetch('http://13.250.2.49:8545', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
