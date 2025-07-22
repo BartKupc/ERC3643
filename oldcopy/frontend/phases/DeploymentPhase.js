@@ -2,12 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
 import { getContractArtifacts } from '../../hooks/compiledContracts';
 import UserManagementPhase from './UserManagementPhase';
-import DeployCoreContractsTab from './advanced/steps/DeployCoreContractsTab';
-import InitializeContractsTab from './advanced/steps/InitializeContractsTab';
-import ConfigureIdentityRegistryTab from './advanced/steps/ConfigureIdentityRegistryTab';
-import AddClaimTopicsTab from './advanced/steps/AddClaimTopicsTab';
-import UserManagementTab from './advanced/steps/UserManagementTab';
-import TokenManagementTab from './advanced/steps/TokenManagementTab';
 
 const STORAGE_KEY = 'trex_deployment_state';
 
@@ -3872,10 +3866,76 @@ const DeploymentPhase = () => {
       title: "Deploy Core Contracts",
       description: "Deploy the essential T-REX contracts",
       content: (
-        <DeployCoreContractsTab
-          deploying={deploying}
-          deployContract={deployContract}
-        />
+        <div>
+          <h3>Step 1: Deploy Core Contracts</h3>
+          <p>Deploy the essential T-REX contracts in the correct order.</p>
+          
+          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+            <Button
+              onClick={() => deployContract('ClaimTopicsRegistry')}
+              disabled={deploying}
+              style={{ backgroundColor: '#007bff', color: 'white' }}
+            >
+              Deploy ClaimTopicsRegistry
+            </Button>
+            <Button
+              onClick={() => deployContract('TrustedIssuersRegistry')}
+              disabled={deploying}
+              style={{ backgroundColor: '#007bff', color: 'white' }}
+            >
+              Deploy TrustedIssuersRegistry
+            </Button>
+            <Button
+              onClick={() => deployContract('IdentityRegistryStorage')}
+              disabled={deploying}
+              style={{ backgroundColor: '#007bff', color: 'white' }}
+            >
+              Deploy IdentityRegistryStorage
+            </Button>
+            <Button
+              onClick={() => deployContract('IdentityRegistry')}
+              disabled={deploying}
+              style={{ backgroundColor: '#007bff', color: 'white' }}
+            >
+              Deploy IdentityRegistry
+            </Button>
+            <Button
+              onClick={() => deployContract('ModularCompliance')}
+              disabled={deploying}
+              style={{ backgroundColor: '#007bff', color: 'white' }}
+            >
+              Deploy ModularCompliance
+            </Button>
+          </div>
+
+          {/* Show deployed contracts */}
+          {Object.keys(deployedContracts).length > 0 && (
+            <div style={{ marginTop: '1rem', padding: '1rem', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
+              <h4>Deployed Contracts:</h4>
+              {Object.entries(deployedContracts).map(([name, addresses]) => (
+                <div key={name} style={{ marginBottom: '0.5rem', padding: '0.5rem', backgroundColor: 'white', borderRadius: '4px' }}>
+                  <div><strong>{name}</strong> ({Array.isArray(addresses) ? addresses.length : 1})</div>
+                  {Array.isArray(addresses) ? (
+                    addresses.map((address, index) => (
+                      <div key={index} style={{ 
+                        fontFamily: 'monospace', 
+                        fontSize: '0.9rem',
+                        padding: '0.25rem 0',
+                        borderBottom: index < addresses.length - 1 ? '1px solid #eee' : 'none'
+                      }}>
+                        {index + 1}. {address} {index === 0 ? '(Latest)' : ''}
+                      </div>
+                    ))
+                  ) : (
+                    <div style={{ fontFamily: 'monospace', fontSize: '0.9rem' }}>
+                      {addresses}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       )
     },
     {
@@ -3883,14 +3943,250 @@ const DeploymentPhase = () => {
       title: "Initialize Contracts",
       description: "Initialize deployed contracts",
       content: (
-        <InitializeContractsTab
-          deployedContracts={deployedContracts}
-          selectedContracts={selectedContracts}
-          setSelectedContracts={setSelectedContracts}
-          reloadDeploymentState={reloadDeploymentState}
-          addLog={addLog}
-          deploying={deploying}
-        />
+        <div>
+          <h3>Step 2: Initialize Contracts</h3>
+          <p>Initialize the deployed contracts with their required setup.</p>
+          
+          {/* Refresh and Auto-Select Button */}
+          <div style={{ marginBottom: '1rem', padding: '1rem', backgroundColor: '#e3f2fd', borderRadius: '4px', border: '1px solid #2196f3' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h4 style={{ margin: '0 0 0.5rem 0', color: '#1976d2' }}>🔄 Auto-Select Latest Contracts</h4>
+                <p style={{ margin: 0, fontSize: '0.9rem', color: '#1976d2' }}>
+                  Click to refresh deployment state and automatically select the latest deployed contracts
+                </p>
+              </div>
+              <Button
+                onClick={() => {
+                  reloadDeploymentState();
+                  addLog("Manually refreshed and auto-selected latest contracts", "info");
+                }}
+                style={{ backgroundColor: '#2196f3', color: 'white', padding: '0.5rem 1rem' }}
+              >
+                🔄 Refresh & Auto-Select
+              </Button>
+            </div>
+          </div>
+          
+          <ContractSelector
+            contractType="ClaimTopicsRegistry"
+            contracts={deployedContracts}
+            selectedAddress={selectedContracts.ClaimTopicsRegistry}
+            onSelect={(address) => setSelectedContracts(prev => ({ ...prev, ClaimTopicsRegistry: address }))}
+            title="Claim Topics Registry"
+            description="Select the ClaimTopicsRegistry to initialize"
+          />
+          
+          <ContractSelector
+            contractType="TrustedIssuersRegistry"
+            contracts={deployedContracts}
+            selectedAddress={selectedContracts.TrustedIssuersRegistry}
+            onSelect={(address) => setSelectedContracts(prev => ({ ...prev, TrustedIssuersRegistry: address }))}
+            title="Trusted Issuers Registry"
+            description="Select the TrustedIssuersRegistry to initialize"
+          />
+          
+          <ContractSelector
+            contractType="IdentityRegistryStorage"
+            contracts={deployedContracts}
+            selectedAddress={selectedContracts.IdentityRegistryStorage}
+            onSelect={(address) => setSelectedContracts(prev => ({ ...prev, IdentityRegistryStorage: address }))}
+            title="Identity Registry Storage"
+            description="Select the IdentityRegistryStorage to initialize"
+          />
+          
+          <ContractSelector
+            contractType="IdentityRegistry"
+            contracts={deployedContracts}
+            selectedAddress={selectedContracts.IdentityRegistry}
+            onSelect={(address) => setSelectedContracts(prev => ({ ...prev, IdentityRegistry: address }))}
+            title="Identity Registry"
+            description="Select the IdentityRegistry to initialize"
+          />
+          {/* Debug log for ModularCompliance */}
+          {console.log('🔍 Debug - deployedContracts structure:', JSON.stringify(deployedContracts, null, 2))}
+          {console.log('🔍 Debug - deployedContracts.ModularCompliance:', deployedContracts.ModularCompliance)}
+          
+          <ContractSelector
+            contractType="ModularCompliance"
+            contracts={deployedContracts}
+            selectedAddress={selectedContracts.ModularCompliance}
+            onSelect={(address) => setSelectedContracts(prev => ({ ...prev, ModularCompliance: address }))}
+            title="ModularCompliance"
+            description="Select the ModularCompliance contract to initialize"
+          />
+          {/* Individual Contract Initialization */}
+          <div style={{ marginTop: '1rem', padding: '1rem', backgroundColor: '#f8f9fa', borderRadius: '4px', border: '1px solid #dee2e6' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h4 style={{ color: '#495057', margin: 0 }}>Initialize Individual Contracts:</h4>
+              <Button
+                onClick={checkContractInitStatus}
+                disabled={checkingInitStatus}
+                style={{ backgroundColor: '#17a2b8', color: 'white', fontSize: '0.8rem', padding: '0.25rem 0.5rem' }}
+              >
+                {checkingInitStatus ? 'Checking...' : 'Check Status'}
+              </Button>
+            </div>
+            
+            <div style={{ display: 'grid', gap: '0.5rem', marginBottom: '1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Button
+                  onClick={async () => {
+                    await initializeContract('ClaimTopicsRegistry');
+                  }}
+                  disabled={initializingContract['ClaimTopicsRegistry'] || !selectedContracts.ClaimTopicsRegistry}
+                  style={{ 
+                    backgroundColor: contractInitStatus.ClaimTopicsRegistry?.isInitialized ? '#6c757d' : '#28a745', 
+                    color: 'white', 
+                    minWidth: '120px' 
+                  }}
+                >
+                  {initializingContract['ClaimTopicsRegistry'] ? 'Initializing...' : contractInitStatus.ClaimTopicsRegistry?.isInitialized ? '✓ Initialized' : 'Initialize ClaimTopicsRegistry'}
+                </Button>
+                <span style={{ fontSize: '0.9rem', color: '#6c757d' }}>
+                  {selectedContracts.ClaimTopicsRegistry ? `(${selectedContracts.ClaimTopicsRegistry.slice(0, 8)}...)` : 'Not selected'}
+                </span>
+                {contractInitStatus.ClaimTopicsRegistry && (
+                  <span style={{ 
+                    fontSize: '0.8rem', 
+                    color: contractInitStatus.ClaimTopicsRegistry.isInitialized ? '#28a745' : '#dc3545',
+                    fontWeight: 'bold'
+                  }}>
+                    {contractInitStatus.ClaimTopicsRegistry.isInitialized ? '✓ Ready' : '⚠ Not initialized'}
+                  </span>
+                )}
+              </div>
+              
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Button
+                  onClick={async () => {
+                    await initializeContract('TrustedIssuersRegistry');
+                  }}
+                  disabled={initializingContract['TrustedIssuersRegistry'] || !selectedContracts.TrustedIssuersRegistry}
+                  style={{ 
+                    backgroundColor: contractInitStatus.TrustedIssuersRegistry?.isInitialized ? '#6c757d' : '#28a745', 
+                    color: 'white', 
+                    minWidth: '120px' 
+                  }}
+                >
+                  {initializingContract['TrustedIssuersRegistry'] ? 'Initializing...' : contractInitStatus.TrustedIssuersRegistry?.isInitialized ? '✓ Initialized' : 'Initialize TrustedIssuersRegistry'}
+                </Button>
+                <span style={{ fontSize: '0.9rem', color: '#6c757d' }}>
+                  {selectedContracts.TrustedIssuersRegistry ? `(${selectedContracts.TrustedIssuersRegistry.slice(0, 8)}...)` : 'Not selected'}
+                </span>
+                {contractInitStatus.TrustedIssuersRegistry && (
+                  <span style={{ 
+                    fontSize: '0.8rem', 
+                    color: contractInitStatus.TrustedIssuersRegistry.isInitialized ? '#28a745' : '#dc3545',
+                    fontWeight: 'bold'
+                  }}>
+                    {contractInitStatus.TrustedIssuersRegistry.isInitialized ? '✓ Ready' : '⚠ Not initialized'}
+                  </span>
+                )}
+              </div>
+              
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Button
+                  onClick={async () => {
+                    await initializeContract('IdentityRegistryStorage');
+                  }}
+                  disabled={initializingContract['IdentityRegistryStorage'] || !selectedContracts.IdentityRegistryStorage}
+                  style={{ 
+                    backgroundColor: contractInitStatus.IdentityRegistryStorage?.isInitialized ? '#6c757d' : '#28a745', 
+                    color: 'white', 
+                    minWidth: '120px' 
+                  }}
+                >
+                  {initializingContract['IdentityRegistryStorage'] ? 'Initializing...' : contractInitStatus.IdentityRegistryStorage?.isInitialized ? '✓ Initialized' : 'Initialize IdentityRegistryStorage'}
+                </Button>
+                <span style={{ fontSize: '0.9rem', color: '#6c757d' }}>
+                  {selectedContracts.IdentityRegistryStorage ? `(${selectedContracts.IdentityRegistryStorage.slice(0, 8)}...)` : 'Not selected'}
+                </span>
+                {contractInitStatus.IdentityRegistryStorage && (
+                  <span style={{ 
+                    fontSize: '0.8rem', 
+                    color: contractInitStatus.IdentityRegistryStorage.isInitialized ? '#28a745' : '#dc3545',
+                    fontWeight: 'bold'
+                  }}>
+                    {contractInitStatus.IdentityRegistryStorage.isInitialized ? '✓ Ready' : '⚠ Not initialized'}
+                  </span>
+                )}
+              </div>
+              
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Button
+                  onClick={async () => {
+                    await initializeContract('IdentityRegistry');
+                  }}
+                  disabled={initializingContract['IdentityRegistry'] || !selectedContracts.IdentityRegistry || !selectedContracts.TrustedIssuersRegistry || !selectedContracts.ClaimTopicsRegistry || !selectedContracts.IdentityRegistryStorage}
+                  style={{ 
+                    backgroundColor: contractInitStatus.IdentityRegistry?.isInitialized ? '#6c757d' : '#28a745', 
+                    color: 'white', 
+                    minWidth: '120px' 
+                  }}
+                >
+                  {initializingContract['IdentityRegistry'] ? 'Initializing...' : contractInitStatus.IdentityRegistry?.isInitialized ? '✓ Initialized' : 'Initialize IdentityRegistry'}
+                </Button>
+                <span style={{ fontSize: '0.9rem', color: '#6c757d' }}>
+                  {selectedContracts.IdentityRegistry ? `(${selectedContracts.IdentityRegistry.slice(0, 8)}...)` : 'Not selected'}
+                </span>
+                {contractInitStatus.IdentityRegistry && (
+                  <span style={{ 
+                    fontSize: '0.8rem', 
+                    color: contractInitStatus.IdentityRegistry.isInitialized ? '#28a745' : '#dc3545',
+                    fontWeight: 'bold'
+                  }}>
+                    {contractInitStatus.IdentityRegistry.isInitialized ? '✓ Ready' : '⚠ Not initialized'}
+                  </span>
+                )}
+              </div>
+              
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Button
+                  onClick={async () => {
+                    await initializeContract('ModularCompliance');
+                  }}
+                  disabled={initializingContract['ModularCompliance'] || !selectedContracts.ModularCompliance}
+                  style={{ 
+                    backgroundColor: contractInitStatus.ModularCompliance?.isInitialized ? '#6c757d' : '#28a745', 
+                    color: 'white', 
+                    minWidth: '120px' 
+                  }}
+                >
+                  {initializingContract['ModularCompliance'] ? 'Initializing...' : contractInitStatus.ModularCompliance?.isInitialized ? '✓ Initialized' : 'Initialize ModularCompliance'}
+                </Button>
+                <span style={{ fontSize: '0.9rem', color: '#6c757d' }}>
+                  {selectedContracts.ModularCompliance ? `(${selectedContracts.ModularCompliance.slice(0, 8)}...)` : 'Not selected'}
+                </span>
+                {contractInitStatus.ModularCompliance && (
+                  <span style={{ 
+                    fontSize: '0.8rem', 
+                    color: contractInitStatus.ModularCompliance.isInitialized ? '#28a745' : '#dc3545',
+                    fontWeight: 'bold'
+                  }}>
+                    {contractInitStatus.ModularCompliance.isInitialized ? '✓ Ready' : '⚠ Not initialized'}
+                  </span>
+                )}
+              </div>
+            </div>
+            
+            <div style={{ borderTop: '1px solid #dee2e6', paddingTop: '1rem', marginTop: '1rem' }}>
+              <Button
+                onClick={async () => {
+                  await initializeAllContracts();
+                  await checkContractInitStatus();
+                }}
+                disabled={initializing || !selectedContracts.ClaimTopicsRegistry || !selectedContracts.TrustedIssuersRegistry || !selectedContracts.IdentityRegistryStorage}
+                style={{ backgroundColor: '#007bff', color: 'white' }}
+              >
+                {initializing ? 'Initializing...' : 'Initialize All Selected Contracts'}
+              </Button>
+              <div style={{ fontSize: '0.8rem', color: '#6c757d', marginTop: '0.5rem' }}>
+                This will initialize all contracts in the correct order
+              </div>
+            </div>
+          </div>
+        </div>
       )
     },
     {
@@ -3898,57 +4194,1077 @@ const DeploymentPhase = () => {
       title: "Configure Identity Registry",
       description: "Connect Identity Registry to other registries",
       content: (
-        <ConfigureIdentityRegistryTab
-          deployedContracts={deployedContracts}
-          selectedContracts={selectedContracts}
-          setSelectedContracts={setSelectedContracts}
-          reloadDeploymentState={reloadDeploymentState}
-          addLog={addLog}
-          deploying={deploying}
-        />
+        <div>
+          <h3>Step 3: Configure Identity Registry</h3>
+          <p>Connect the Identity Registry to the other registries to establish the T-REX ecosystem.</p>
+          
+          {/* Refresh and Auto-Select Button */}
+          <div style={{ marginBottom: '1rem', padding: '1rem', backgroundColor: '#e3f2fd', borderRadius: '4px', border: '1px solid #2196f3' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h4 style={{ margin: '0 0 0.5rem 0', color: '#1976d2' }}>🔄 Auto-Select Latest Contracts</h4>
+                <p style={{ margin: 0, fontSize: '0.9rem', color: '#1976d2' }}>
+                  Click to refresh deployment state and automatically select the latest deployed contracts
+                </p>
+              </div>
+              <Button
+                onClick={() => {
+                  reloadDeploymentState();
+                  addLog("Manually refreshed and auto-selected latest contracts", "info");
+                }}
+                style={{ backgroundColor: '#2196f3', color: 'white', padding: '0.5rem 1rem' }}
+              >
+                🔄 Refresh & Auto-Select
+              </Button>
+            </div>
+          </div>
+          
+          {/* Contract Selectors for Configuration */}
+          <ContractSelector
+            contractType="IdentityRegistry"
+            contracts={deployedContracts}
+            selectedAddress={selectedContracts.IdentityRegistry}
+            onSelect={(address) => setSelectedContracts(prev => ({ ...prev, IdentityRegistry: address }))}
+            title="Identity Registry to Configure"
+            description="Select which Identity Registry to configure"
+          />
+          
+          <ContractSelector
+            contractType="TrustedIssuersRegistry"
+            contracts={deployedContracts}
+            selectedAddress={selectedContracts.TrustedIssuersRegistry}
+            onSelect={(address) => setSelectedContracts(prev => ({ ...prev, TrustedIssuersRegistry: address }))}
+            title="Trusted Issuers Registry"
+            description="Select which TrustedIssuersRegistry to connect"
+          />
+          
+          <ContractSelector
+            contractType="ClaimTopicsRegistry"
+            contracts={deployedContracts}
+            selectedAddress={selectedContracts.ClaimTopicsRegistry}
+            onSelect={(address) => setSelectedContracts(prev => ({ ...prev, ClaimTopicsRegistry: address }))}
+            title="Claim Topics Registry"
+            description="Select which ClaimTopicsRegistry to connect"
+          />
+          
+          <ContractSelector
+            contractType="IdentityRegistryStorage"
+            contracts={deployedContracts}
+            selectedAddress={selectedContracts.IdentityRegistryStorage}
+            onSelect={(address) => setSelectedContracts(prev => ({ ...prev, IdentityRegistryStorage: address }))}
+            title="Identity Registry Storage"
+            description="Select which IdentityRegistryStorage to connect"
+          />
+          
+          {/* Show what connections will be made */}
+          <div style={{ marginBottom: '1rem', padding: '1rem', backgroundColor: '#e3f2fd', borderRadius: '4px', border: '1px solid #2196f3' }}>
+            <h4>Connections to be established:</h4>
+            <div style={{ display: 'grid', gap: '0.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span style={{ color: '#2196f3', fontWeight: 'bold' }}>→</span>
+                <span><strong>TrustedIssuersRegistry:</strong></span>
+                <span style={{ fontFamily: 'monospace', fontSize: '0.9rem' }}>
+                  {selectedContracts.TrustedIssuersRegistry || 'Not selected'}
+                </span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span style={{ color: '#2196f3', fontWeight: 'bold' }}>→</span>
+                <span><strong>ClaimTopicsRegistry:</strong></span>
+                <span style={{ fontFamily: 'monospace', fontSize: '0.9rem' }}>
+                  {selectedContracts.ClaimTopicsRegistry || 'Not selected'}
+                </span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span style={{ color: '#2196f3', fontWeight: 'bold' }}>→</span>
+                <span><strong>IdentityRegistryStorage:</strong></span>
+                <span style={{ fontFamily: 'monospace', fontSize: '0.9rem' }}>
+                  {selectedContracts.IdentityRegistryStorage || 'Not selected'}
+                </span>
+              </div>
+            </div>
+          </div>
+          
+          <Button
+            onClick={configureIdentityRegistry}
+            disabled={deploying || !selectedContracts.IdentityRegistry || !selectedContracts.ClaimTopicsRegistry || !selectedContracts.TrustedIssuersRegistry || !selectedContracts.IdentityRegistryStorage}
+            style={{ backgroundColor: '#007bff', color: 'white' }}
+          >
+            {deploying ? 'Configuring...' : 'Configure All Connections'}
+          </Button>
+          
+          <div style={{ marginTop: '1rem', fontSize: '0.9rem', color: '#666' }}>
+            <p><strong>What this does:</strong></p>
+            <ul style={{ margin: '0.5rem 0', paddingLeft: '1.5rem' }}>
+              <li>Calls <code>setTrustedIssuersRegistry()</code> to link Identity Registry to Trusted Issuers Registry</li>
+              <li>Calls <code>setClaimTopicsRegistry()</code> to link Identity Registry to Claim Topics Registry</li>
+              <li>Calls <code>setIdentityRegistryStorage()</code> to link Identity Registry to Identity Registry Storage</li>
+              <li><strong>Calls <code>bindIdentityRegistry()</code> to establish bilateral binding between IR and IRS</strong></li>
+            </ul>
+          </div>
+        </div>
       )
     },
     {
       id: 4,
-      title: "Add Claim Topics",
-      description: "Add essential claim topics for compliance",
+      title: "Add Agent",
+      description: "Add your admin address as an agent to both Identity Registry and Identity Registry Storage.",
       content: (
-        <AddClaimTopicsTab
-          deployedContracts={deployedContracts}
-          selectedContracts={selectedContracts}
-          setSelectedContracts={setSelectedContracts}
-          availableClaimTopics={availableClaimTopics}
-          addClaimTopic={addClaimTopic}
-          reloadDeploymentState={reloadDeploymentState}
-          addLog={addLog}
-          deploying={deploying}
-        />
+        <div>
+          <h3>Step 4: Add Agent</h3>
+          <p>Add your admin address (0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266) as an agent to both the Identity Registry and Identity Registry Storage.</p>
+          
+          {/* Refresh and Auto-Select Button */}
+          <div style={{ marginBottom: '1rem', padding: '1rem', backgroundColor: '#e3f2fd', borderRadius: '4px', border: '1px solid #2196f3' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h4 style={{ margin: '0 0 0.5rem 0', color: '#1976d2' }}>🔄 Auto-Select Latest Contracts</h4>
+                <p style={{ margin: 0, fontSize: '0.9rem', color: '#1976d2' }}>
+                  Click to refresh deployment state and automatically select the latest deployed contracts
+                </p>
+              </div>
+              <Button
+                onClick={() => {
+                  reloadDeploymentState();
+                  addLog("Manually refreshed and auto-selected latest contracts", "info");
+                }}
+                style={{ backgroundColor: '#2196f3', color: 'white', padding: '0.5rem 1rem' }}
+              >
+                🔄 Refresh & Auto-Select
+              </Button>
+            </div>
+          </div>
+          <ContractSelector
+            contractType="IdentityRegistry"
+            contracts={deployedContracts}
+            selectedAddress={selectedContracts.IdentityRegistry}
+            onSelect={(address) => setSelectedContracts(prev => ({ ...prev, IdentityRegistry: address }))}
+            title="Identity Registry"
+            description="Select which Identity Registry to add agent to"
+          />
+          <ContractSelector
+            contractType="IdentityRegistryStorage"
+            contracts={deployedContracts}
+            selectedAddress={selectedContracts.IdentityRegistryStorage}
+            onSelect={(address) => setSelectedContracts(prev => ({ ...prev, IdentityRegistryStorage: address }))}
+            title="Identity Registry Storage"
+            description="Select which Identity Registry Storage to add agent to"
+          />
+          <Button
+            onClick={async () => {
+              setDeploying(true);
+              setMessage('Adding agent to both contracts...');
+              addLog('Starting agent addition to both IR and IRS', "info");
+              const signer = await getSigner();
+              const signerAddress = await signer.getAddress();
+              let anyError = false;
+              // Add to IR
+              if (selectedContracts.IdentityRegistry) {
+                try {
+                  // Check if already an agent (still uses frontend call for now)
+                  const irArtifacts = getContractArtifacts('IdentityRegistry');
+                  const ir = new ethers.Contract(selectedContracts.IdentityRegistry, irArtifacts.abi, signer);
+                  const isAgentIR = await ir.isAgent(signerAddress);
+                  if (!isAgentIR) {
+                    const result = await hardhatInteraction('send', {
+                      contractName: 'IdentityRegistry',
+                      contractAddress: selectedContracts.IdentityRegistry,
+                      method: 'addAgent',
+                      params: [signerAddress]
+                    });
+                    addLog('Agent added to Identity Registry', "success");
+                    addLog(`Transaction hash: ${result.transactionHash}`, "info");
+                  } else {
+                    addLog('Address is already an agent in Identity Registry', "info");
+                  }
+                } catch (e) {
+                  addLog('Error adding agent to Identity Registry: ' + e.message, "error");
+                  anyError = true;
+                }
+              } else {
+                addLog('No Identity Registry selected', "warning");
+                setMessage('No Identity Registry selected');
+                anyError = true;
+              }
+              // Add to IRS
+              if (selectedContracts.IdentityRegistryStorage) {
+                try {
+                  // Check if already an agent (still uses frontend call for now)
+                  const irsArtifacts = getContractArtifacts('IdentityRegistryStorage');
+                  const irs = new ethers.Contract(selectedContracts.IdentityRegistryStorage, irsArtifacts.abi, signer);
+                  const isAgentIRS = await irs.isAgent(signerAddress);
+                  if (!isAgentIRS) {
+                    const result = await hardhatInteraction('send', {
+                      contractName: 'IdentityRegistryStorage',
+                      contractAddress: selectedContracts.IdentityRegistryStorage,
+                      method: 'addAgent',
+                      params: [signerAddress]
+                    });
+                    addLog('Agent added to Identity Registry Storage', "success");
+                    addLog(`Transaction hash: ${result.transactionHash}`, "info");
+                  } else {
+                    addLog('Address is already an agent in Identity Registry Storage', "info");
+                  }
+                } catch (e) {
+                  addLog('Error adding agent to Identity Registry Storage: ' + e.message, "error");
+                  anyError = true;
+                }
+              } else {
+                addLog('No Identity Registry Storage selected', "warning");
+                setMessage('No Identity Registry Storage selected');
+                anyError = true;
+              }
+              if (!anyError) {
+                setMessage('Agent added to both contracts successfully');
+              }
+              setDeploying(false);
+            }}
+            disabled={deploying || !selectedContracts.IdentityRegistry || !selectedContracts.IdentityRegistryStorage}
+            style={{ backgroundColor: '#007bff', color: 'white' }}
+          >
+            {deploying ? 'Adding Agent...' : 'Add Agent to Both'}
+          </Button>
+        </div>
       )
     },
     {
       id: 5,
-      title: "User Management",
-      description: "Create and manage user identities (do this BEFORE deploying tokens)",
+      title: "Add Claim Topics",
+      description: "Add essential claim topics for compliance",
       content: (
-        <UserManagementTab
-          deployedContracts={deployedContracts}
-          selectedContracts={selectedContracts}
-          setSelectedContracts={setSelectedContracts}
-          // Add more user management props as needed
-        />
+        <div>
+          <h3>Step 5: Add Claim Topics</h3>
+          <p>Add essential claim topics for KYC/AML compliance.</p>
+          
+          {/* Refresh and Auto-Select Button */}
+          <div style={{ marginBottom: '1rem', padding: '1rem', backgroundColor: '#e3f2fd', borderRadius: '4px', border: '1px solid #2196f3' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h4 style={{ margin: '0 0 0.5rem 0', color: '#1976d2' }}>🔄 Auto-Select Latest Contracts</h4>
+                <p style={{ margin: 0, fontSize: '0.9rem', color: '#1976d2' }}>
+                  Click to refresh deployment state and automatically select the latest deployed contracts
+                </p>
+              </div>
+              <Button
+                onClick={() => {
+                  reloadDeploymentState();
+                  addLog("Manually refreshed and auto-selected latest contracts", "info");
+                }}
+                style={{ backgroundColor: '#2196f3', color: 'white', padding: '0.5rem 1rem' }}
+              >
+                🔄 Refresh & Auto-Select
+              </Button>
+            </div>
+          </div>
+          
+          <ContractSelector
+            contractType="ClaimTopicsRegistry"
+            contracts={deployedContracts}
+            selectedAddress={selectedContracts.ClaimTopicsRegistry}
+            onSelect={(address) => {
+              setSelectedContracts(prev => ({ ...prev, ClaimTopicsRegistry: address }));
+              if (address) {
+                loadClaimTopics(address);
+              }
+            }}
+            title="Claim Topics Registry"
+            description="Select which ClaimTopicsRegistry to add claim topics to"
+          />
+          
+          <Button
+            onClick={() => {
+              if (selectedContracts.ClaimTopicsRegistry) {
+                loadClaimTopics(selectedContracts.ClaimTopicsRegistry);
+              }
+            }}
+            disabled={!selectedContracts.ClaimTopicsRegistry || loadingClaimTopics}
+            style={{ backgroundColor: '#17a2b8', color: 'white', marginBottom: '1rem', marginLeft: '0.5rem' }}
+          >
+            {loadingClaimTopics ? 'Loading...' : 'Refresh Claim Topics'}
+          </Button>
+          
+          {/* Display existing claim topics */}
+          {selectedContracts.ClaimTopicsRegistry && (
+            <div style={{ marginBottom: '1rem', padding: '1rem', backgroundColor: '#f8f9fa', borderRadius: '4px', border: '1px solid #dee2e6' }}>
+              <h4 style={{ marginBottom: '0.5rem', color: '#495057' }}>Current Claim Topics:</h4>
+              {loadingClaimTopics ? (
+                <div style={{ color: '#6c757d', fontStyle: 'italic' }}>Loading claim topics...</div>
+              ) : availableClaimTopics.length === 0 ? (
+                <div style={{ color: '#6c757d', fontStyle: 'italic' }}>No claim topics found in this registry.</div>
+              ) : (
+                <div style={{ display: 'grid', gap: '0.5rem' }}>
+                  {availableClaimTopics.map((topic, index) => (
+                    <div key={topic.id} style={{ 
+                      padding: '0.5rem', 
+                      backgroundColor: '#fff', 
+                      border: '1px solid #ced4da', 
+                      borderRadius: '4px',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center'
+                    }}>
+                      <div>
+                        <strong style={{ color: '#495057' }}>{topic.name}</strong>
+                        <div style={{ fontSize: '0.9rem', color: '#6c757d' }}>ID: {topic.id}</div>
+                        <div style={{ fontSize: '0.8rem', color: '#6c757d' }}>{topic.description}</div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <div style={{ 
+                          backgroundColor: '#28a745', 
+                          color: 'white', 
+                          padding: '0.25rem 0.5rem', 
+                          borderRadius: '3px', 
+                          fontSize: '0.8rem',
+                          fontWeight: 'bold'
+                        }}>
+                          ✓ Added
+                        </div>
+                        <Button
+                          onClick={() => removeClaimTopic(topic.id)}
+                          disabled={deploying}
+                          style={{ 
+                            backgroundColor: '#dc3545', 
+                            color: 'white', 
+                            padding: '0.25rem 0.5rem', 
+                            fontSize: '0.8rem',
+                            border: 'none',
+                            borderRadius: '3px',
+                            cursor: deploying ? 'not-allowed' : 'pointer'
+                          }}
+                        >
+                          🗑️ Remove
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+          
+          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+            <Button
+              onClick={() => addClaimTopic(1)}
+              disabled={deploying || !selectedContracts.ClaimTopicsRegistry || availableClaimTopics.some(t => t.id === 1)}
+              style={{ backgroundColor: '#007bff', color: 'white' }}
+            >
+              Add Topic 1 (KYC)
+            </Button>
+            <Button
+              onClick={() => addClaimTopic(2)}
+              disabled={deploying || !selectedContracts.ClaimTopicsRegistry || availableClaimTopics.some(t => t.id === 2)}
+              style={{ backgroundColor: '#007bff', color: 'white' }}
+            >
+              Add Topic 2 (AML)
+            </Button>
+            <Button
+              onClick={() => addClaimTopic(3)}
+              disabled={deploying || !selectedContracts.ClaimTopicsRegistry || availableClaimTopics.some(t => t.id === 3)}
+              style={{ backgroundColor: '#007bff', color: 'white' }}
+            >
+              Add Topic 3 (Accreditation)
+            </Button>
+            <Button
+              onClick={() => addClaimTopic(4)}
+              disabled={deploying || !selectedContracts.ClaimTopicsRegistry || availableClaimTopics.some(t => t.id === 4)}
+              style={{ backgroundColor: '#007bff', color: 'white' }}
+            >
+              Add Topic 4 (EU Nationality)
+            </Button>
+            <Button
+              onClick={() => addClaimTopic(5)}
+              disabled={deploying || !selectedContracts.ClaimTopicsRegistry || availableClaimTopics.some(t => t.id === 5)}
+              style={{ backgroundColor: '#007bff', color: 'white' }}
+            >
+              Add Topic 5 (US Nationality)
+            </Button>
+            <Button
+              onClick={() => addClaimTopic(6)}
+              disabled={deploying || !selectedContracts.ClaimTopicsRegistry || availableClaimTopics.some(t => t.id === 6)}
+              style={{ backgroundColor: '#007bff', color: 'white' }}
+            >
+              Add Topic 6 (Blacklist)
+            </Button>
+          </div>
+        </div>
       )
     },
     {
       id: 6,
+      title: "Add Trusted Issuer",
+      description: "Add a trusted issuer for claim verification",
+      content: (
+        <div>
+          <h3>Step 6: Add Trusted Issuer</h3>
+          <p>Create a ClaimIssuer contract and add it as a trusted issuer with specific claim topics.</p>
+          
+          {/* Refresh and Auto-Select Button */}
+          <div style={{ marginBottom: '1rem', padding: '1rem', backgroundColor: '#e3f2fd', borderRadius: '4px', border: '1px solid #2196f3' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h4 style={{ margin: '0 0 0.5rem 0', color: '#1976d2' }}>🔄 Auto-Select Latest Contracts</h4>
+                <p style={{ margin: 0, fontSize: '0.9rem', color: '#1976d2' }}>
+                  Click to refresh deployment state and automatically select the latest deployed contracts
+                </p>
+              </div>
+              <Button
+                onClick={() => {
+                  reloadDeploymentState();
+                  addLog("Manually refreshed and auto-selected latest contracts", "info");
+                }}
+                style={{ backgroundColor: '#2196f3', color: 'white', padding: '0.5rem 1rem' }}
+              >
+                🔄 Refresh & Auto-Select
+              </Button>
+            </div>
+          </div>
+          
+          <ContractSelector
+            contractType="TrustedIssuersRegistry"
+            contracts={deployedContracts}
+            selectedAddress={selectedContracts.TrustedIssuersRegistry}
+            onSelect={(address) => setSelectedContracts(prev => ({ ...prev, TrustedIssuersRegistry: address }))}
+            title="Trusted Issuers Registry"
+            description="Select which TrustedIssuersRegistry to add trusted issuer to"
+          />
+          
+          {/* Claim Topics Selection */}
+          <div style={{ marginTop: '1rem', padding: '1rem', backgroundColor: '#f8f9fa', borderRadius: '4px', border: '1px solid #dee2e6' }}>
+            <h4 style={{ marginBottom: '1rem', color: '#495057' }}>Select Claim Topics for Trusted Issuer</h4>
+            <p style={{ marginBottom: '1rem', color: '#6c757d', fontSize: '0.9rem' }}>
+              Choose which claim topics this trusted issuer can issue:
+            </p>
+            
+            <div style={{ display: 'grid', gap: '0.5rem', marginBottom: '1rem' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <input
+                  type="checkbox"
+                  id="topic1"
+                  defaultChecked={true}
+                  style={{ transform: 'scale(1.2)' }}
+                />
+                <span><strong>Topic 1:</strong> KYC (Know Your Customer)</span>
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <input
+                  type="checkbox"
+                  id="topic2"
+                  defaultChecked={true}
+                  style={{ transform: 'scale(1.2)' }}
+                />
+                <span><strong>Topic 2:</strong> AML (Anti-Money Laundering)</span>
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <input
+                  type="checkbox"
+                  id="topic3"
+                  defaultChecked={true}
+                  style={{ transform: 'scale(1.2)' }}
+                />
+                <span><strong>Topic 3:</strong> Accredited Investor</span>
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <input
+                  type="checkbox"
+                  id="topic4"
+                  defaultChecked={false}
+                  style={{ transform: 'scale(1.2)' }}
+                />
+                <span><strong>Topic 4:</strong> EU Nationality Confirmed</span>
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <input
+                  type="checkbox"
+                  id="topic5"
+                  defaultChecked={false}
+                  style={{ transform: 'scale(1.2)' }}
+                />
+                <span><strong>Topic 5:</strong> US Nationality Confirmed</span>
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <input
+                  type="checkbox"
+                  id="topic6"
+                  defaultChecked={false}
+                  style={{ transform: 'scale(1.2)' }}
+                />
+                <span><strong>Topic 6:</strong> Blacklist</span>
+              </label>
+            </div>
+            
+            <div style={{ fontSize: '0.8rem', color: '#6c757d', marginBottom: '1rem' }}>
+              <strong>Note:</strong> The trusted issuer will only be able to issue claims for the selected topics.
+            </div>
+          </div>
+          
+          <Button
+            onClick={() => {
+              // Get selected claim topics
+              const selectedTopics = [];
+              for (let i = 1; i <= 6; i++) {
+                const checkbox = document.getElementById(`topic${i}`);
+                if (checkbox && checkbox.checked) {
+                  selectedTopics.push(i);
+                }
+              }
+              
+              if (selectedTopics.length === 0) {
+                setMessage('Please select at least one claim topic');
+                return;
+              }
+              
+              deployClaimIssuerAndAddAsTrusted(selectedTopics);
+            }}
+            disabled={deploying || !selectedContracts.TrustedIssuersRegistry}
+            style={{ backgroundColor: '#007bff', color: 'white' }}
+          >
+            {deploying ? 'Deploying ClaimIssuer...' : 'Deploy ClaimIssuer & Add as Trusted'}
+          </Button>
+          
+          <div style={{ marginTop: '1rem', fontSize: '0.9rem', color: '#666' }}>
+            <p><strong>What this does:</strong></p>
+            <ul style={{ margin: '0.5rem 0', paddingLeft: '1.5rem' }}>
+              <li>Deploys a ClaimIssuer contract (specialized Identity for issuing claims)</li>
+              <li>Adds your address as the management key to the ClaimIssuer</li>
+              <li>Adds a signing key to the ClaimIssuer for signing claims</li>
+              <li>Registers the ClaimIssuer as a trusted issuer in the TrustedIssuersRegistry</li>
+              <li>Specifies which claim topics this issuer can issue</li>
+            </ul>
+          </div>
+        </div>
+      )
+    },
+    {
+      id: 7,
+      title: "User Management",
+      description: "Create and manage user identities (do this BEFORE deploying tokens)",
+      content: (() => {
+        console.log('🔍 Passing props to UserManagementPhase:', { deployedContracts, selectedContracts });
+        return (
+          <div>
+            <UserManagementPhase 
+              deployedContracts={deployedContracts}
+              selectedContracts={selectedContracts}
+              setSelectedContracts={setSelectedContracts}
+            />
+          </div>
+        );
+      })()
+    },
+    {
+      id: 8,
       title: "Token Management",
       description: "Deploy and manage tokens with comprehensive controls",
       content: (
-        <TokenManagementTab
-          deployedContracts={deployedContracts}
-          selectedContracts={selectedContracts}
-          setSelectedContracts={setSelectedContracts}
-          // Add more token management props as needed
-        />
+        <div>
+          <h3>Step 8: Token Management</h3>
+          <p>Deploy and manage ERC-3643 tokens with comprehensive role and function management.</p>
+          
+          {/* Sub-step Navigation */}
+          <div style={{ marginBottom: '2rem' }}>
+            <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+              <Button
+                onClick={() => setCurrentSubStep('deploy')}
+                style={{ 
+                  backgroundColor: currentSubStep === 'deploy' ? '#007bff' : '#6c757d', 
+                  color: 'white',
+                  padding: '1rem 2rem',
+                  fontSize: '1.1rem',
+                  fontWeight: 'bold'
+                }}
+              >
+                Deploy Token
+              </Button>
+              <Button
+                onClick={() => setCurrentSubStep('roles')}
+                style={{ 
+                  backgroundColor: currentSubStep === 'roles' ? '#007bff' : '#6c757d', 
+                  color: 'white',
+                  padding: '1rem 2rem',
+                  fontSize: '1.1rem',
+                  fontWeight: 'bold'
+                }}
+              >
+                Role Management
+              </Button>
+              <Button
+                onClick={() => setCurrentSubStep('claims')}
+                style={{ 
+                  backgroundColor: currentSubStep === 'claims' ? '#007bff' : '#6c757d', 
+                  color: 'white',
+                  padding: '1rem 2rem',
+                  fontSize: '1.1rem',
+                  fontWeight: 'bold'
+                }}
+              >
+                Claim/Token Management
+              </Button>
+              <Button
+                onClick={() => setCurrentSubStep('functions')}
+                style={{ 
+                  backgroundColor: currentSubStep === 'functions' ? '#007bff' : '#6c757d', 
+                  color: 'white',
+                  padding: '1rem 2rem',
+                  fontSize: '1.1rem',
+                  fontWeight: 'bold'
+                }}
+              >
+                Function Management
+              </Button>
+            </div>
+          </div>
+
+          {/* Sub-step 8a: Deploy Token */}
+          {currentSubStep === 'deploy' && (
+            <div>
+              <h4>Deploy Token</h4>
+              <p>Deploy the ERC-3643 token with compliance integration.</p>
+              
+              {/* Contract Selectors */}
+              <div style={{ marginBottom: '1rem' }}>
+                {/* Identity Registry Selector */}
+                {deployedContracts.IdentityRegistry && deployedContracts.IdentityRegistry.length > 0 && (
+                  <div style={{ marginBottom: '1rem', padding: '1rem', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
+                    <h4>Select Identity Registry:</h4>
+                    <ContractSelector
+                      contractType="IdentityRegistry"
+                      contracts={deployedContracts.IdentityRegistry}
+                      selectedAddress={selectedContracts.IdentityRegistry}
+                      onSelect={(address) => setSelectedContracts(prev => ({ ...prev, IdentityRegistry: address }))}
+                      title="IdentityRegistry"
+                      description="Choose which Identity Registry to attach to this token"
+                    />
+                  </div>
+                )}
+                
+                {/* ModularCompliance Contract Selector */}
+                {deployedContracts.ModularCompliance && deployedContracts.ModularCompliance.length > 0 && (
+                  <div style={{ marginBottom: '1rem', padding: '1rem', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
+                    <h4>Select ModularCompliance Contract:</h4>
+                    <ContractSelector
+                      contractType="ModularCompliance"
+                      contracts={deployedContracts.ModularCompliance}
+                      selectedAddress={selectedContracts.ModularCompliance}
+                      onSelect={(address) => setSelectedContracts(prev => ({ ...prev, ModularCompliance: address }))}
+                      title="ModularCompliance"
+                      description="Choose which ModularCompliance contract to attach to this token"
+                    />
+                  </div>
+                )}
+              </div>
+              
+              <div style={{ marginBottom: '1rem' }}>
+                <input
+                  type="text"
+                  placeholder="Token Name"
+                  defaultValue="My Security Token"
+                  id="tokenName"
+                  style={{ width: '100%', padding: '0.5rem', marginBottom: '0.5rem' }}
+                />
+                <input
+                  type="text"
+                  placeholder="Token Symbol"
+                  defaultValue="MST"
+                  id="tokenSymbol"
+                  style={{ width: '100%', padding: '0.5rem', marginBottom: '0.5rem' }}
+                />
+                <input
+                  type="number"
+                  placeholder="Decimals"
+                  defaultValue="18"
+                  id="tokenDecimals"
+                  style={{ width: '100%', padding: '0.5rem', marginBottom: '0.5rem' }}
+                />
+              </div>
+              <Button
+                onClick={() => {
+                  const name = document.getElementById('tokenName').value;
+                  const symbol = document.getElementById('tokenSymbol').value;
+                  const decimals = parseInt(document.getElementById('tokenDecimals').value);
+                  deployToken({ name, symbol, decimals });
+                }}
+                disabled={deploying || !deployedContracts.ModularCompliance}
+                style={{ backgroundColor: '#007bff', color: 'white' }}
+              >
+                {deploying ? 'Deploying Token...' : 'Deploy Token'}
+              </Button>
+              
+              {/* Show which contracts will be used */}
+              {(deployedContracts.IdentityRegistry || deployedContracts.ModularCompliance) && (
+                <div style={{ marginTop: '0.5rem', fontSize: '0.9rem', color: '#666' }}>
+                  <div>Will use Identity Registry: {selectedContracts.IdentityRegistry || (deployedContracts.IdentityRegistry && deployedContracts.IdentityRegistry[0])}</div>
+                  <div>Will use ModularCompliance: {selectedContracts.ModularCompliance || (deployedContracts.ModularCompliance && deployedContracts.ModularCompliance[0])}</div>
+                </div>
+              )}
+              
+              {/* Show deployed tokens */}
+              {deployedTokens.length > 0 && (
+                <div style={{ marginTop: '1rem', padding: '1rem', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
+                  <h4>Deployed Tokens ({deployedTokens.length}):</h4>
+                  {deployedTokens.map((token, index) => (
+                    <div key={index} style={{ marginBottom: '0.5rem', padding: '0.5rem', backgroundColor: 'white', borderRadius: '4px' }}>
+                      <div><strong>{token.name} ({token.symbol})</strong></div>
+                      <div style={{ fontFamily: 'monospace', fontSize: '0.9rem' }}>Address: {token.address}</div>
+                      <div>Decimals: {token.decimals}</div>
+                      <div style={{ fontSize: '0.8rem', color: '#666' }}>Deployed: {new Date(token.deployedAt).toLocaleString()}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Sub-step 8b: Role Management */}
+          {currentSubStep === 'roles' && (
+            <div>
+              <h4>Role Management</h4>
+              <p>Set up token roles and permissions for minting, burning, and pausing.</p>
+              
+              {/* Token Selector */}
+              {deployedTokens.length > 0 && (
+                <div style={{ marginBottom: '1rem', padding: '1rem', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
+                  <h4>Select Token:</h4>
+                  <select
+                    id="selectedToken"
+                    value={selectedContracts.Token || ""}
+                    style={{ width: '100%', padding: '0.5rem', marginBottom: '0.5rem' }}
+                    onChange={(e) => {
+                      const tokenAddress = e.target.value;
+                      if (tokenAddress) {
+                        setSelectedContracts(prev => ({ ...prev, Token: tokenAddress }));
+                        setTokenStatus('Checking...');
+                        setTimeout(() => checkTokenStatus(), 100);
+                      } else {
+                        setTokenStatus('No token selected');
+                      }
+                    }}
+                  >
+                    <option value="">-- Select a token --</option>
+                    {deployedTokens.map((token, index) => (
+                      <option key={index} value={token.address}>
+                        {token.name} ({token.symbol}) - {token.address}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              
+              {/* Agent Management */}
+              <div style={{ marginBottom: '1rem', padding: '1rem', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
+                <h4>Add Token Agent:</h4>
+                <p>Add an agent to the selected token. Agents can mint, burn, and pause tokens.</p>
+                <input
+                  type="text"
+                  placeholder="Agent Address (leave empty to use your address)"
+                  id="tokenAgentAddress"
+                  style={{ width: '100%', padding: '0.5rem', marginBottom: '0.5rem' }}
+                  value={tokenAgentInput}
+                  onChange={e => setTokenAgentInput(e.target.value)}
+                />
+                <Button
+                  onClick={addTokenAgent}
+                  disabled={deploying || !selectedContracts.Token}
+                  style={{ backgroundColor: '#007bff', color: 'white' }}
+                >
+                  {deploying ? 'Adding Agent...' : 'Add Token Agent'}
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Sub-step 8c: Claim/Token Management */}
+          {currentSubStep === 'claims' && (
+            <div>
+              <h4>Claim/Token Check</h4>
+              <p>Check required claims and user verification status for token operations.</p>
+              {/* Token Selector */}
+              {deployedTokens.length > 0 && (
+                <div style={{ marginBottom: '1rem', padding: '1rem', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
+                  <h4>Select Token:</h4>
+                  <select
+                    id="selectedTokenClaims"
+                    value={selectedContracts.Token || ""}
+                    style={{ width: '100%', padding: '0.5rem', marginBottom: '0.5rem' }}
+                    onChange={(e) => {
+                      const tokenAddress = e.target.value;
+                      if (tokenAddress) {
+                        setSelectedContracts(prev => ({ ...prev, Token: tokenAddress }));
+                        setRequiredClaimTopics([]);
+                        setVerificationStatus('Not checked');
+                      } else {
+                        setRequiredClaimTopics([]);
+                        setVerificationStatus('Not checked');
+                      }
+                    }}
+                  >
+                    <option value="">-- Select a token --</option>
+                    {deployedTokens.map((token, index) => (
+                      <option key={index} value={token.address}>
+                        {token.name} ({token.symbol}) - {token.address}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              {/* User Address to Check */}
+              <div style={{ marginBottom: '1rem', padding: '1rem', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
+                <h4>User Verification Check:</h4>
+                <p>Check if a user is verified for this token (has all required claims from trusted issuers).</p>
+                                  <div style={{ marginBottom: '1rem' }}>
+                    <label>User Address to Check:</label>
+                    <input
+                      type="text"
+                      value={userAddressToCheck}
+                      onChange={(e) => setUserAddressToCheck(e.target.value)}
+                      placeholder="0x... (leave empty to use account 0)"
+                      style={{ width: '100%', padding: '0.5rem', marginTop: '0.5rem', borderRadius: '4px', border: '1px solid #ced4da' }}
+                    />
+                  </div>
+                {/* Only one comprehensive check button */}
+                                  <Button
+                    onClick={runComprehensiveDiagnostics}
+                    disabled={checkingVerification || !selectedContracts.Token}
+                    style={{ backgroundColor: '#007bff', color: 'white', marginBottom: '1rem', marginRight: '0.5rem' }}
+                  >
+                    {checkingVerification ? 'Checking...' : 'Run Comprehensive Check'}
+                  </Button>
+                {/* Show result area as before */}
+                {message && (
+                  <div style={{ marginTop: '1rem', padding: '1rem', backgroundColor: '#fff3cd', borderRadius: '4px', border: '1px solid #ffeaa7', color: '#856404' }}>
+                    <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontFamily: 'inherit', fontSize: '1rem', margin: 0 }}>{message}</pre>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Sub-step 8d: Function Management */}
+          {currentSubStep === 'functions' && (
+            <div>
+              <h4>Function Management</h4>
+              <p>Perform token operations and management functions.</p>
+              
+              {/* Token Selector */}
+              {deployedTokens.length > 0 && (
+                <div style={{ marginBottom: '1rem', padding: '1rem', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
+                  <h4>Select Token:</h4>
+                  <select
+                    id="selectedTokenFunctions"
+                    value={selectedContracts.Token || ""}
+                    style={{ width: '100%', padding: '0.5rem', marginBottom: '0.5rem' }}
+                    onChange={(e) => {
+                      const tokenAddress = e.target.value;
+                      if (tokenAddress) {
+                        setSelectedContracts(prev => ({ ...prev, Token: tokenAddress }));
+                        setTokenStatus('Checking...');
+                        setTimeout(() => checkTokenStatus(), 100);
+                      } else {
+                        setTokenStatus('No token selected');
+                      }
+                    }}
+                  >
+                    <option value="">-- Select a token --</option>
+                    {deployedTokens.map((token, index) => (
+                      <option key={index} value={token.address}>
+                        {token.name} ({token.symbol}) - {token.address}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              
+              {/* Token Operations */}
+              {selectedContracts.Token && (
+                <div style={{ marginBottom: '1rem', padding: '1rem', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
+                  <h4>Token Operations:</h4>
+                  <p>Perform token operations (requires agent role).</p>
+                  
+                  {/* Token Status */}
+                  <div style={{ marginBottom: '1rem', padding: '0.5rem', backgroundColor: 'white', borderRadius: '4px' }}>
+                    <strong>Token Status:</strong> 
+                    <span style={{ 
+                      marginLeft: '0.5rem',
+                      color: tokenStatus.includes('PAUSED') ? '#dc3545' : 
+                             tokenStatus.includes('ACTIVE') ? '#28a745' : 
+                             tokenStatus.includes('❌') ? '#dc3545' : 
+                             tokenStatus.includes('⚠️') ? '#ffc107' : '#6c757d'
+                    }}>
+                      {tokenStatus}
+                    </span>
+                    <Button
+                      onClick={checkTokenStatus}
+                      disabled={deploying || !selectedContracts.Token}
+                      style={{ marginLeft: '0.5rem', backgroundColor: '#6c757d', color: 'white', padding: '0.25rem 0.5rem', fontSize: '0.8rem' }}
+                    >
+                      Refresh Status
+                    </Button>
+                  </div>
+                  
+                                <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+                <Button
+                  onClick={() => setTokenPaused(true)}
+                  disabled={deploying}
+                  style={{ backgroundColor: '#dc3545', color: 'white' }}
+                >
+                  Pause Token
+                </Button>
+                <Button
+                  onClick={() => setTokenPaused(false)}
+                  disabled={deploying}
+                  style={{ backgroundColor: '#28a745', color: 'white' }}
+                >
+                  Unpause Token
+                </Button>
+                <Button
+                  onClick={checkAndFixModularCompliance}
+                  disabled={checkingVerification}
+                  style={{ backgroundColor: '#17a2b8', color: 'white' }}
+                >
+                  {checkingVerification ? 'Checking...' : 'Check ModularCompliance'}
+                </Button>
+              </div>
+                  
+                  <div style={{ marginBottom: '1rem' }}>
+                    <h5>Mint Tokens:</h5>
+                    <input
+                      type="text"
+                      placeholder="Recipient Address"
+                      id="mintRecipient"
+                      style={{ width: '100%', padding: '0.5rem', marginBottom: '0.5rem' }}
+                    />
+                    <input
+                      type="number"
+                      placeholder="Amount to Mint"
+                      id="mintAmount"
+                      style={{ width: '100%', padding: '0.5rem', marginBottom: '0.5rem' }}
+                    />
+                    <Button
+                      onClick={mintTokens}
+                      disabled={deploying}
+                      style={{ backgroundColor: '#007bff', color: 'white' }}
+                    >
+                      {deploying ? 'Minting...' : 'Mint Tokens'}
+                    </Button>
+                  </div>
+                  
+                  <div style={{ marginBottom: '1rem' }}>
+                    <h5>Burn Tokens:</h5>
+                    <input
+                      type="text"
+                      placeholder="Address to Burn From"
+                      id="burnAddress"
+                      style={{ width: '100%', padding: '0.5rem', marginBottom: '0.5rem' }}
+                    />
+                    <input
+                      type="number"
+                      placeholder="Amount to Burn"
+                      id="burnAmount"
+                      style={{ width: '100%', padding: '0.5rem', marginBottom: '0.5rem' }}
+                    />
+                    <Button
+                      onClick={burnTokens}
+                      disabled={deploying}
+                      style={{ backgroundColor: '#dc3545', color: 'white' }}
+                    >
+                      {deploying ? 'Burning...' : 'Burn Tokens'}
+                    </Button>
+                  </div>
+
+                  <div>
+                    <h5>Transfer Tokens (Option 1 - Simple):</h5>
+                    <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '1rem' }}>
+                      Transfer tokens from your wallet (signer/agent) to another address. This uses <code>transfer()</code> with full compliance checks.
+                    </p>
+                    
+                    <div style={{ marginBottom: '1rem', padding: '1rem', backgroundColor: '#d4edda', borderRadius: '4px', border: '1px solid #c3e6cb' }}>
+                      <h6>✅ Standard Transfer:</h6>
+                      <p style={{ fontSize: '0.9rem', color: '#155724', marginBottom: '0.5rem' }}>
+                        • <strong>From:</strong> Your wallet (signer/agent)</p>
+                      <p style={{ fontSize: '0.9rem', color: '#155724', marginBottom: '0.5rem' }}>
+                        • <strong>To:</strong> Any verified address</p>
+                      <p style={{ fontSize: '0.9rem', color: '#155724', margin: '0' }}>
+                        • <strong>Compliance:</strong> Full validation (identity, compliance rules)</p>
+                    </div>
+                    
+                    <input
+                      type="text"
+                      placeholder="To Address (recipient)"
+                      id="transferTo"
+                      style={{ width: '100%', padding: '0.5rem', marginBottom: '0.5rem' }}
+                    />
+                    <input
+                      type="number"
+                      placeholder="Amount to Transfer"
+                      id="transferAmount"
+                      style={{ width: '100%', padding: '0.5rem', marginBottom: '0.5rem' }}
+                    />
+                    <Button
+                      onClick={transferTokens}
+                      disabled={deploying}
+                      style={{ backgroundColor: '#28a745', color: 'white' }}
+                    >
+                      {deploying ? 'Transferring...' : 'Transfer Tokens'}
+                    </Button>
+                  </div>
+
+                  <div style={{ marginTop: '2rem', padding: '1rem', backgroundColor: '#f8f9fa', borderRadius: '4px', border: '2px solid #dee2e6' }}>
+                    <h5>Transfer Between Other Accounts (Option 2 - Advanced):</h5>
+                    <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '1rem' }}>
+                      <strong>Optional:</strong> Test transfers between different accounts using agent privileges. This simulates real-world scenarios.
+                    </p>
+                    
+                    <div style={{ marginBottom: '1rem', padding: '1rem', backgroundColor: '#fff3cd', borderRadius: '4px', border: '1px solid #ffeaa7' }}>
+                      <h6>⚠️ Two-Step Process:</h6>
+                      <p style={{ fontSize: '0.9rem', color: '#856404', marginBottom: '0.5rem' }}>
+                        <strong>Step 1:</strong> Agent uses <code>forcedTransfer()</code> to move tokens from Account A to Agent</p>
+                      <p style={{ fontSize: '0.9rem', color: '#856404', marginBottom: '0.5rem' }}>
+                        <strong>Step 2:</strong> Agent uses <code>transfer()</code> to move tokens from Agent to Account B (with compliance)</p>
+                      <p style={{ fontSize: '0.9rem', color: '#856404', marginBottom: '0.5rem' }}>
+                        <strong>Why this works:</strong> Bypasses approval complexity while still testing compliance rules</p>
+                      <p style={{ fontSize: '0.9rem', color: '#856404', margin: '0' }}>
+                        <strong>Use case:</strong> Testing transfers between different user accounts in your Hardhat environment</p>
+                    </div>
+                    
+                    <div style={{ marginBottom: '1rem', padding: '1rem', backgroundColor: '#d1ecf1', borderRadius: '4px', border: '1px solid #bee5eb' }}>
+                      <h6>ℹ️ Example Scenario:</h6>
+                      <p style={{ fontSize: '0.9rem', color: '#0c5460', marginBottom: '0.5rem' }}>
+                        • <strong>Account 2:</strong> Has 15 tokens (minted earlier)</p>
+                      <p style={{ fontSize: '0.9rem', color: '#0c5460', marginBottom: '0.5rem' }}>
+                        • <strong>Account 3:</strong> Verified address (wants to receive tokens)</p>
+                      <p style={{ fontSize: '0.9rem', color: '#0c5460', margin: '0' }}>
+                        • <strong>Result:</strong> 5 tokens moved from Account 2 → Agent → Account 3 (with compliance check)</p>
+                    </div>
+                    
+                    <input
+                      type="text"
+                      placeholder="From Address (e.g., Account 2)"
+                      id="transferFromAdvanced"
+                      style={{ width: '100%', padding: '0.5rem', marginBottom: '0.5rem' }}
+                    />
+                    <input
+                      type="text"
+                      placeholder="To Address (e.g., Account 3)"
+                      id="transferToAdvanced"
+                      style={{ width: '100%', padding: '0.5rem', marginBottom: '0.5rem' }}
+                    />
+                    <input
+                      type="number"
+                      placeholder="Amount to Transfer"
+                      id="transferAmountAdvanced"
+                      style={{ width: '100%', padding: '0.5rem', marginBottom: '0.5rem' }}
+                    />
+                    <Button
+                      onClick={testTransferFromWithCompliance}
+                      disabled={deploying}
+                      style={{ backgroundColor: '#17a2b8', color: 'white' }}
+                    >
+                      {deploying ? 'Testing...' : 'Test Transfer Between Accounts'}
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       )
     }
   ];
