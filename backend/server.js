@@ -69,7 +69,7 @@ function getLatestDeployment() {
 // Routes
 app.get('/api/health', (req, res) => {
   const provider = createProvider();
-  const wallet = new ethers.Wallet(process.env.PRIVATE_KEY || '0xdf57089febbacf7ba0bc227dafbffa9fc08a93fdc68e1e42411a14efcf23656e', provider);
+  const wallet = new ethers.Wallet(process.env.PRIVATE_KEY || '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80', provider);
   res.json({ 
     status: 'OK', 
     message: 'T-REX API Server is running',
@@ -247,7 +247,7 @@ app.post('/api/deploy/token', async (req, res) => {
     
     // Get the deployer address (account 0)
     const provider = createProvider();
-    const wallet = new ethers.Wallet(process.env.PRIVATE_KEY || '0xdf57089febbacf7ba0bc227dafbffa9fc08a93fdc68e1e42411a14efcf23656e', provider);
+    const wallet = new ethers.Wallet(process.env.PRIVATE_KEY || '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80', provider);
     const deployerAddress = await wallet.getAddress();
     
     // Automatically add deployer as agent for both Token and IR
@@ -341,7 +341,7 @@ app.post('/api/deploy/claim-issuer', async (req, res) => {
     
     // Get the deployer address (account 0)
     const provider = createProvider();
-    const wallet = new ethers.Wallet(process.env.PRIVATE_KEY || '0xdf57089febbacf7ba0bc227dafbffa9fc08a93fdc68e1e42411a14efcf23656e', provider);
+    const wallet = new ethers.Wallet(process.env.PRIVATE_KEY || '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80', provider);
     const deployerAddress = await wallet.getAddress();
     
     console.log('🔑 Deploying ClaimIssuer with deployer address:', deployerAddress);
@@ -474,7 +474,7 @@ app.get('/api/claim-topics/:tokenAddress', async (req, res) => {
     console.log(`🎯 Getting claim topics for token: ${tokenAddress}`);
     
     const provider = createProvider();
-    const wallet = new ethers.Wallet(process.env.PRIVATE_KEY || '0xdf57089febbacf7ba0bc227dafbffa9fc08a93fdc68e1e42411a14efcf23656e', provider);
+    const wallet = new ethers.Wallet(process.env.PRIVATE_KEY || '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80', provider);
     
     // Get the token contract to find the ClaimTopicsRegistry
     const tokenArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/contracts/src/contracts/token/Token.sol/Token.json');
@@ -535,8 +535,9 @@ app.get('/api/agents/:tokenAddress', async (req, res) => {
     console.log(`🎯 Getting agents for token: ${tokenAddress}`);
     
     const provider = createProvider();
-    const wallet = new ethers.Wallet(process.env.PRIVATE_KEY || '0xdf57089febbacf7ba0bc227dafbffa9fc08a93fdc68e1e42411a14efcf23656e', provider);
+    const wallet = new ethers.Wallet(process.env.PRIVATE_KEY || '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80', provider);
     const deployerAddress = await wallet.getAddress();
+    console.log(`🔍 Backend deployer address: ${deployerAddress}`);
     
     // Get the token contract to find the Identity Registry
     const tokenArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/contracts/src/contracts/token/Token.sol/Token.json');
@@ -554,7 +555,9 @@ app.get('/api/agents/:tokenAddress', async (req, res) => {
     
     // Check Token agents
     try {
+      console.log(`🔍 Checking if ${deployerAddress} is a token agent for ${tokenAddress}...`);
       const isTokenAgent = await token.isAgent(deployerAddress);
+      console.log(`🔍 isAgent() result: ${isTokenAgent}`);
       if (isTokenAgent) {
         agents.token.push(deployerAddress);
         console.log(`✅ Deployer is Token Agent`);
@@ -615,7 +618,7 @@ app.get('/api/trusted-issuers/:tokenAddress', async (req, res) => {
     console.log(`🎯 Getting trusted issuers for token: ${tokenAddress}`);
     
     const provider = createProvider();
-    const wallet = new ethers.Wallet(process.env.PRIVATE_KEY || '0xdf57089febbacf7ba0bc227dafbffa9fc08a93fdc68e1e42411a14efcf23656e', provider);
+    const wallet = new ethers.Wallet(process.env.PRIVATE_KEY || '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80', provider);
     
     // Get the token contract to find the TrustedIssuersRegistry
     const tokenArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/contracts/src/contracts/token/Token.sol/Token.json');
@@ -695,7 +698,7 @@ app.get('/api/token-info/:tokenAddress', async (req, res) => {
     console.log(`🎯 Getting token info for: ${tokenAddress}`);
     
     const provider = createProvider();
-    const wallet = new ethers.Wallet(process.env.PRIVATE_KEY || '0xdf57089febbacf7ba0bc227dafbffa9fc08a93fdc68e1e42411a14efcf23656e', provider);
+    const wallet = new ethers.Wallet(process.env.PRIVATE_KEY || '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80', provider);
     
     // Get the token contract
     const tokenArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/contracts/src/contracts/token/Token.sol/Token.json');
@@ -748,7 +751,7 @@ app.get('/api/token-status/:tokenAddress', async (req, res) => {
     console.log(`🎯 Checking token status for: ${tokenAddress}`);
     
     const provider = createProvider();
-    const wallet = new ethers.Wallet(process.env.PRIVATE_KEY || '0xdf57089febbacf7ba0bc227dafbffa9fc08a93fdc68e1e42411a14efcf23656e', provider);
+    const wallet = new ethers.Wallet(process.env.PRIVATE_KEY || '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80', provider);
     
     // Get the token contract
     const tokenArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/contracts/src/contracts/token/Token.sol/Token.json');
@@ -798,7 +801,7 @@ app.get('/api/identity-registries', async (req, res) => {
     console.log(`🎯 Getting Identity Registries from all factories`);
     
     const provider = createProvider();
-    const wallet = new ethers.Wallet(process.env.PRIVATE_KEY || '0xdf57089febbacf7ba0bc227dafbffa9fc08a93fdc68e1e42411a14efcf23656e', provider);
+    const wallet = new ethers.Wallet(process.env.PRIVATE_KEY || '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80', provider);
     
     // Load deployments to get all factories
     const deploymentsPath = path.join(__dirname, '../deployments.json');
