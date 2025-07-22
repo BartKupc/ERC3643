@@ -489,7 +489,7 @@ app.get('/api/claim-topics/:tokenAddress', async (req, res) => {
     console.log('Identity Registry:', identityRegistry);
     
     // Get the Identity Registry contract to access CTR
-    const irArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/contracts/src/contracts/registries/IdentityRegistry.sol/IdentityRegistry.json');
+    const irArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/contracts/src/contracts/registry/implementation/IdentityRegistry.sol/IdentityRegistry.json');
     if (!fs.existsSync(irArtifactsPath)) {
       throw new Error('IdentityRegistry artifacts not found. Please compile contracts first.');
     }
@@ -501,7 +501,7 @@ app.get('/api/claim-topics/:tokenAddress', async (req, res) => {
     console.log('ClaimTopicsRegistry:', claimTopicsRegistry);
     
     // Get claim topics from the ClaimTopicsRegistry
-    const ctrArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/contracts/src/contracts/registries/ClaimTopicsRegistry.sol/ClaimTopicsRegistry.json');
+    const ctrArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/contracts/src/contracts/registry/implementation/ClaimTopicsRegistry.sol/ClaimTopicsRegistry.json');
     if (!fs.existsSync(ctrArtifactsPath)) {
       throw new Error('ClaimTopicsRegistry artifacts not found. Please compile contracts first.');
     }
