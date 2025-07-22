@@ -1239,25 +1239,33 @@ app.post('/api/add-claim-to-identity', async (req, res) => {
     const signature = await wallet.signMessage(ethers.utils.arrayify(dataHash));
     
     console.log(`🔍 Debug: Signer address: ${await wallet.getAddress()}`);
-    console.log(`🔍 Debug: OnchainID wallet: ${onchainIdWallet}`);
+    console.log(`🔍 Debug: User address for signature: ${userAddress}`);
     console.log(`🔍 Debug: Claim data: ${claimData}`);
     console.log(`🔍 Debug: Data hash: ${dataHash}`);
     console.log(`🔍 Debug: Signature: ${signature}`);
     
-    // Add claim to the OnchainID
-    // Parameters: topic, scheme, issuer, signature, data, uri
+    // Add claim using the ClaimIssuer contract
+    // Load ClaimIssuer ABI
+    const claimIssuerArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/contracts/src/@onchain-id/solidity/contracts/ClaimIssuer.sol/ClaimIssuer.json');
+    if (!fs.existsSync(claimIssuerArtifactsPath)) {
+      throw new Error('ClaimIssuer artifacts not found. Please compile contracts first.');
+    }
+    const claimIssuerArtifacts = JSON.parse(fs.readFileSync(claimIssuerArtifactsPath, 'utf8'));
+    const claimIssuer = new ethers.Contract(finalIssuerAddress, claimIssuerArtifacts.abi, wallet);
+    
+    // Parameters: identityAddress, topic, scheme, issuer, signature, data, uri
     const scheme = 1; // ECDSA
     const uri = '';
     
-    console.log(`Calling addClaim(${topicId}, ${scheme}, ${finalIssuerAddress}, ${signature}, ${claimData}, ${uri})`);
-    const tx = await onchainId.addClaim(topicId, scheme, finalIssuerAddress, signature, claimData, uri);
+    console.log(`Calling ClaimIssuer.addClaim(${onchainIdAddress}, ${topicId}, ${scheme}, ${finalIssuerAddress}, ${signature}, ${claimData}, ${uri})`);
+    const tx = await claimIssuer.addClaim(onchainIdAddress, topicId, scheme, finalIssuerAddress, signature, claimData, uri);
     await tx.wait();
     
-    console.log(`✅ Successfully added claim to OnchainID`);
+    console.log(`✅ Successfully added claim to OnchainID via ClaimIssuer`);
     
     res.json({
       success: true,
-      message: 'Successfully added claim to identity',
+      message: 'Successfully added claim to identity via ClaimIssuer',
       onchainIdAddress: onchainIdAddress,
       topic: topicId,
       value: claimValue,
