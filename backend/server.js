@@ -1253,12 +1253,19 @@ app.post('/api/add-claim-to-identity', async (req, res) => {
     const claimIssuerArtifacts = JSON.parse(fs.readFileSync(claimIssuerArtifactsPath, 'utf8'));
     const claimIssuer = new ethers.Contract(finalIssuerAddress, claimIssuerArtifacts.abi, wallet);
     
-    // Parameters: identityAddress, topic, scheme, issuer, signature, data, uri
+    // Parameters: topic, scheme, issuer, signature, data, uri
     const scheme = 1; // ECDSA
     const uri = '';
     
     console.log(`Calling ClaimIssuer.addClaim(${onchainIdAddress}, ${topicId}, ${scheme}, ${finalIssuerAddress}, ${signature}, ${claimData}, ${uri})`);
-    const tx = await claimIssuer.addClaim(onchainIdAddress, topicId, scheme, finalIssuerAddress, signature, claimData, uri);
+    const tx = await claimIssuer.addClaim(
+      topicId,
+      scheme,
+      finalIssuerAddress,
+      signature,
+      claimData,
+      uri
+    );
     await tx.wait();
     
     console.log(`✅ Successfully added claim to OnchainID via ClaimIssuer`);
