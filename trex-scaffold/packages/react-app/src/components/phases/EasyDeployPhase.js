@@ -119,37 +119,18 @@ const EasyDeployPhase = () => {
     try {
       const privateKey = '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80';
       
-      // Try different Hardhat node URLs based on environment
-      const hardhatUrls = [
-        'http://127.0.0.1:8545',
-        'http://localhost:8545',
-        'http://0.0.0.0:8545'
-      ];
+      // Use the CORS proxy to connect to Hardhat node
+      console.log('Using CORS proxy to connect to Hardhat node');
+      const provider = new ethers.providers.JsonRpcProvider('http://localhost:3001/api/hardhat');
       
-      let provider;
-      let lastError;
-      
-      for (const url of hardhatUrls) {
-        try {
-          console.log(`Trying to connect to Hardhat node at: ${url}`);
-          provider = new ethers.providers.JsonRpcProvider(url);
-          await provider.getNetwork();
-          console.log(`✅ Successfully connected to Hardhat node at: ${url}`);
-          break;
-        } catch (error) {
-          console.log(`❌ Failed to connect to ${url}:`, error.message);
-          lastError = error;
-        }
-      }
-      
-      if (!provider) {
-        throw lastError || new Error('Could not connect to any Hardhat node URL');
-      }
+      // Test the connection
+      await provider.getNetwork();
+      console.log('✅ Successfully connected to Hardhat node via CORS proxy');
       
       return new ethers.Wallet(privateKey, provider);
     } catch (error) {
       console.error('Network connection error:', error);
-      throw new Error(`Failed to connect to Hardhat network. Please ensure Hardhat node is running with: npx hardhat node --hostname 0.0.0.0`);
+      throw new Error(`Failed to connect to Hardhat network via CORS proxy. Please ensure Hardhat node is running with: npx hardhat node --hostname 0.0.0.0`);
     }
   };
 
