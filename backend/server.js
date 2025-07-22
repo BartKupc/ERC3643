@@ -1220,15 +1220,25 @@ app.post('/api/add-claim-to-identity', async (req, res) => {
     // The signature should be of: keccak256(abi.encode(address identityHolder_address, uint256 topic, bytes data))
     const claimData = ethers.utils.hexlify(ethers.utils.toUtf8Bytes(claimValue));
     
+    // Get the wallet address of the OnchainID (the user who owns it)
+    const onchainIdWallet = await onchainId.wallet();
+    console.log(`🔍 Debug: OnchainID wallet: ${onchainIdWallet}`);
+    
     const dataHash = ethers.utils.keccak256(
       ethers.utils.defaultAbiCoder.encode(
         ['address', 'uint256', 'bytes'],
-        [onchainIdAddress, topicId, claimData]
+        [onchainIdWallet, topicId, claimData]
       )
     );
     
     // Sign the data hash with the wallet's private key
     const signature = await wallet.signMessage(ethers.utils.arrayify(dataHash));
+    
+    console.log(`🔍 Debug: Signer address: ${await wallet.getAddress()}`);
+    console.log(`🔍 Debug: OnchainID wallet: ${onchainIdWallet}`);
+    console.log(`🔍 Debug: Claim data: ${claimData}`);
+    console.log(`🔍 Debug: Data hash: ${dataHash}`);
+    console.log(`🔍 Debug: Signature: ${signature}`);
     
     // Add claim to the OnchainID
     // Parameters: topic, scheme, issuer, signature, data, uri
@@ -1512,6 +1522,7 @@ app.get('/api/token/verify-user/:tokenAddress/:userAddress', async (req, res) =>
       try {
         trustedIssuers = await tir.getTrustedIssuersForClaimTopic(topicNum);
         trustedIssuerAddresses = trustedIssuers.map(issuer => issuer.toString());
+        console.log(`🔍 Debug: Found ${trustedIssuerAddresses.length} trusted issuers for topic ${topicNum}: ${trustedIssuerAddresses.join(', ')}`);
       } catch (issuerError) {
         console.log(`Warning: Could not get trusted issuers for topic ${topicNum}: ${issuerError.message}`);
       }
@@ -1520,6 +1531,7 @@ app.get('/api/token/verify-user/:tokenAddress/:userAddress', async (req, res) =>
       let claims = [];
       try {
         claims = await onchainId.getClaimIdsByTopic(topicNum);
+        console.log(`🔍 Debug: Found ${claims.length} claims for topic ${topicNum}`);
         if (!Array.isArray(claims)) {
           claims = [];
         }
@@ -1536,6 +1548,7 @@ app.get('/api/token/verify-user/:tokenAddress/:userAddress', async (req, res) =>
           try {
             const claim = await onchainId.getClaim(claimId);
             const claimIssuer = claim.issuer;
+            console.log(`🔍 Debug: Claim ${claimId} issuer: ${claimIssuer}, trusted issuers: ${trustedIssuerAddresses.join(', ')}`);
             
             // Check if the claim issuer is trusted for this topic
             if (trustedIssuerAddresses.includes(claimIssuer.toLowerCase())) {
@@ -1553,6 +1566,9 @@ app.get('/api/token/verify-user/:tokenAddress/:userAddress', async (req, res) =>
                 data: claimData,
                 scheme: claim.scheme.toNumber()
               });
+              console.log(`🔍 Debug: Claim ${claimId} is valid! Data: ${claimData}`);
+            } else {
+              console.log(`🔍 Debug: Claim ${claimId} issuer ${claimIssuer} is not trusted for topic ${topicNum}`);
             }
           } catch (claimError) {
             console.log(`Warning: Could not get claim ${claimId}: ${claimError.message}`);
