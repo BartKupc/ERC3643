@@ -1598,6 +1598,29 @@ app.get('/api/token/verify-user/:tokenAddress/:userAddress', async (req, res) =>
         if (!Array.isArray(claims)) {
           claims = [];
         }
+        
+        // Debug: Let's also check all claims on the OnchainID to see what's there
+        console.log(`🔍 Debug: Checking all claims on OnchainID ${onchainIdAddress} for topic ${topicNum}`);
+        try {
+          // Try to get claims for a broader range of topics to see what's stored
+          for (let i = 1; i <= 10; i++) {
+            const topicClaims = await onchainId.getClaimIdsByTopic(i);
+            if (topicClaims.length > 0) {
+              console.log(`🔍 Debug: Found ${topicClaims.length} claims for topic ${i}`);
+              for (const claimId of topicClaims) {
+                try {
+                  const claim = await onchainId.getClaim(claimId);
+                  console.log(`🔍 Debug: Claim ${claimId} - Topic: ${claim.topic}, Issuer: ${claim.issuer}, Data: ${claim.data}`);
+                } catch (e) {
+                  console.log(`🔍 Debug: Error getting claim ${claimId}: ${e.message}`);
+                }
+              }
+            }
+          }
+        } catch (e) {
+          console.log(`🔍 Debug: Error checking all claims: ${e.message}`);
+        }
+        
       } catch (claimsError) {
         console.log(`Warning: Could not get claims for topic ${topicNum}: ${claimsError.message}`);
       }
@@ -1640,12 +1663,59 @@ app.get('/api/token/verify-user/:tokenAddress/:userAddress', async (req, res) =>
         }
       }
       
+      // If no claims found on OnchainID, check with ClaimIssuer contracts
+      if (!hasValidClaim && trustedIssuerAddresses.length > 0) {
+        console.log(`🔍 Debug: No claims found on OnchainID for topic ${topicNum}, checking ClaimIssuer contracts...`);
+        
+        for (const issuerAddress of trustedIssuerAddresses) {
+          try {
+            // Load ClaimIssuer artifacts
+            const claimIssuerArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/contracts/src/@onchain-id/solidity/contracts/ClaimIssuer.sol/ClaimIssuer.json');
+            if (fs.existsSync(claimIssuerArtifactsPath)) {
+              const claimIssuerArtifacts = JSON.parse(fs.readFileSync(claimIssuerArtifactsPath, 'utf8'));
+              const claimIssuer = new ethers.Contract(issuerAddress, claimIssuerArtifacts.abi, wallet);
+              
+              // Try to validate a claim with this issuer
+              // We need to create a signature for the claim data
+              const claimData = ethers.utils.hexlify(ethers.utils.toUtf8Bytes("YES")); // Default claim value
+              const dataHash = ethers.utils.keccak256(
+                ethers.utils.defaultAbiCoder.encode(
+                  ['address', 'uint256', 'bytes'],
+                  [onchainIdAddress, topicNum, claimData]
+                )
+              );
+              const signature = await wallet.signMessage(ethers.utils.arrayify(dataHash));
+              
+              const isValid = await claimIssuer.isClaimValid(onchainIdAddress, topicNum, signature, claimData);
+              console.log(`🔍 Debug: ClaimIssuer ${issuerAddress} validation for topic ${topicNum}: ${isValid}`);
+              
+              if (isValid) {
+                hasValidClaim = true;
+                claimDetails.push({
+                  claimId: 'ClaimIssuer-validated',
+                  issuer: issuerAddress,
+                  data: 'YES',
+                  scheme: 1,
+                  validatedBy: 'ClaimIssuer'
+                });
+                console.log(`🔍 Debug: Claim validated by ClaimIssuer ${issuerAddress} for topic ${topicNum}`);
+                break; // Found a valid claim, no need to check other issuers
+              }
+            }
+          } catch (issuerError) {
+            console.log(`🔍 Debug: Error checking ClaimIssuer ${issuerAddress}: ${issuerError.message}`);
+          }
+        }
+      }
+      
       verificationDetails.push({
         topic: topicNum,
         required: true,
+        hasClaims: claims.length > 0,
         hasValidClaim: hasValidClaim,
         trustedIssuers: trustedIssuerAddresses,
-        claims: claimDetails
+        claims: claimDetails,
+        claimSource: claims.length > 0 ? 'OnchainID' : (hasValidClaim ? 'ClaimIssuer' : 'None')
       });
     }
     
