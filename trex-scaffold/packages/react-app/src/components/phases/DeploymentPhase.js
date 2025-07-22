@@ -8,8 +8,6 @@ import TokenManagementTab from './advanced/steps/TokenManagementTab';
 import { Button } from './shared/uiComponents';
 import { createLoggingUtils } from './shared/loggingUtils';
 
-const STORAGE_KEY = 'trex_deployment_state';
-
 const DeploymentPhase = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [logs, setLogs] = useState([]);
