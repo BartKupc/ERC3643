@@ -904,8 +904,10 @@ app.post('/api/create-onchainid', async (req, res) => {
     console.log(`🔍 Using deployer address: ${deployerAddress}`);
     console.log(`🔍 Identity Factory: ${deploymentDetails.factories.identityFactory}`);
     
-    // Variable to store the OnchainID address
+    // Variable to store the OnchainID address and transaction info
     let onchainIdAddress;
+    let transactionHash = null;
+    let isNewOnchainId = false;
     
     // Get the Identity Factory contract
     const identityFactoryAddress = deploymentDetails.factories.identityFactory;
@@ -933,6 +935,7 @@ app.post('/api/create-onchainid', async (req, res) => {
       if (existingOnchainIdAddress && existingOnchainIdAddress !== '0x0000000000000000000000000000000000000000') {
         console.log(`✅ OnchainID already exists for ${userAddress}: ${existingOnchainIdAddress}`);
         onchainIdAddress = existingOnchainIdAddress;
+        isNewOnchainId = false;
       }
     } catch (error) {
       console.log(`🔍 No existing OnchainID found, will create new one`);
@@ -958,6 +961,8 @@ app.post('/api/create-onchainid', async (req, res) => {
       await tx.wait();
       
       console.log(`✅ OnchainID creation transaction confirmed: ${tx.hash}`);
+      transactionHash = tx.hash;
+      isNewOnchainId = true;
       
       // Get the created OnchainID address
       onchainIdAddress = await identityFactory.getIdentity(userAddress);
@@ -1001,7 +1006,8 @@ app.post('/api/create-onchainid', async (req, res) => {
       success: true,
       onchainIdAddress: onchainIdAddress,
       userAddress: userAddress,
-      transactionHash: tx.hash
+      transactionHash: transactionHash,
+      isNewOnchainId: isNewOnchainId
     });
     
   } catch (error) {
