@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { ethers } from 'ethers';
-import { Button, createLoggingUtils, loadDeploymentState, clearDeploymentState } from './shared';
-import { getContractArtifacts } from '../../hooks/compiledContracts';
 import TabNavigation from './easy-deploy/TabNavigation';
 import FactoryManagementTab from './easy-deploy/FactoryManagementTab';
 import TokenManagementTab from './easy-deploy/TokenManagementTab';
@@ -11,13 +9,11 @@ import TrustedIssuerManagementTab from './easy-deploy/TrustedIssuerManagementTab
 import AgentManagementTab from './easy-deploy/AgentManagementTab';
 import UserManagementTab from './easy-deploy/UserManagementTab';
 import TokenOperationsTab from './easy-deploy/TokenOperationsTab';
-import { CLAIM_TOPIC_LABELS } from './easy-deploy/constants';
 import config from '../../config.json';
 
 const EasyDeployPhase = () => {
   // State management
   const [activeTab, setActiveTab] = useState('factory');
-  const [deployedContracts, setDeployedContracts] = useState({});
   const [message, setMessage] = useState('');
   const [logs, setLogs] = useState([]);
   const [factories, setFactories] = useState([]);
@@ -41,28 +37,6 @@ const EasyDeployPhase = () => {
 
   // Claims Management State
   const [claimTopics, setClaimTopics] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [addingClaimTopic, setAddingClaimTopic] = useState(false);
-  const [removingClaimTopicState, setRemovingClaimTopicState] = useState(false);
-
-  // Trusted Issuer Management State
-  const [issuerAddress, setIssuerAddress] = useState('');
-  const [issuerClaimTopics, setIssuerClaimTopics] = useState([]);
-  const [newClaimTopic, setNewClaimTopic] = useState('');
-  const [addingIssuer, setAddingIssuer] = useState(false);
-  const [deployedClaimIssuers, setDeployedClaimIssuers] = useState([]);
-
-  // Agent Management State
-  const [agents, setAgents] = useState({ token: [], ir: [], irs: [] });
-  const [removingAgentState, setRemovingAgentState] = useState(false);
-
-  // Token OnchainID State
-  const [tokenOnchainId, setTokenOnchainId] = useState(null);
-  const [loadingTokenOnchainId, setLoadingTokenOnchainId] = useState(false);
-
-  // Claim Issuer Management State
-  const [selectedIdentityForClaims, setSelectedIdentityForClaims] = useState('');
   const [selectedClaimIssuer, setSelectedClaimIssuer] = useState('');
   const [availableClaimIssuers, setAvailableClaimIssuers] = useState(() => {
     try {
@@ -73,8 +47,9 @@ const EasyDeployPhase = () => {
       return [];
     }
   });
-  const [loadingClaimIssuers, setLoadingClaimIssuers] = useState(false);
-  const [addingClaimIssuer, setAddingClaimIssuer] = useState(false);
+  const [selectedIdentityForClaims, setSelectedIdentityForClaims] = useState('');
+  const [selectedClaimTopics, setSelectedClaimTopics] = useState([]);
+  const [claimIssuers, setClaimIssuers] = useState([]);
 
   // Claim Topics Management State
   const [selectedIdentityForClaimTopics, setSelectedIdentityForClaimTopics] = useState('');
@@ -96,11 +71,17 @@ const EasyDeployPhase = () => {
 
   // Additional state
   const [selectedOperationsToken, setSelectedOperationsToken] = useState(null);
-  const [selectedAgentContractType, setSelectedAgentContractType] = useState('token');
-  const [agentAddressInput, setAgentAddressInput] = useState('');
-  const [selectedTokenForAgent, setSelectedTokenForAgent] = useState(null);
-  const [selectedIRForAgent, setSelectedIRForAgent] = useState(null);
-
+  const [selectedClaimIssuer, setSelectedClaimIssuer] = useState('');
+  const [availableClaimIssuers, setAvailableClaimIssuers] = useState(() => {
+    try {
+      const saved = localStorage.getItem('trex_available_claim_issuers');
+      return saved ? JSON.parse(saved) : [];
+    } catch (error) {
+      console.error('Error loading claim issuers from localStorage:', error);
+      return [];
+    }
+  });
+  const [selectedIdentityForClaims, setSelectedIdentityForClaims] = useState('');
   const [selectedClaimTopics, setSelectedClaimTopics] = useState([]);
   const [claimIssuers, setClaimIssuers] = useState([]);
 

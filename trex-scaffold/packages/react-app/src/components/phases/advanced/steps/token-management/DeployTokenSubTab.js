@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button, ContractSelector } from '../../shared/uiComponents';
+import { Button, ContractSelector } from '../../shared';
 
 const DeployTokenSubTab = ({
   deployedContracts = {},
