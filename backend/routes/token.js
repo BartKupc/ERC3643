@@ -13,7 +13,7 @@ router.post('/pause', async (req, res) => {
     if (!tokenAddress) throw new Error('Token address is required');
     const provider = createProvider();
     const wallet = new ethers.Wallet(process.env.PRIVATE_KEY || '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80', provider);
-    const tokenArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/react-app/src/contracts/Token.json');
+    const tokenArtifactsPath = path.join(__dirname, '../../trex-scaffold/packages/react-app/src/contracts/Token.json');
     if (!fs.existsSync(tokenArtifactsPath)) throw new Error('Token artifacts not found. Please compile contracts first.');
     const tokenArtifacts = JSON.parse(fs.readFileSync(tokenArtifactsPath, 'utf8'));
     const token = new ethers.Contract(tokenAddress, tokenArtifacts.abi, wallet);
@@ -32,7 +32,7 @@ router.get('/token-info/:tokenAddress', async (req, res) => {
     console.log(`🎯 Getting token info for: ${tokenAddress}`);
     if (!tokenAddress) throw new Error('Token address is required');
     const provider = createProvider();
-    const tokenArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/react-app/src/contracts/Token.json');
+    const tokenArtifactsPath = path.join(__dirname, '../../trex-scaffold/packages/react-app/src/contracts/Token.json');
     console.log(`🔍 Looking for Token artifacts at: ${tokenArtifactsPath}`);
     if (!fs.existsSync(tokenArtifactsPath)) {
       console.log(`❌ Token artifacts not found at: ${tokenArtifactsPath}`);
@@ -80,7 +80,7 @@ router.get('/token-status/:tokenAddress', async (req, res) => {
     console.log(`🎯 Checking token status for: ${tokenAddress}`);
     if (!tokenAddress) throw new Error('Token address is required');
     const provider = createProvider();
-    const tokenArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/react-app/src/contracts/Token.json');
+    const tokenArtifactsPath = path.join(__dirname, '../../trex-scaffold/packages/react-app/src/contracts/Token.json');
     console.log(`🔍 Looking for Token artifacts at: ${tokenArtifactsPath}`);
     if (!fs.existsSync(tokenArtifactsPath)) {
       console.log(`❌ Token artifacts not found at: ${tokenArtifactsPath}`);
@@ -127,7 +127,7 @@ router.get('/verify-user/:tokenAddress/:userAddress', async (req, res) => {
     const { tokenAddress, userAddress } = req.params;
     if (!tokenAddress || !userAddress) throw new Error('Token address and user address are required');
     const provider = createProvider();
-    const tokenArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/react-app/src/contracts/Token.json');
+    const tokenArtifactsPath = path.join(__dirname, '../../trex-scaffold/packages/react-app/src/contracts/Token.json');
     if (!fs.existsSync(tokenArtifactsPath)) throw new Error('Token artifacts not found. Please compile contracts first.');
     const tokenArtifacts = JSON.parse(fs.readFileSync(tokenArtifactsPath, 'utf8'));
     const token = new ethers.Contract(tokenAddress, tokenArtifacts.abi, provider);
@@ -145,7 +145,7 @@ router.post('/mint', async (req, res) => {
     if (!tokenAddress || !toAddress || !amount) throw new Error('Token address, to address, and amount are required');
     const provider = createProvider();
     const wallet = new ethers.Wallet(process.env.PRIVATE_KEY || '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80', provider);
-    const tokenArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/react-app/src/contracts/Token.json');
+    const tokenArtifactsPath = path.join(__dirname, '../../trex-scaffold/packages/react-app/src/contracts/Token.json');
     if (!fs.existsSync(tokenArtifactsPath)) throw new Error('Token artifacts not found. Please compile contracts first.');
     const tokenArtifacts = JSON.parse(fs.readFileSync(tokenArtifactsPath, 'utf8'));
     const token = new ethers.Contract(tokenAddress, tokenArtifacts.abi, wallet);
@@ -166,7 +166,7 @@ router.post('/burn', async (req, res) => {
     if (!tokenAddress || !fromAddress || !amount) throw new Error('Token address, from address, and amount are required');
     const provider = createProvider();
     const wallet = new ethers.Wallet(process.env.PRIVATE_KEY || '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80', provider);
-    const tokenArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/react-app/src/contracts/Token.json');
+    const tokenArtifactsPath = path.join(__dirname, '../../trex-scaffold/packages/react-app/src/contracts/Token.json');
     if (!fs.existsSync(tokenArtifactsPath)) throw new Error('Token artifacts not found. Please compile contracts first.');
     const tokenArtifacts = JSON.parse(fs.readFileSync(tokenArtifactsPath, 'utf8'));
     const token = new ethers.Contract(tokenAddress, tokenArtifacts.abi, wallet);
@@ -187,7 +187,7 @@ router.post('/transfer', async (req, res) => {
     if (!tokenAddress || !fromAddress || !toAddress || !amount) throw new Error('Token address, from address, to address, and amount are required');
     const provider = createProvider();
     const wallet = new ethers.Wallet(process.env.PRIVATE_KEY || '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80', provider);
-    const tokenArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/react-app/src/contracts/Token.json');
+    const tokenArtifactsPath = path.join(__dirname, '../../trex-scaffold/packages/react-app/src/contracts/Token.json');
     if (!fs.existsSync(tokenArtifactsPath)) throw new Error('Token artifacts not found. Please compile contracts first.');
     const tokenArtifacts = JSON.parse(fs.readFileSync(tokenArtifactsPath, 'utf8'));
     const token = new ethers.Contract(tokenAddress, tokenArtifacts.abi, wallet);
@@ -210,7 +210,7 @@ router.post('/transfer-from', async (req, res) => {
     if (!tokenAddress || !fromAddress || !toAddress || !amount) throw new Error('Token address, from address, to address, and amount are required');
     const provider = createProvider();
     const wallet = new ethers.Wallet(process.env.PRIVATE_KEY || '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80', provider);
-    const tokenArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/react-app/src/contracts/Token.json');
+    const tokenArtifactsPath = path.join(__dirname, '../../trex-scaffold/packages/react-app/src/contracts/Token.json');
     if (!fs.existsSync(tokenArtifactsPath)) throw new Error('Token artifacts not found. Please compile contracts first.');
     const tokenArtifacts = JSON.parse(fs.readFileSync(tokenArtifactsPath, 'utf8'));
     const token = new ethers.Contract(tokenAddress, tokenArtifacts.abi, wallet);
