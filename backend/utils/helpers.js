@@ -53,14 +53,14 @@ const getContractArtifacts = (contractName) => {
 
 // Helper to run deployment scripts using Hardhat
 async function runDeploymentScript(scriptName, options = {}) {
-  const scriptPath = path.join(__dirname, '../scripts', scriptName);
+  const scriptPath = path.join(__dirname, '../../scripts', scriptName);
   if (!fs.existsSync(scriptPath)) {
     throw new Error(`Deployment script not found: ${scriptPath}`);
   }
   const env = { ...process.env, ...options };
   const { stdout, stderr } = await execAsync(`npx hardhat run ${scriptPath} --network localhost`, {
     env,
-    cwd: path.join(__dirname, '..')
+    cwd: path.join(__dirname, '../../')
   });
   if (stderr) {
     console.error('Script stderr:', stderr);
