@@ -224,6 +224,21 @@ app.get('/api/deployments/:deploymentId', (req, res) => {
   }
 });
 
+// New endpoint: GET /api/deployments
+app.get('/api/deployments', (req, res) => {
+  try {
+    const deploymentsPath = path.join(__dirname, '../deployments.json');
+    if (!fs.existsSync(deploymentsPath)) {
+      return res.status(404).json({ error: 'deployments.json not found' });
+    }
+    const deployments = JSON.parse(fs.readFileSync(deploymentsPath, 'utf8'));
+    res.json(deployments);
+  } catch (err) {
+    console.error('Error reading deployments.json:', err);
+    res.status(500).json({ error: 'Failed to read deployments.json' });
+  }
+});
+
 // Start server
 app.listen(PORT, () => {
   console.log(`🚀 T-REX Backend Server running on port ${PORT}`);
