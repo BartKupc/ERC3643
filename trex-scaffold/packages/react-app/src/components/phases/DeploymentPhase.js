@@ -106,6 +106,7 @@ const DeploymentPhase = () => {
   const reloadDeploymentState = async () => {
     try {
       const response = await axios.get('/api/contracts/state');
+      console.log('Backend deployment state:', response.data.deployment); // DEBUG LOG
       if (response.data.success && response.data.deployment) {
         const deployment = response.data.deployment;
         
