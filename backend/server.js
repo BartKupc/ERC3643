@@ -77,7 +77,7 @@ app.get('/api/identity-registries', async (req, res) => {
           }
           
           // Get the Identity Registry contract
-          const irArtifactsPath = path.join(__dirname, '../../trex-scaffold/packages/react-app/src/contracts/IdentityRegistry.json');
+          const irArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/react-app/src/contracts/IdentityRegistry.json');
           console.log(`🔍 Loading IR artifacts from: ${irArtifactsPath}`);
           if (!fs.existsSync(irArtifactsPath)) {
             throw new Error('IdentityRegistry artifacts not found. Please compile contracts first.');
@@ -91,7 +91,7 @@ app.get('/api/identity-registries', async (req, res) => {
           console.log(`🔍 Getting TrustedIssuersRegistry address from IR...`);
           const tirAddress = await ir.issuersRegistry();
           console.log(`✅ TrustedIssuersRegistry address: ${tirAddress}`);
-          const tirArtifactsPath = path.join(__dirname, '../../trex-scaffold/packages/react-app/src/contracts/TrustedIssuersRegistry.json');
+          const tirArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/react-app/src/contracts/TrustedIssuersRegistry.json');
           console.log(`🔍 Loading TIR artifacts from: ${tirArtifactsPath}`);
           if (!fs.existsSync(tirArtifactsPath)) {
             throw new Error('TrustedIssuersRegistry artifacts not found. Please compile contracts first.');
