@@ -50,7 +50,7 @@ const DeploymentPhase = () => {
         const parsedState = JSON.parse(savedState);
         setDeployedContracts(parsedState.contracts || {});
         setDeployedTokens(parsedState.tokens || []);
-        addLog("Loaded deployment state from storage", "info");
+        // Do NOT log here
       }
     } catch (error) {
       console.error("Error loading deployment state:", error);
@@ -388,8 +388,9 @@ const DeploymentPhase = () => {
   // Load state on component mount
   useEffect(() => {
     loadDeploymentState();
+    addLog("Loaded deployment state from storage", "info");
     reloadDeploymentState();
-  }, [loadDeploymentState, reloadDeploymentState]);
+  }, []);
 
   // Add useEffect to auto-select contracts when deployedContracts changes
   useEffect(() => {
