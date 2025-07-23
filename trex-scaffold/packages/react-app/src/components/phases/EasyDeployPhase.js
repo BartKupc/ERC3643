@@ -219,7 +219,9 @@ const EasyDeployPhase = () => {
 
     try {
       addLog("Sending factory deployment request to backend...", "info");
-      await axios.post('/api/deploy/factory');
+      await axios.post('/api/deploy/factory', {}, {
+        timeout: 5 * 60 * 1000 // 5 minute timeout for factory deployment
+      });
 
       addLog("Factory deployment request sent successfully", "success");
       addLog("Waiting for backend to process deployment...", "info");
@@ -283,6 +285,8 @@ const EasyDeployPhase = () => {
         factoryAddress: selectedFactory.address,
         tokenDetails,
         claimDetails
+      }, {
+        timeout: 10 * 60 * 1000 // 10 minute timeout for token deployment
       });
 
       addLog("Token deployment request sent successfully", "success");
@@ -596,7 +600,9 @@ const EasyDeployPhase = () => {
     
     try {
       addLog("Sending ClaimIssuer deployment request to backend...", "info");
-      const response = await axios.post('/api/deploy/claim-issuer');
+      const response = await axios.post('/api/deploy/claim-issuer', {}, {
+        timeout: 3 * 60 * 1000 // 3 minute timeout for ClaimIssuer deployment
+      });
       
       if (response.data.success) {
         const { claimIssuerAddress, deployerAddress } = response.data;

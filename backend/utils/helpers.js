@@ -57,15 +57,29 @@ async function runDeploymentScript(scriptName, options = {}) {
   if (!fs.existsSync(scriptPath)) {
     throw new Error(`Deployment script not found: ${scriptPath}`);
   }
+  console.log(`🔧 Running script: ${scriptPath}`);
+  console.log(`📁 Working directory: ${path.join(__dirname, '../../')}`);
+  
   const env = { ...process.env, ...options };
-  const { stdout, stderr } = await execAsync(`npx hardhat run ${scriptPath} --network localhost`, {
-    env,
-    cwd: path.join(__dirname, '../../')
-  });
-  if (stderr) {
-    console.error('Script stderr:', stderr);
+  try {
+    const { stdout, stderr } = await execAsync(`npx hardhat run ${scriptPath} --network localhost`, {
+      env,
+      cwd: path.join(__dirname, '../../'),
+      timeout: 10 * 60 * 1000 // 10 minute timeout
+    });
+    
+    if (stderr) {
+      console.error('Script stderr:', stderr);
+    }
+    
+    console.log(`✅ Script completed successfully`);
+    return stdout;
+  } catch (error) {
+    console.error(`❌ Script execution failed:`, error.message);
+    if (error.stdout) console.log('Script stdout:', error.stdout);
+    if (error.stderr) console.log('Script stderr:', error.stderr);
+    throw error;
   }
-  return stdout;
 }
 
 // Helper to get latest deployment

@@ -90,20 +90,36 @@ router.post('/token', async (req, res) => {
         envVars.CLAIM_DETAILS_PATH = claimDetailsPath;
       }
       
-      // Run the token deployment script
+      // Run the token deployment script with timeout
       console.log('🚀 Running token deployment script...');
-      const output = await runDeploymentScript('deploy_token_enhanced.js', envVars);
+      const deploymentPromise = runDeploymentScript('deploy_token_enhanced.js', envVars);
+      
+      // Add timeout to prevent hanging
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Token deployment timed out after 5 minutes')), 5 * 60 * 1000);
+      });
+      
+      const output = await Promise.race([deploymentPromise, timeoutPromise]);
       console.log('✅ Token deployment script completed');
       console.log('Output:', output);
       
+      // Add a small delay to ensure deployments.json is written
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
       // Get the latest deployment to find the newly deployed token
+      console.log('🔍 Getting latest deployment...');
       const latestDeployment = getLatestDeployment();
+      console.log('📋 Latest deployment:', latestDeployment ? 'found' : 'not found');
+      
       if (!latestDeployment || !latestDeployment.tokens || latestDeployment.tokens.length === 0) {
+        console.error('❌ No deployment data found after token deployment');
+        console.log('Latest deployment data:', latestDeployment);
         throw new Error('Token deployment failed - no deployment data found');
       }
       
       const latestToken = latestDeployment.tokens[latestDeployment.tokens.length - 1];
       console.log('📋 Token deployed at:', latestToken.token.address);
+      console.log('📤 Sending response to frontend...');
       
       res.json({
         success: true,
@@ -112,6 +128,8 @@ router.post('/token', async (req, res) => {
         tokenDetails: latestToken.token,
         deployment: latestDeployment
       });
+      
+      console.log('✅ Response sent successfully');
     } catch (deployError) {
       throw deployError;
     }
