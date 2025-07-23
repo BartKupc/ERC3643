@@ -6,7 +6,7 @@ const DeployCoreContractsTab = ({
   deploying,
   deployContract
 }) => (
-  <div>
+  <div style={{ maxWidth: '100%', overflowX: 'auto' }}>
     <h3>Step 1: Deploy Core Contracts</h3>
     <p>Deploy the essential T-REX contracts in the correct order.</p>
     

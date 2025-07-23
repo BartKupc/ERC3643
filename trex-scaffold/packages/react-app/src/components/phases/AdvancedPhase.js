@@ -309,7 +309,7 @@ const AdvancedPhase = () => {
   };
 
   return (
-    <div style={{ backgroundColor: 'white', color: 'black' }}>
+    <div style={{ backgroundColor: 'white', color: 'black', maxWidth: '100%', overflowX: 'auto' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
         <h2 style={{ margin: 0, color: 'black' }}>T-REX Advanced Deployment</h2>
         <button

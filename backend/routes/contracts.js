@@ -83,28 +83,28 @@ async function handleDeploy(contractName, res) {
     // Add delay to ensure deployments.json is written
     await new Promise(resolve => setTimeout(resolve, 1000));
     
-    // Get the latest deployment
-    const latestDeployment = getLatestDeployment();
-    if (!latestDeployment) {
+    // Get all deployments to find the most recent one for this contract
+    const deploymentsPath = path.join(__dirname, '../../deployments.json');
+    if (!fs.existsSync(deploymentsPath)) {
       throw new Error('Deployment failed - no deployment data found');
     }
     
-    // Find the deployed contract address
+    const allDeployments = JSON.parse(fs.readFileSync(deploymentsPath, 'utf8'));
     let contractAddress = null;
     
-    // Check for suite format (from factory deployments)
-    if (contractName === 'Factory' && latestDeployment.factory) {
+    // First, check if the latest deployment is a factory deployment with suite
+    const latestDeployment = allDeployments[allDeployments.length - 1];
+    if (latestDeployment.suite && latestDeployment.suite[contractName.toLowerCase()]) {
+      contractAddress = latestDeployment.suite[contractName.toLowerCase()];
+    } else if (contractName === 'Factory' && latestDeployment.factory) {
       contractAddress = latestDeployment.factory.address;
     } else if (contractName === 'Token' && latestDeployment.tokens && latestDeployment.tokens.length > 0) {
       contractAddress = latestDeployment.tokens[latestDeployment.tokens.length - 1].token.address;
-    } else if (latestDeployment.suite) {
-      contractAddress = latestDeployment.suite[contractName.toLowerCase()];
     }
     
-    // Check for individual component format (from individual deployments)
-    if (!contractAddress && Array.isArray(latestDeployment)) {
-      // Look for the most recent deployment of this component
-      const componentDeployments = latestDeployment
+    // If not found in latest, search for individual component deployments
+    if (!contractAddress) {
+      const componentDeployments = allDeployments
         .filter(d => d.component === contractName)
         .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
       
@@ -114,6 +114,13 @@ async function handleDeploy(contractName, res) {
     }
     
     if (!contractAddress) {
+      console.log(`❌ Could not find deployed address for ${contractName}`);
+      console.log('Available deployments:', allDeployments.map(d => ({ 
+        type: d.component ? 'component' : 'factory', 
+        component: d.component, 
+        hasSuite: !!d.suite,
+        timestamp: d.timestamp 
+      })));
       throw new Error(`Could not find deployed address for ${contractName}`);
     }
     
