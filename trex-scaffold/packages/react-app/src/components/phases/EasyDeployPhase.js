@@ -10,7 +10,7 @@ import AgentManagementTab from './easy-deploy/AgentManagementTab';
 import UserManagementTab from './easy-deploy/UserManagementTab';
 import TokenOperationsTab from './easy-deploy/TokenOperationsTab';
 import config from '../../config.json';
-import { Button } from './shared/uiComponents';
+import { Button } from './shared';
 
 const EasyDeployPhase = () => {
   // State management

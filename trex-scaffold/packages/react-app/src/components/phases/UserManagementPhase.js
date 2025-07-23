@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import UserManagementTab from './advanced/steps/UserManagementTab';
-import { Button } from './shared/uiComponents';
+import { Button } from './shared';
 import { createLoggingUtils } from './shared/loggingUtils';
 
 const UserManagementPhase = ({ deployedContracts = {}, selectedContracts = {}, setSelectedContracts = () => {} }) => {

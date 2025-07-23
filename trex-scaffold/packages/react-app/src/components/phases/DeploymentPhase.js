@@ -5,7 +5,7 @@ import ConfigureIdentityRegistryTab from './advanced/steps/ConfigureIdentityRegi
 import AddClaimTopicsTab from './advanced/steps/AddClaimTopicsTab';
 import UserManagementTab from './advanced/steps/UserManagementTab';
 import TokenManagementTab from './advanced/steps/TokenManagementTab';
-import { Button } from './shared/uiComponents';
+import { Button } from './shared';
 import { createLoggingUtils } from './shared/loggingUtils';
 
 const DeploymentPhase = () => {
