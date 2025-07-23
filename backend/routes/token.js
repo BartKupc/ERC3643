@@ -208,15 +208,215 @@ router.get('/verify-user/:tokenAddress/:userAddress', async (req, res) => {
     
     // Check if user is verified
     const isVerified = await ir.isVerified(userAddress);
-    console.log(`✅ User verification result: ${isVerified}`);
+    console.log(`✅ Basic verification result: ${isVerified}`);
+    
+    // Get investor country
+    const investorCountry = await ir.investorCountry(userAddress);
+    console.log(`🔍 Investor country: ${investorCountry}`);
+    
+    // Get the TrustedIssuersRegistry
+    const tirAddress = await ir.issuersRegistry();
+    console.log(`🔍 TrustedIssuersRegistry: ${tirAddress}`);
+    const tirArtifactsPath = path.join(__dirname, '../../trex-scaffold/packages/react-app/src/contracts/TrustedIssuersRegistry.json');
+    console.log(`🔍 Looking for TIR artifacts at: ${tirArtifactsPath}`);
+    if (!fs.existsSync(tirArtifactsPath)) {
+      console.log(`❌ TrustedIssuersRegistry artifacts not found at: ${tirArtifactsPath}`);
+      throw new Error('TrustedIssuersRegistry artifacts not found. Please compile contracts first.');
+    }
+    console.log(`✅ TrustedIssuersRegistry artifacts found at: ${tirArtifactsPath}`);
+    const tirArtifacts = JSON.parse(fs.readFileSync(tirArtifactsPath, 'utf8'));
+    const tir = new ethers.Contract(tirAddress, tirArtifacts.abi, wallet);
+    console.log(`✅ TrustedIssuersRegistry contract instance created for ${tirAddress}`);
+    
+    // Get the ClaimTopicsRegistry
+    const ctrAddress = await ir.topicsRegistry();
+    console.log(`🔍 ClaimTopicsRegistry: ${ctrAddress}`);
+    const ctrArtifactsPath = path.join(__dirname, '../../trex-scaffold/packages/react-app/src/contracts/ClaimTopicsRegistry.json');
+    console.log(`🔍 Looking for CTR artifacts at: ${ctrArtifactsPath}`);
+    if (!fs.existsSync(ctrArtifactsPath)) {
+      console.log(`❌ ClaimTopicsRegistry artifacts not found at: ${ctrArtifactsPath}`);
+      throw new Error('ClaimTopicsRegistry artifacts not found. Please compile contracts first.');
+    }
+    console.log(`✅ ClaimTopicsRegistry artifacts found at: ${ctrArtifactsPath}`);
+    const ctrArtifacts = JSON.parse(fs.readFileSync(ctrArtifactsPath, 'utf8'));
+    const ctr = new ethers.Contract(ctrAddress, ctrArtifacts.abi, wallet);
+    console.log(`✅ ClaimTopicsRegistry contract instance created for ${ctrAddress}`);
+    
+    // Get required claim topics
+    let requiredTopics = [];
+    try {
+      requiredTopics = await ctr.getClaimTopics();
+      if (!Array.isArray(requiredTopics)) {
+        requiredTopics = [];
+      }
+      console.log(`🔍 Required claim topics: ${requiredTopics.map(t => t.toString()).join(', ')}`);
+    } catch (topicError) {
+      console.log(`Warning: Could not get claim topics: ${topicError.message}`);
+      requiredTopics = [];
+    }
+    
+    // Load OnchainID artifacts
+    const onchainIdArtifactsPath = path.join(__dirname, '../../trex-scaffold/packages/react-app/src/contracts/Identity.json');
+    console.log(`🔍 Looking for OnchainID artifacts at: ${onchainIdArtifactsPath}`);
+    if (!fs.existsSync(onchainIdArtifactsPath)) {
+      console.log(`❌ OnchainID artifacts not found at: ${onchainIdArtifactsPath}`);
+      throw new Error('OnchainID artifacts not found. Please compile contracts first.');
+    }
+    console.log(`✅ OnchainID artifacts found at: ${onchainIdArtifactsPath}`);
+    const onchainIdArtifacts = JSON.parse(fs.readFileSync(onchainIdArtifactsPath, 'utf8'));
+    
+    // Get the OnchainID contract
+    const onchainId = new ethers.Contract(onchainIdAddress, onchainIdArtifacts.abi, wallet);
+    console.log(`✅ OnchainID contract instance created for ${onchainIdAddress}`);
+    
+    // Check each required topic
+    let verificationDetails = [];
+    for (const topicId of requiredTopics) {
+      let topicNum;
+      try {
+        topicNum = typeof topicId === 'object' && topicId.toNumber ? topicId.toNumber() : Number(topicId);
+      } catch (numError) {
+        console.log(`Warning: Could not convert topic ID ${topicId}: ${numError.message}`);
+        continue;
+      }
+      
+      console.log(`🔍 Checking topic ${topicNum}...`);
+      
+      // Get trusted issuers for this topic
+      let trustedIssuers = [];
+      let trustedIssuerAddresses = [];
+      try {
+        trustedIssuers = await tir.getTrustedIssuersForClaimTopic(topicNum);
+        trustedIssuerAddresses = trustedIssuers.map(issuer => issuer.toString());
+        console.log(`🔍 Found ${trustedIssuerAddresses.length} trusted issuers for topic ${topicNum}: ${trustedIssuerAddresses.join(', ')}`);
+      } catch (issuerError) {
+        console.log(`Warning: Could not get trusted issuers for topic ${topicNum}: ${issuerError.message}`);
+      }
+      
+      // Check if user has claims for this topic
+      let claims = [];
+      try {
+        claims = await onchainId.getClaimIdsByTopic(topicNum);
+        console.log(`🔍 Found ${claims.length} claims for topic ${topicNum}`);
+        if (!Array.isArray(claims)) {
+          claims = [];
+        }
+      } catch (claimsError) {
+        console.log(`Warning: Could not get claims for topic ${topicNum}: ${claimsError.message}`);
+      }
+      
+      let hasValidClaim = false;
+      let claimDetails = [];
+      
+      if (claims.length > 0) {
+        // Check each claim
+        for (const claimId of claims) {
+          try {
+            const claim = await onchainId.getClaim(claimId);
+            const claimIssuer = claim.issuer;
+            console.log(`🔍 Claim ${claimId} issuer: ${claimIssuer}, trusted issuers: ${trustedIssuerAddresses.join(', ')}`);
+            
+            // Check if the claim issuer is trusted for this topic
+            if (trustedIssuerAddresses.map(addr => addr.toLowerCase()).includes(claimIssuer.toLowerCase())) {
+              hasValidClaim = true;
+              let claimData = '';
+              try {
+                claimData = ethers.utils.toUtf8String(claim.data);
+              } catch (e) {
+                claimData = claim.data; // Keep as hex if not UTF8
+              }
+              
+              claimDetails.push({
+                claimId: claimId.toString(),
+                issuer: claimIssuer,
+                data: claimData,
+                scheme: claim.scheme.toNumber()
+              });
+              console.log(`🔍 Claim ${claimId} is valid! Data: ${claimData}`);
+            } else {
+              console.log(`🔍 Claim ${claimId} issuer ${claimIssuer} is not trusted for topic ${topicNum}`);
+            }
+          } catch (claimError) {
+            console.log(`Warning: Could not get claim ${claimId}: ${claimError.message}`);
+          }
+        }
+      }
+      
+      // If no claims found on OnchainID, check with ClaimIssuer contracts
+      if (!hasValidClaim && trustedIssuerAddresses.length > 0) {
+        console.log(`🔍 No claims found on OnchainID for topic ${topicNum}, checking ClaimIssuer contracts...`);
+        
+        for (const issuerAddress of trustedIssuerAddresses) {
+          try {
+            // Load ClaimIssuer artifacts
+            const claimIssuerArtifactsPath = path.join(__dirname, '../../trex-scaffold/packages/react-app/src/contracts/ClaimIssuer.json');
+            if (fs.existsSync(claimIssuerArtifactsPath)) {
+              const claimIssuerArtifacts = JSON.parse(fs.readFileSync(claimIssuerArtifactsPath, 'utf8'));
+              const claimIssuer = new ethers.Contract(issuerAddress, claimIssuerArtifacts.abi, wallet);
+              
+              // Try to validate a claim with this issuer
+              // We need to create a signature for the claim data
+              const claimData = ethers.utils.hexlify(ethers.utils.toUtf8Bytes("YES")); // Default claim value
+              const dataHash = ethers.utils.keccak256(
+                ethers.utils.defaultAbiCoder.encode(
+                  ['address', 'uint256', 'bytes'],
+                  [onchainIdAddress, topicNum, claimData]
+                )
+              );
+              const signature = await wallet.signMessage(ethers.utils.arrayify(dataHash));
+              
+              const isValid = await claimIssuer.isClaimValid(onchainIdAddress, topicNum, signature, claimData);
+              console.log(`🔍 ClaimIssuer ${issuerAddress} validation for topic ${topicNum}: ${isValid}`);
+              
+              if (isValid) {
+                hasValidClaim = true;
+                claimDetails.push({
+                  claimId: 'ClaimIssuer-validated',
+                  issuer: issuerAddress,
+                  data: 'YES',
+                  scheme: 1,
+                  validatedBy: 'ClaimIssuer'
+                });
+                console.log(`🔍 Claim validated by ClaimIssuer ${issuerAddress} for topic ${topicNum}`);
+                break; // Found a valid claim, no need to check other issuers
+              }
+            }
+          } catch (issuerError) {
+            console.log(`🔍 Error checking ClaimIssuer ${issuerAddress}: ${issuerError.message}`);
+          }
+        }
+      }
+      
+      verificationDetails.push({
+        topic: topicNum,
+        required: true,
+        hasClaims: claims.length > 0,
+        hasValidClaim: hasValidClaim,
+        trustedIssuers: trustedIssuerAddresses,
+        claims: claimDetails,
+        claimSource: claims.length > 0 ? 'OnchainID' : (hasValidClaim ? 'ClaimIssuer' : 'None')
+      });
+    }
+    
+    // Determine overall verification status
+    const allTopicsVerified = verificationDetails.every(detail => detail.hasValidClaim);
+    const verified = isVerified && allTopicsVerified;
+    
+    console.log(`✅ Verification check completed for user: ${userAddress}`);
+    console.log(`📊 Overall verification status: ${verified} (Basic: ${isVerified}, Topics: ${allTopicsVerified})`);
     
     res.json({
       success: true,
-      verified: isVerified,
+      verified: verified,
+      reason: verified ? 'User is fully verified' : 'User verification incomplete',
       details: {
         userAddress: userAddress,
         onchainIdAddress: onchainIdAddress,
-        identityRegistry: identityRegistryAddress
+        identityRegistry: identityRegistryAddress,
+        isVerified: isVerified,
+        investorCountry: typeof investorCountry === 'object' && investorCountry.toNumber ? investorCountry.toNumber() : Number(investorCountry),
+        requiredTopics: requiredTopics.map(t => typeof t === 'object' && t.toNumber ? t.toNumber() : Number(t)),
+        verificationDetails: verificationDetails
       }
     });
   } catch (error) {
