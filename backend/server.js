@@ -43,7 +43,44 @@ app.use('/api/diagnostics', diagnosticsRoutes);
 
 const factoriesRoutes = require('./routes/factories');
 app.use('/api/factories', factoriesRoutes);
-app.use('/api/deployments', factoriesRoutes);
+
+// Add deployments routes directly
+app.get('/api/deployments/test', (req, res) => {
+  console.log('🧪 Deployments test route called');
+  res.json({ message: 'Deployments route is working' });
+});
+
+app.get('/api/deployments/:deploymentId', (req, res) => {
+  console.log('🔍 Deployment details requested for:', req.params.deploymentId);
+  try {
+    const { deploymentId } = req.params;
+    const deploymentsPath = path.join(__dirname, '../deployments.json');
+    console.log('📁 Looking for deployments at:', deploymentsPath);
+    if (!fs.existsSync(deploymentsPath)) {
+      console.log('❌ Deployments file not found');
+      return res.status(404).json({ error: 'No deployments found' });
+    }
+    const deployments = JSON.parse(fs.readFileSync(deploymentsPath, 'utf8'));
+    console.log('📋 Found', deployments.length, 'deployments');
+    const deployment = deployments.find(d => d.deploymentId === deploymentId);
+    if (!deployment) {
+      console.log('❌ Deployment not found:', deploymentId);
+      return res.status(404).json({ error: 'Deployment not found' });
+    }
+    console.log('✅ Found deployment:', deploymentId);
+    if (deployment.factory && deployment.tokens && deployment.tokens.length > 0) {
+      const latestToken = deployment.tokens[deployment.tokens.length - 1];
+      if (latestToken.suite) {
+        deployment.suite = latestToken.suite;
+      }
+      deployment.latestToken = latestToken;
+    }
+    res.json(deployment);
+  } catch (error) {
+    console.log('❌ Error in deployment route:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
 
 // Start server
 app.listen(PORT, () => {
