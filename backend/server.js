@@ -44,6 +44,42 @@ app.use('/api/diagnostics', diagnosticsRoutes);
 const factoriesRoutes = require('./routes/factories');
 app.use('/api/factories', factoriesRoutes);
 
+// Clear all deployment data
+app.delete('/api/addresses', (req, res) => {
+  try {
+    console.log('🧹 Clearing all deployment data...');
+    const deploymentsPath = path.join(__dirname, '../deployments.json');
+    
+    // Clear the deployments.json file by writing an empty array
+    fs.writeFileSync(deploymentsPath, JSON.stringify([], null, 2));
+    console.log('✅ Deployments file cleared (reset to empty array)');
+    
+    // Also clear any temporary files
+    const tempFiles = [
+      path.join(__dirname, 'temp_token_config.json'),
+      path.join(__dirname, 'temp_claim_details.json')
+    ];
+    
+    tempFiles.forEach(filePath => {
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+        console.log(`✅ Temporary file deleted: ${path.basename(filePath)}`);
+      }
+    });
+    
+    res.json({ 
+      success: true, 
+      message: 'All deployment data cleared successfully' 
+    });
+  } catch (error) {
+    console.error('❌ Error clearing deployment data:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+});
+
 // Add deployments routes directly
 app.get('/api/deployments/test', (req, res) => {
   console.log('🧪 Deployments test route called');
