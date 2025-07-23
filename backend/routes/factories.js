@@ -32,7 +32,7 @@ router.get('/', (req, res) => {
 // Get all deployments
 router.get('/deployments', (req, res) => {
   try {
-    const deploymentsPath = path.join(__dirname, '../deployments.json');
+    const deploymentsPath = path.join(__dirname, '../../deployments.json');
     if (fs.existsSync(deploymentsPath)) {
       const deployments = JSON.parse(fs.readFileSync(deploymentsPath, 'utf8'));
       res.json(deployments);
@@ -48,7 +48,7 @@ router.get('/deployments', (req, res) => {
 router.get('/deployments/:deploymentId', (req, res) => {
   try {
     const { deploymentId } = req.params;
-    const deploymentsPath = path.join(__dirname, '../deployments.json');
+    const deploymentsPath = path.join(__dirname, '../../deployments.json');
     if (!fs.existsSync(deploymentsPath)) {
       return res.status(404).json({ error: 'No deployments found' });
     }

@@ -70,7 +70,7 @@ async function runDeploymentScript(scriptName, options = {}) {
 
 // Helper to get latest deployment
 function getLatestDeployment() {
-  const deploymentsPath = path.join(__dirname, '../deployments.json');
+  const deploymentsPath = path.join(__dirname, '../../deployments.json');
   if (!fs.existsSync(deploymentsPath)) {
     return null;
   }
