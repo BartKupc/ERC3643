@@ -102,36 +102,73 @@ const DeploymentPhase = () => {
     return response.data;
   };
 
-  // Helper to reload deployment state from backend
+  // Helper to parse deployments array into { ContractName: [addresses...] }
+  const parseDeploymentsArray = (deployments) => {
+    const result = {};
+    deployments.forEach(entry => {
+      // Individual component deployments
+      if (entry.component && entry.address) {
+        if (!result[entry.component]) result[entry.component] = [];
+        if (!result[entry.component].includes(entry.address)) {
+          result[entry.component].push(entry.address);
+        }
+      }
+      // Factory/suite deployments
+      if (entry.suite) {
+        Object.entries(entry.suite).forEach(([key, address]) => {
+          const name =
+            key === 'claimTopicsRegistry' ? 'ClaimTopicsRegistry' :
+            key === 'trustedIssuersRegistry' ? 'TrustedIssuersRegistry' :
+            key === 'identityRegistryStorage' ? 'IdentityRegistryStorage' :
+            key === 'identityRegistry' ? 'IdentityRegistry' :
+            key === 'modularCompliance' ? 'ModularCompliance' :
+            key === 'compliance' ? 'ModularCompliance' :
+            key.charAt(0).toUpperCase() + key.slice(1);
+          if (!result[name]) result[name] = [];
+          if (address && !result[name].includes(address)) {
+            result[name].push(address);
+          }
+        });
+      }
+      if (entry.implementations) {
+        Object.entries(entry.implementations).forEach(([key, address]) => {
+          const name =
+            key === 'claimTopicsRegistry' ? 'ClaimTopicsRegistry' :
+            key === 'trustedIssuersRegistry' ? 'TrustedIssuersRegistry' :
+            key === 'identityRegistryStorage' ? 'IdentityRegistryStorage' :
+            key === 'identityRegistry' ? 'IdentityRegistry' :
+            key === 'modularCompliance' ? 'ModularCompliance' :
+            key === 'compliance' ? 'ModularCompliance' :
+            key.charAt(0).toUpperCase() + key.slice(1);
+          if (!result[name]) result[name] = [];
+          if (address && !result[name].includes(address)) {
+            result[name].push(address);
+          }
+        });
+      }
+      if (entry.factory && entry.factory.address) {
+        if (!result.Factory) result.Factory = [];
+        if (!result.Factory.includes(entry.factory.address)) {
+          result.Factory.push(entry.factory.address);
+        }
+      }
+    });
+    return result;
+  };
+
+  // Replace reloadDeploymentState to use /api/deployments as the source of truth
   const reloadDeploymentState = async () => {
     try {
-      const response = await axios.get('/api/contracts/state');
-      console.log('Backend deployment state:', response.data.deployment); // DEBUG LOG
-      if (response.data.success && response.data.deployment) {
-        const deployment = response.data.deployment;
-        
-        // Update local state based on backend deployment data
-        const newContracts = {};
-        if (deployment.suite) {
-          Object.keys(deployment.suite).forEach(key => {
-            if (deployment.suite[key]) {
-              newContracts[key.charAt(0).toUpperCase() + key.slice(1)] = [deployment.suite[key]];
-            }
-          });
-        }
-        if (deployment.factory) {
-          newContracts.Factory = [deployment.factory.address];
-        }
-        
-        setDeployedContracts(newContracts);
-        addLog("Reloaded deployment state from backend", "info");
-        
-        // Auto-select latest contracts
-        // Do NOT call autoSelectLatestContracts here
+      const response = await axios.get('/api/deployments');
+      console.log('Backend deployments array:', response.data); // DEBUG LOG
+      if (Array.isArray(response.data)) {
+        const parsed = parseDeploymentsArray(response.data);
+        setDeployedContracts(parsed);
+        addLog('Reloaded deployment state from backend', 'info');
       }
     } catch (error) {
-      console.error("Error reloading deployment state:", error);
-      addLog("Error reloading deployment state from backend", "error");
+      console.error('Error reloading deployment state:', error);
+      addLog('Error reloading deployment state from backend', 'error');
     }
   };
 

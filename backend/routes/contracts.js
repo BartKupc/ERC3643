@@ -399,6 +399,21 @@ router.get('/state', async (req, res) => {
   }
 });
 
+// Add /api/deployments endpoint to return the full deployments.json array
+router.get('/deployments', async (req, res) => {
+  try {
+    const deploymentsPath = path.join(__dirname, '../../deployments.json');
+    if (fs.existsSync(deploymentsPath)) {
+      const deployments = JSON.parse(fs.readFileSync(deploymentsPath, 'utf8'));
+      res.json(deployments);
+    } else {
+      res.json([]);
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Get available contracts
 router.get('/available', async (req, res) => {
   try {
