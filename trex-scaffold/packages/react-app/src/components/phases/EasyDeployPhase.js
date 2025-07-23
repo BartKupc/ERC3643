@@ -219,14 +219,15 @@ const EasyDeployPhase = () => {
 
     try {
       addLog("Sending factory deployment request to backend...", "info");
-      await axios.post('/api/deploy/factory', {}, {
-        timeout: 5 * 60 * 1000 // 5 minute timeout for factory deployment
+      const response = await axios.post('/api/deploy/factory', {}, {
+        timeout: 10 * 60 * 1000 // 10 minute timeout for factory deployment
       });
 
       addLog("Factory deployment request sent successfully", "success");
       addLog("Waiting for backend to process deployment...", "info");
 
-      await new Promise(res => setTimeout(res, 1500));
+      // Wait a bit longer to ensure backend has finished processing
+      await new Promise(res => setTimeout(res, 2000));
 
       addLog("Loading updated factory list...", "info");
       const factoriesResponse = await axios.get('/api/factories');
@@ -242,7 +243,31 @@ const EasyDeployPhase = () => {
       setMessage("Factory deployed successfully!");
       addLog("Factory deployment completed successfully!", "success");
     } catch (error) {
-      const errorMessage = error.response?.data?.error || error.message;
+      let errorMessage;
+      if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+        errorMessage = "Factory deployment timed out. The deployment may have succeeded - please refresh the page to check.";
+        addLog("Factory deployment timed out - checking if deployment succeeded...", "warning");
+        
+        // Try to load factories anyway in case deployment succeeded
+        try {
+          const factoriesResponse = await axios.get('/api/factories');
+          setFactories(factoriesResponse.data);
+          
+          if (factoriesResponse.data.length > 0) {
+            const latestFactory = factoriesResponse.data[factoriesResponse.data.length - 1];
+            setSelectedFactory(latestFactory);
+            addLog(`Found new factory: ${latestFactory.address}`, "success");
+            loadDeploymentDetails(latestFactory.deploymentId);
+            setMessage("Factory deployment may have succeeded - please check the factory list.");
+            return;
+          }
+        } catch (refreshError) {
+          addLog("Could not refresh factory list after timeout", "error");
+        }
+      } else {
+        errorMessage = error.response?.data?.error || error.message;
+      }
+      
       setMessage("Failed to deploy factory: " + errorMessage);
       addLog(`Factory deployment failed: ${errorMessage}`, "error");
     }
@@ -292,7 +317,8 @@ const EasyDeployPhase = () => {
       addLog("Token deployment request sent successfully", "success");
       addLog("Waiting for backend to process deployment...", "info");
 
-      await new Promise(res => setTimeout(res, 1500));
+      // Wait a bit longer to ensure backend has finished processing
+      await new Promise(res => setTimeout(res, 2000));
 
       addLog("Loading updated factory list...", "info");
       const factoriesResponse = await axios.get('/api/factories');
@@ -315,7 +341,31 @@ const EasyDeployPhase = () => {
       setMessage("Token deployed successfully with claim issuer and topics!");
       addLog("Token deployment completed successfully!", "success");
     } catch (error) {
-      const errorMessage = error.response?.data?.error || error.message;
+      let errorMessage;
+      if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+        errorMessage = "Token deployment timed out. The deployment may have succeeded - please refresh the page to check.";
+        addLog("Token deployment timed out - checking if deployment succeeded...", "warning");
+        
+        // Try to load factories anyway in case deployment succeeded
+        try {
+          const factoriesResponse = await axios.get('/api/factories');
+          setFactories(factoriesResponse.data);
+          
+          if (factoriesResponse.data.length > 0) {
+            const latestFactory = factoriesResponse.data[factoriesResponse.data.length - 1];
+            setSelectedFactory(latestFactory);
+            addLog(`Found updated factory: ${latestFactory.address}`, "success");
+            loadDeploymentDetails(latestFactory.deploymentId);
+            setMessage("Token deployment may have succeeded - please check the token list.");
+            return;
+          }
+        } catch (refreshError) {
+          addLog("Could not refresh factory list after timeout", "error");
+        }
+      } else {
+        errorMessage = error.response?.data?.error || error.message;
+      }
+      
       setMessage("Failed to deploy token: " + errorMessage);
       addLog(`Token deployment failed: ${errorMessage}`, "error");
     }

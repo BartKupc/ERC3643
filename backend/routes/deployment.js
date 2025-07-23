@@ -15,6 +15,10 @@ router.post('/factory', async (req, res) => {
     const output = await runDeploymentScript('deploy_factory_enhanced.js');
     console.log('✅ Factory deployment script completed');
     console.log('Output:', output);
+    
+    // Add a small delay to ensure deployments.json is written
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
     // Get the latest deployment
     const latestDeployment = getLatestDeployment();
     if (!latestDeployment || !latestDeployment.factory) {
