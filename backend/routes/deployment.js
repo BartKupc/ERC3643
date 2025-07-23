@@ -89,13 +89,28 @@ router.post('/token', async (req, res) => {
       if (claimDetailsPath) {
         envVars.CLAIM_DETAILS_PATH = claimDetailsPath;
       }
-      // TODO: Run the token deployment script with envVars
-      // await runDeploymentScript('deploy_token.js', envVars);
-      // For now, just return a placeholder
+      
+      // Run the token deployment script
+      console.log('🚀 Running token deployment script...');
+      const output = await runDeploymentScript('deploy_token_enhanced.js', envVars);
+      console.log('✅ Token deployment script completed');
+      console.log('Output:', output);
+      
+      // Get the latest deployment to find the newly deployed token
+      const latestDeployment = getLatestDeployment();
+      if (!latestDeployment || !latestDeployment.tokens || latestDeployment.tokens.length === 0) {
+        throw new Error('Token deployment failed - no deployment data found');
+      }
+      
+      const latestToken = latestDeployment.tokens[latestDeployment.tokens.length - 1];
+      console.log('📋 Token deployed at:', latestToken.token.address);
+      
       res.json({
         success: true,
-        message: 'Token deployment endpoint (to be implemented)',
-        tokenDetails: enhancedTokenDetails
+        message: 'Token deployed successfully',
+        tokenAddress: latestToken.token.address,
+        tokenDetails: latestToken.token,
+        deployment: latestDeployment
       });
     } catch (deployError) {
       throw deployError;

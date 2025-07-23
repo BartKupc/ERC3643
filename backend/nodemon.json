@@ -1,0 +1,16 @@
+{
+  "ignore": [
+    "deployments.json",
+    "../deployments.json",
+    "../../deployments.json",
+    "*.json",
+    "node_modules/**/*",
+    "**/*.log"
+  ],
+  "watch": [
+    "server.js",
+    "routes/",
+    "utils/"
+  ],
+  "ext": "js,json"
+} 
