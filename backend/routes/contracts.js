@@ -91,12 +91,26 @@ async function handleDeploy(contractName, res) {
     
     // Find the deployed contract address
     let contractAddress = null;
+    
+    // Check for suite format (from factory deployments)
     if (contractName === 'Factory' && latestDeployment.factory) {
       contractAddress = latestDeployment.factory.address;
     } else if (contractName === 'Token' && latestDeployment.tokens && latestDeployment.tokens.length > 0) {
       contractAddress = latestDeployment.tokens[latestDeployment.tokens.length - 1].token.address;
     } else if (latestDeployment.suite) {
       contractAddress = latestDeployment.suite[contractName.toLowerCase()];
+    }
+    
+    // Check for individual component format (from individual deployments)
+    if (!contractAddress && Array.isArray(latestDeployment)) {
+      // Look for the most recent deployment of this component
+      const componentDeployments = latestDeployment
+        .filter(d => d.component === contractName)
+        .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+      
+      if (componentDeployments.length > 0) {
+        contractAddress = componentDeployments[0].address;
+      }
     }
     
     if (!contractAddress) {

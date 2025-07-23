@@ -309,9 +309,25 @@ const AdvancedPhase = () => {
   };
 
   return (
-    <div style={{ padding: '20px', maxWidth: '1400px', margin: '0 auto' }}>
-      <h1>Advanced T-REX Deployment</h1>
-      
+    <div style={{ backgroundColor: 'white', color: 'black' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+        <h2 style={{ margin: 0, color: 'black' }}>T-REX Advanced Deployment</h2>
+        <button
+          onClick={clearState}
+          disabled={false}
+          style={{ 
+            padding: '0.5rem 1rem',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            backgroundColor: '#dc3545',
+            color: 'white'
+          }}
+        >
+          Clear All Data
+        </button>
+      </div>
+
       {/* Navigation */}
       <AdvancedNav 
         advancedPhase={advancedPhase} 
@@ -319,50 +335,84 @@ const AdvancedPhase = () => {
         phaseComplete={phaseComplete} 
       />
 
-      {/* Message Display */}
+      {/* Status message */}
       {message && (
         <div style={{ 
-          padding: '10px', 
-          marginBottom: '20px', 
-          backgroundColor: message.includes('Error') ? '#f8d7da' : '#d4edda',
-          border: `1px solid ${message.includes('Error') ? '#f5c6cb' : '#c3e6cb'}`,
-          borderRadius: '5px',
-          color: message.includes('Error') ? '#721c24' : '#155724'
+          padding: '1.25rem', 
+          backgroundColor: '#fff3cd', 
+          border: '2px solid #ffeeba', 
+          borderRadius: '6px',
+          marginBottom: '1.5rem',
+          color: '#856404',
+          fontWeight: 'bold',
+          fontSize: '1.1rem',
+          textAlign: 'center',
+          boxShadow: '0 2px 8px rgba(255, 193, 7, 0.1)'
         }}>
           {message}
         </div>
       )}
 
       {/* Current Phase Content */}
-      <div style={{ marginBottom: '20px' }}>
+      <div style={{ marginBottom: '2rem' }}>
         {renderCurrentPhase()}
       </div>
 
       {/* Deployed Contracts Display */}
-      <div style={{ marginBottom: '20px' }}>
-        <h3>Deployed Contracts:</h3>
-        {Object.entries(deployedContracts).map(([contractType, addresses]) => (
-          <div key={contractType} style={{ marginBottom: '10px' }}>
-            <strong>{contractType}:</strong> {addresses.join(', ')}
+      {Object.keys(deployedContracts).length > 0 && (
+        <div style={{ marginTop: '1rem', padding: '1rem', backgroundColor: '#f8f9fa', borderRadius: '4px', marginBottom: '2rem' }}>
+          <h4>Deployed Contracts:</h4>
+          {Object.entries(deployedContracts).map(([name, addresses]) => (
+            <div key={name} style={{ marginBottom: '0.5rem', padding: '0.5rem', backgroundColor: 'white', borderRadius: '4px' }}>
+              <div><strong>{name}</strong> ({Array.isArray(addresses) ? addresses.length : 1})</div>
+              {Array.isArray(addresses) ? (
+                addresses.map((address, index) => (
+                  <div key={index} style={{ 
+                    fontFamily: 'monospace', 
+                    fontSize: '0.9rem',
+                    padding: '0.25rem 0',
+                    borderBottom: index < addresses.length - 1 ? '1px solid #eee' : 'none'
+                  }}>
+                    {index + 1}. {address} {index === 0 ? '(Latest)' : ''}
+                  </div>
+                ))
+              ) : (
+                <div style={{ fontFamily: 'monospace', fontSize: '0.9rem' }}>
+                  {addresses}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Logs */}
+      <div style={{ 
+        backgroundColor: '#f8f9fa', 
+        padding: '1rem', 
+        borderRadius: '4px',
+        maxHeight: '300px',
+        overflow: 'auto'
+      }}>
+        <h4 style={{ margin: '0 0 1rem 0', color: 'black' }}>Deployment Logs</h4>
+        {logs.map((log, index) => (
+          <div key={index} style={{ 
+            marginBottom: '0.5rem', 
+            padding: '0.5rem', 
+            backgroundColor: 'white', 
+            borderRadius: '4px',
+            fontSize: '0.9rem'
+          }}>
+            <span style={{ color: '#666' }}>[{log.timestamp}]</span>
+            <span style={{ 
+              color: log.type === 'error' ? '#dc3545' : 
+                     log.type === 'success' ? '#28a745' : '#007bff',
+              marginLeft: '0.5rem'
+            }}>
+              {log.message}
+            </span>
           </div>
         ))}
-      </div>
-
-      {/* Clear State Button */}
-      <div style={{ marginTop: '20px' }}>
-        <button 
-          onClick={clearState}
-          style={{ 
-            backgroundColor: '#dc3545', 
-            color: 'white', 
-            border: 'none', 
-            padding: '10px 20px', 
-            borderRadius: '5px',
-            cursor: 'pointer'
-          }}
-        >
-          Clear All State
-        </button>
       </div>
     </div>
   );

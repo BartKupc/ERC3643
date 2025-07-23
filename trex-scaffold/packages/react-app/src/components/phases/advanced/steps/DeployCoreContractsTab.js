@@ -2,49 +2,79 @@ import React from 'react';
 import { Button } from '../../shared';
 
 const DeployCoreContractsTab = ({
+  deployedContracts,
   deploying,
   deployContract
 }) => (
   <div>
     <h3>Step 1: Deploy Core Contracts</h3>
     <p>Deploy the essential T-REX contracts in the correct order.</p>
+    
     <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
       <Button
         onClick={() => deployContract('ClaimTopicsRegistry')}
         disabled={deploying}
         style={{ backgroundColor: '#007bff', color: 'white' }}
       >
-        Deploy ClaimTopicsRegistry
+        {deploying ? 'Deploying...' : 'Deploy ClaimTopicsRegistry'}
       </Button>
       <Button
         onClick={() => deployContract('TrustedIssuersRegistry')}
         disabled={deploying}
         style={{ backgroundColor: '#007bff', color: 'white' }}
       >
-        Deploy TrustedIssuersRegistry
+        {deploying ? 'Deploying...' : 'Deploy TrustedIssuersRegistry'}
       </Button>
       <Button
         onClick={() => deployContract('IdentityRegistryStorage')}
         disabled={deploying}
         style={{ backgroundColor: '#007bff', color: 'white' }}
       >
-        Deploy IdentityRegistryStorage
+        {deploying ? 'Deploying...' : 'Deploy IdentityRegistryStorage'}
       </Button>
       <Button
         onClick={() => deployContract('IdentityRegistry')}
         disabled={deploying}
         style={{ backgroundColor: '#007bff', color: 'white' }}
       >
-        Deploy IdentityRegistry
+        {deploying ? 'Deploying...' : 'Deploy IdentityRegistry'}
       </Button>
       <Button
         onClick={() => deployContract('ModularCompliance')}
         disabled={deploying}
         style={{ backgroundColor: '#007bff', color: 'white' }}
       >
-        Deploy ModularCompliance
+        {deploying ? 'Deploying...' : 'Deploy ModularCompliance'}
       </Button>
     </div>
+
+    {/* Show deployed contracts */}
+    {Object.keys(deployedContracts).length > 0 && (
+      <div style={{ marginTop: '1rem', padding: '1rem', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
+        <h4>Deployed Contracts:</h4>
+        {Object.entries(deployedContracts).map(([name, addresses]) => (
+          <div key={name} style={{ marginBottom: '0.5rem', padding: '0.5rem', backgroundColor: 'white', borderRadius: '4px' }}>
+            <div><strong>{name}</strong> ({Array.isArray(addresses) ? addresses.length : 1})</div>
+            {Array.isArray(addresses) ? (
+              addresses.map((address, index) => (
+                <div key={index} style={{ 
+                  fontFamily: 'monospace', 
+                  fontSize: '0.9rem',
+                  padding: '0.25rem 0',
+                  borderBottom: index < addresses.length - 1 ? '1px solid #eee' : 'none'
+                }}>
+                  {index + 1}. {address} {index === 0 ? '(Latest)' : ''}
+                </div>
+              ))
+            ) : (
+              <div style={{ fontFamily: 'monospace', fontSize: '0.9rem' }}>
+                {addresses}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    )}
   </div>
 );
 
