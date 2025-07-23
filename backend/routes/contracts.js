@@ -451,4 +451,21 @@ router.get('/available', async (req, res) => {
   }
 });
 
+const deploymentsPath = path.join(__dirname, '../../deployments.json');
+function loadDeploymentsObj() {
+  if (fs.existsSync(deploymentsPath)) {
+    const raw = fs.readFileSync(deploymentsPath, 'utf8');
+    if (raw.trim().startsWith('{')) {
+      const obj = JSON.parse(raw);
+      if (!obj.easydeploy) obj.easydeploy = [];
+      if (!obj.advanced) obj.advanced = [];
+      return obj;
+    }
+  }
+  return { easydeploy: [], advanced: [] };
+}
+function saveDeploymentsObj(obj) {
+  fs.writeFileSync(deploymentsPath, JSON.stringify(obj, null, 2));
+}
+
 module.exports = router; 
