@@ -10,6 +10,7 @@ import AgentManagementTab from './easy-deploy/AgentManagementTab';
 import UserManagementTab from './easy-deploy/UserManagementTab';
 import TokenOperationsTab from './easy-deploy/TokenOperationsTab';
 import config from '../../config.json';
+import { Button } from '../shared/uiComponents';
 
 const EasyDeployPhase = () => {
   // State management
@@ -627,7 +628,6 @@ const EasyDeployPhase = () => {
             localStorage.removeItem('trex_user_identities');
             localStorage.removeItem('trex_available_claim_issuers');
             // Clear all state
-            setDeployedContracts({});
             setFactories([]);
             setSelectedFactory(null);
             setDeploymentDetails(null);
@@ -651,8 +651,6 @@ const EasyDeployPhase = () => {
             setUserCountry('840');
             setCreatingUser(false);
             setClaimTopics([]);
-            setLoading(false);
-            setError(null);
             setAddingClaimTopic(false);
             setRemovingClaimTopicState(false);
             setIssuerAddress('');

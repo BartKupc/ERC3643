@@ -3,7 +3,7 @@ const router = express.Router();
 const path = require('path');
 const fs = require('fs');
 const { ethers } = require('ethers');
-const { createProvider } = require('../server');
+const { createProvider, getContractArtifacts } = require('../utils/helpers');
 
 // Add claim issuer (placeholder)
 router.post('/add', (req, res) => {

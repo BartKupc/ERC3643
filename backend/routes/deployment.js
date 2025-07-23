@@ -5,7 +5,7 @@ const fs = require('fs');
 const { ethers } = require('ethers');
 
 // Import helpers from server.js (you may need to refactor these into a shared module)
-const { createProvider, runDeploymentScript, getLatestDeployment } = require('../server');
+const { createProvider, runDeploymentScript, getLatestDeployment } = require('../utils/helpers');
 
 // Deploy Factory
 router.post('/factory', async (req, res) => {

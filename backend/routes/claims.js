@@ -4,7 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const { ethers } = require('ethers');
 
-const { createProvider } = require('../server');
+const { createProvider, getContractArtifacts } = require('../utils/helpers');
 
 // Get claim topics from a token's ClaimTopicsRegistry
 router.get('/claim-topics/:tokenAddress', async (req, res) => {

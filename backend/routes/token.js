@@ -4,7 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const { ethers } = require('ethers');
 
-const { createProvider } = require('../server');
+const { createProvider, getContractArtifacts } = require('../utils/helpers');
 
 // Pause/Unpause token
 router.post('/pause', async (req, res) => {

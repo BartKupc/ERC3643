@@ -3,7 +3,7 @@ const router = express.Router();
 const path = require('path');
 const fs = require('fs');
 const { ethers } = require('ethers');
-const { runDeploymentScript, getLatestDeployment, createProvider } = require('../server');
+const { runDeploymentScript, getLatestDeployment } = require('../utils/helpers');
 
 // Get factories
 router.get('/factories', (req, res) => {

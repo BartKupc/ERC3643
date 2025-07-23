@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { ethers } = require('ethers');
 const fetch = require('node-fetch');
-const { createProvider, getContractArtifacts } = require('../server');
+const { createProvider, getContractArtifacts } = require('../utils/helpers');
 
 // Health check
 router.get('/health', (req, res) => {

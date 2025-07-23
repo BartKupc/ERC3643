@@ -4,7 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const { ethers } = require('ethers');
 
-const { createProvider, getLatestDeployment } = require('../server');
+const { createProvider, getContractArtifacts } = require('../utils/helpers');
 
 // Create OnchainID using TREX Factory
 router.post('/create-onchainid', async (req, res) => {
