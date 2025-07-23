@@ -428,91 +428,302 @@ router.get('/verify-user/:tokenAddress/:userAddress', async (req, res) => {
 // Mint tokens
 router.post('/mint', async (req, res) => {
   try {
-    const { tokenAddress, toAddress, amount } = req.body;
-    if (!tokenAddress || !toAddress || !amount) throw new Error('Token address, to address, and amount are required');
+    const { tokenAddress, amount, recipient } = req.body;
+    console.log(`🎯 Minting ${amount} tokens to ${recipient} on token: ${tokenAddress}`);
+    
+    if (!tokenAddress || !amount || !recipient) {
+      throw new Error('Token address, amount, and recipient are required');
+    }
+    
     const provider = createProvider();
     const wallet = new ethers.Wallet(process.env.PRIVATE_KEY || '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80', provider);
+    const deployerAddress = await wallet.getAddress();
+    
+    console.log(`🔍 Using deployer address: ${deployerAddress}`);
+    
+    // Get the Token contract
     const tokenArtifactsPath = path.join(__dirname, '../../trex-scaffold/packages/react-app/src/contracts/Token.json');
-    if (!fs.existsSync(tokenArtifactsPath)) throw new Error('Token artifacts not found. Please compile contracts first.');
+    console.log(`🔍 Looking for Token artifacts at: ${tokenArtifactsPath}`);
+    if (!fs.existsSync(tokenArtifactsPath)) {
+      console.log(`❌ Token artifacts not found at: ${tokenArtifactsPath}`);
+      throw new Error('Token artifacts not found. Please compile contracts first.');
+    }
+    console.log(`✅ Token artifacts found at: ${tokenArtifactsPath}`);
     const tokenArtifacts = JSON.parse(fs.readFileSync(tokenArtifactsPath, 'utf8'));
     const token = new ethers.Contract(tokenAddress, tokenArtifacts.abi, wallet);
+    console.log(`✅ Token contract instance created for ${tokenAddress}`);
+    
+    // Check if deployer is an agent
+    const isAgent = await token.isAgent(deployerAddress);
+    console.log(`🔍 Is deployer agent on token: ${isAgent}`);
+    
+    if (!isAgent) {
+      throw new Error('Deployer is not an agent on this token');
+    }
+    
+    // Convert amount to wei based on token decimals
     const decimals = await token.decimals();
     const decimalsNumber = typeof decimals === 'object' && decimals.toNumber ? decimals.toNumber() : Number(decimals);
     const amountInWei = ethers.utils.parseUnits(amount, decimalsNumber);
-    const tx = await token.mint(toAddress, amountInWei);
-    res.json({ success: true, tokenAddress, toAddress, amount, transactionHash: tx.hash });
+    
+    console.log(`🔍 Minting ${amount} tokens (${amountInWei} wei) to ${recipient}`);
+    
+    // Mint tokens
+    const tx = await token.mint(recipient, amountInWei);
+    console.log(`✅ Mint transaction sent: ${tx.hash}`);
+    await tx.wait();
+    console.log(`✅ Mint transaction confirmed`);
+    
+    console.log(`✅ Successfully minted ${amount} tokens to ${recipient}`);
+    
+    res.json({
+      success: true,
+      message: `Successfully minted ${amount} tokens to ${recipient}`,
+      tokenAddress: tokenAddress,
+      amount: amount,
+      recipient: recipient,
+      transactionHash: tx.hash
+    });
+    
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    console.error('❌ Error minting tokens:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
   }
 });
 
 // Burn tokens
 router.post('/burn', async (req, res) => {
   try {
-    const { tokenAddress, fromAddress, amount } = req.body;
-    if (!tokenAddress || !fromAddress || !amount) throw new Error('Token address, from address, and amount are required');
+    const { tokenAddress, amount, fromAddress } = req.body;
+    console.log(`🎯 Burning ${amount} tokens from ${fromAddress} on token: ${tokenAddress}`);
+    
+    if (!tokenAddress || !amount || !fromAddress) {
+      throw new Error('Token address, amount, and from address are required');
+    }
+    
     const provider = createProvider();
     const wallet = new ethers.Wallet(process.env.PRIVATE_KEY || '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80', provider);
+    const deployerAddress = await wallet.getAddress();
+    
+    console.log(`🔍 Using deployer address: ${deployerAddress}`);
+    
+    // Get the Token contract
     const tokenArtifactsPath = path.join(__dirname, '../../trex-scaffold/packages/react-app/src/contracts/Token.json');
-    if (!fs.existsSync(tokenArtifactsPath)) throw new Error('Token artifacts not found. Please compile contracts first.');
+    console.log(`🔍 Looking for Token artifacts at: ${tokenArtifactsPath}`);
+    if (!fs.existsSync(tokenArtifactsPath)) {
+      console.log(`❌ Token artifacts not found at: ${tokenArtifactsPath}`);
+      throw new Error('Token artifacts not found. Please compile contracts first.');
+    }
+    console.log(`✅ Token artifacts found at: ${tokenArtifactsPath}`);
     const tokenArtifacts = JSON.parse(fs.readFileSync(tokenArtifactsPath, 'utf8'));
     const token = new ethers.Contract(tokenAddress, tokenArtifacts.abi, wallet);
+    console.log(`✅ Token contract instance created for ${tokenAddress}`);
+    
+    // Check if deployer is an agent
+    const isAgent = await token.isAgent(deployerAddress);
+    console.log(`🔍 Is deployer agent on token: ${isAgent}`);
+    
+    if (!isAgent) {
+      throw new Error('Deployer is not an agent on this token');
+    }
+    
+    // Convert amount to wei based on token decimals
     const decimals = await token.decimals();
     const decimalsNumber = typeof decimals === 'object' && decimals.toNumber ? decimals.toNumber() : Number(decimals);
     const amountInWei = ethers.utils.parseUnits(amount, decimalsNumber);
+    
+    console.log(`🔍 Burning ${amount} tokens (${amountInWei} wei) from ${fromAddress}`);
+    
+    // Burn tokens
     const tx = await token.burn(fromAddress, amountInWei);
-    res.json({ success: true, tokenAddress, fromAddress, amount, transactionHash: tx.hash });
+    console.log(`✅ Burn transaction sent: ${tx.hash}`);
+    await tx.wait();
+    console.log(`✅ Burn transaction confirmed`);
+    
+    console.log(`✅ Successfully burned ${amount} tokens from ${fromAddress}`);
+    
+    res.json({
+      success: true,
+      message: `Successfully burned ${amount} tokens from ${fromAddress}`,
+      tokenAddress: tokenAddress,
+      amount: amount,
+      fromAddress: fromAddress,
+      transactionHash: tx.hash
+    });
+    
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    console.error('❌ Error burning tokens:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
   }
 });
 
-// Transfer tokens
+// Transfer tokens (from signer to recipient)
 router.post('/transfer', async (req, res) => {
   try {
-    const { tokenAddress, fromAddress, toAddress, amount } = req.body;
-    if (!tokenAddress || !fromAddress || !toAddress || !amount) throw new Error('Token address, from address, to address, and amount are required');
+    const { tokenAddress, amount, toAddress } = req.body;
+    console.log(`🎯 Transferring ${amount} tokens to ${toAddress} on token: ${tokenAddress}`);
+    
+    if (!tokenAddress || !amount || !toAddress) {
+      throw new Error('Token address, amount, and to address are required');
+    }
+    
     const provider = createProvider();
     const wallet = new ethers.Wallet(process.env.PRIVATE_KEY || '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80', provider);
+    const deployerAddress = await wallet.getAddress();
+    
+    console.log(`🔍 Using deployer address: ${deployerAddress}`);
+    
+    // Get the Token contract
     const tokenArtifactsPath = path.join(__dirname, '../../trex-scaffold/packages/react-app/src/contracts/Token.json');
-    if (!fs.existsSync(tokenArtifactsPath)) throw new Error('Token artifacts not found. Please compile contracts first.');
+    console.log(`🔍 Looking for Token artifacts at: ${tokenArtifactsPath}`);
+    if (!fs.existsSync(tokenArtifactsPath)) {
+      console.log(`❌ Token artifacts not found at: ${tokenArtifactsPath}`);
+      throw new Error('Token artifacts not found. Please compile contracts first.');
+    }
+    console.log(`✅ Token artifacts found at: ${tokenArtifactsPath}`);
     const tokenArtifacts = JSON.parse(fs.readFileSync(tokenArtifactsPath, 'utf8'));
     const token = new ethers.Contract(tokenAddress, tokenArtifacts.abi, wallet);
+    console.log(`✅ Token contract instance created for ${tokenAddress}`);
+    
+    // Convert amount to wei based on token decimals
     const decimals = await token.decimals();
     const decimalsNumber = typeof decimals === 'object' && decimals.toNumber ? decimals.toNumber() : Number(decimals);
     const amountInWei = ethers.utils.parseUnits(amount, decimalsNumber);
-    const fromBalance = await token.balanceOf(fromAddress);
-    if (fromBalance.lt(amountInWei)) throw new Error(`Insufficient balance. Need ${amount} tokens, but ${fromAddress} only has ${ethers.utils.formatUnits(fromBalance, decimalsNumber)}`);
-    const tx = await token.forcedTransfer(fromAddress, toAddress, amountInWei);
-    res.json({ success: true, tokenAddress, fromAddress, toAddress, amount, transactionHash: tx.hash });
+    
+    console.log(`🔍 Transferring ${amount} tokens (${amountInWei} wei) from ${deployerAddress} to ${toAddress}`);
+    
+    // Transfer tokens (from signer to recipient)
+    const tx = await token.transfer(toAddress, amountInWei);
+    console.log(`✅ Transfer transaction sent: ${tx.hash}`);
+    await tx.wait();
+    console.log(`✅ Transfer transaction confirmed`);
+    
+    console.log(`✅ Successfully transferred ${amount} tokens to ${toAddress}`);
+    
+    res.json({
+      success: true,
+      message: `Successfully transferred ${amount} tokens to ${toAddress}`,
+      tokenAddress: tokenAddress,
+      amount: amount,
+      fromAddress: deployerAddress,
+      toAddress: toAddress,
+      transactionHash: tx.hash
+    });
+    
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    console.error('❌ Error transferring tokens:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
   }
 });
 
-// Transfer tokens from
+// TransferFrom tokens (using agent privileges with forcedTransfer)
 router.post('/transfer-from', async (req, res) => {
   try {
-    const { tokenAddress, fromAddress, toAddress, amount } = req.body;
-    if (!tokenAddress || !fromAddress || !toAddress || !amount) throw new Error('Token address, from address, to address, and amount are required');
+    const { tokenAddress, amount, fromAddress, toAddress } = req.body;
+    console.log(`🎯 Transferring ${amount} tokens from ${fromAddress} to ${toAddress} on token: ${tokenAddress}`);
+    
+    if (!tokenAddress || !amount || !fromAddress || !toAddress) {
+      throw new Error('Token address, amount, from address, and to address are required');
+    }
+    
     const provider = createProvider();
     const wallet = new ethers.Wallet(process.env.PRIVATE_KEY || '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80', provider);
+    const deployerAddress = await wallet.getAddress();
+    
+    console.log(`🔍 Using deployer address: ${deployerAddress}`);
+    
+    // Get the Token contract
     const tokenArtifactsPath = path.join(__dirname, '../../trex-scaffold/packages/react-app/src/contracts/Token.json');
-    if (!fs.existsSync(tokenArtifactsPath)) throw new Error('Token artifacts not found. Please compile contracts first.');
+    console.log(`🔍 Looking for Token artifacts at: ${tokenArtifactsPath}`);
+    if (!fs.existsSync(tokenArtifactsPath)) {
+      console.log(`❌ Token artifacts not found at: ${tokenArtifactsPath}`);
+      throw new Error('Token artifacts not found. Please compile contracts first.');
+    }
+    console.log(`✅ Token artifacts found at: ${tokenArtifactsPath}`);
     const tokenArtifacts = JSON.parse(fs.readFileSync(tokenArtifactsPath, 'utf8'));
     const token = new ethers.Contract(tokenAddress, tokenArtifacts.abi, wallet);
+    console.log(`✅ Token contract instance created for ${tokenAddress}`);
+    
+    // Check if deployer is an agent
+    const isAgent = await token.isAgent(deployerAddress);
+    console.log(`🔍 Is deployer agent on token: ${isAgent}`);
+    
+    if (!isAgent) {
+      throw new Error('Deployer is not an agent on this token');
+    }
+    
+    // Convert amount to wei based on token decimals
     const decimals = await token.decimals();
     const decimalsNumber = typeof decimals === 'object' && decimals.toNumber ? decimals.toNumber() : Number(decimals);
     const amountInWei = ethers.utils.parseUnits(amount, decimalsNumber);
+    
+    console.log(`🔍 Transferring ${amount} tokens (${amountInWei} wei) from ${fromAddress} to ${toAddress}`);
+    
+    // Check if from address has sufficient balance
     const fromBalance = await token.balanceOf(fromAddress);
-    if (fromBalance.lt(amountInWei)) throw new Error(`Insufficient balance. Need ${amount} tokens, but ${fromAddress} only has ${ethers.utils.formatUnits(fromBalance, decimalsNumber)}`);
+    console.log(`🔍 From address balance: ${ethers.utils.formatUnits(fromBalance, decimalsNumber)} tokens`);
+    
+    if (fromBalance.lt(amountInWei)) {
+      throw new Error(`Insufficient balance. Need ${amount} tokens, but ${fromAddress} only has ${ethers.utils.formatUnits(fromBalance, decimalsNumber)}`);
+    }
+    
+    // Use two-step process like in frontend:
     // Step 1: Transfer tokens from source to agent (using forcedTransfer)
-    const tx1 = await token.forcedTransfer(fromAddress, wallet.address, amountInWei);
+    console.log(`🔍 Step 1: Transferring ${amount} tokens from ${fromAddress} to agent (${deployerAddress}) using forcedTransfer`);
+    const tx1 = await token.forcedTransfer(fromAddress, deployerAddress, amountInWei);
+    console.log(`✅ Step 1 transaction sent: ${tx1.hash}`);
+    await tx1.wait();
+    console.log(`✅ Step 1 complete: Tokens moved to agent`);
+    
+    // Check agent's new balance
+    const agentBalance = await token.balanceOf(deployerAddress);
+    console.log(`🔍 Agent balance after step 1: ${ethers.utils.formatUnits(agentBalance, decimalsNumber)} tokens`);
+    
     // Step 2: Transfer tokens from agent to destination (using regular transfer with compliance)
+    console.log(`🔍 Step 2: Transferring ${amount} tokens from agent to ${toAddress} (with compliance check)`);
     const tx2 = await token.transfer(toAddress, amountInWei);
-    res.json({ success: true, tokenAddress, amount, fromAddress, toAddress, transactionHash1: tx1.hash, transactionHash2: tx2.hash });
+    console.log(`✅ Step 2 transaction sent: ${tx2.hash}`);
+    await tx2.wait();
+    console.log(`✅ Step 2 complete: Tokens transferred to destination with compliance`);
+    
+    // Check final balances
+    const finalFromBalance = await token.balanceOf(fromAddress);
+    const finalToBalance = await token.balanceOf(toAddress);
+    const finalAgentBalance = await token.balanceOf(deployerAddress);
+    
+    console.log(`🔍 Final balances:`);
+    console.log(`  ${fromAddress}: ${ethers.utils.formatUnits(finalFromBalance, decimalsNumber)} tokens`);
+    console.log(`  ${toAddress}: ${ethers.utils.formatUnits(finalToBalance, decimalsNumber)} tokens`);
+    console.log(`  Agent: ${ethers.utils.formatUnits(finalAgentBalance, decimalsNumber)} tokens`);
+    
+    console.log(`✅ TransferFrom operation completed successfully with compliance validation`);
+    
+    res.json({
+      success: true,
+      message: `Successfully transferred ${amount} tokens from ${fromAddress} to ${toAddress} with compliance checks`,
+      tokenAddress: tokenAddress,
+      amount: amount,
+      fromAddress: fromAddress,
+      toAddress: toAddress,
+      transactionHash1: tx1.hash,
+      transactionHash2: tx2.hash
+    });
+    
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    console.error('❌ Error executing transferFrom:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
   }
 });
 
