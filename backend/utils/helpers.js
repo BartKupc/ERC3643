@@ -15,21 +15,21 @@ const createProvider = () => {
 const getContractArtifacts = (contractName) => {
   // ... (same as in server.js)
   const artifactPaths = {
-    'TREXFactory': '../trex-scaffold/packages/react-app/src/contracts/TREXFactory.json',
-    'Token': '../trex-scaffold/packages/react-app/src/contracts/Token.json',
-    'ModularCompliance': '../trex-scaffold/packages/react-app/src/contracts/ModularCompliance.json',
-    'IdentityRegistry': '../trex-scaffold/packages/react-app/src/contracts/IdentityRegistry.json',
-    'IdentityRegistryStorage': '../trex-scaffold/packages/react-app/src/contracts/IdentityRegistryStorage.json',
-    'ClaimTopicsRegistry': '../trex-scaffold/packages/react-app/src/contracts/ClaimTopicsRegistry.json',
-    'TrustedIssuersRegistry': '../trex-scaffold/packages/react-app/src/contracts/TrustedIssuersRegistry.json',
-    'IAFactory': '../trex-scaffold/packages/react-app/src/contracts/IAFactory.json',
-    'TokenProxy': '../trex-scaffold/packages/react-app/src/contracts/TokenProxy.json',
-    'ModularComplianceProxy': '../trex-scaffold/packages/react-app/src/contracts/ModularComplianceProxy.json',
-    'TREXImplementationAuthority': '../trex-scaffold/packages/react-app/src/contracts/TREXImplementationAuthority.json',
-    'Identity': '../trex-scaffold/packages/react-app/src/contracts/Identity.json',
-    'IImplementationAuthority': '../trex-scaffold/packages/react-app/src/contracts/IImplementationAuthority.json',
-    'IIdFactory': '../trex-scaffold/packages/react-app/src/contracts/IIdFactory.json',
-    'ClaimIssuer': '../trex-scaffold/packages/react-app/src/contracts/ClaimIssuer.json'
+    'TREXFactory': '../../trex-scaffold/packages/react-app/src/contracts/TREXFactory.json',
+    'Token': '../../trex-scaffold/packages/react-app/src/contracts/Token.json',
+    'ModularCompliance': '../../trex-scaffold/packages/react-app/src/contracts/ModularCompliance.json',
+    'IdentityRegistry': '../../trex-scaffold/packages/react-app/src/contracts/IdentityRegistry.json',
+    'IdentityRegistryStorage': '../../trex-scaffold/packages/react-app/src/contracts/IdentityRegistryStorage.json',
+    'ClaimTopicsRegistry': '../../trex-scaffold/packages/react-app/src/contracts/ClaimTopicsRegistry.json',
+    'TrustedIssuersRegistry': '../../trex-scaffold/packages/react-app/src/contracts/TrustedIssuersRegistry.json',
+    'IAFactory': '../../trex-scaffold/packages/react-app/src/contracts/IAFactory.json',
+    'TokenProxy': '../../trex-scaffold/packages/react-app/src/contracts/TokenProxy.json',
+    'ModularComplianceProxy': '../../trex-scaffold/packages/react-app/src/contracts/ModularComplianceProxy.json',
+    'TREXImplementationAuthority': '../../trex-scaffold/packages/react-app/src/contracts/TREXImplementationAuthority.json',
+    'Identity': '../../trex-scaffold/packages/react-app/src/contracts/Identity.json',
+    'IImplementationAuthority': '../../trex-scaffold/packages/react-app/src/contracts/IImplementationAuthority.json',
+    'IIdFactory': '../../trex-scaffold/packages/react-app/src/contracts/IIdFactory.json',
+    'ClaimIssuer': '../../trex-scaffold/packages/react-app/src/contracts/ClaimIssuer.json'
   };
   const artifactPath = artifactPaths[contractName];
   if (!artifactPath) {
