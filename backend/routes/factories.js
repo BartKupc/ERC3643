@@ -5,6 +5,12 @@ const fs = require('fs');
 const { ethers } = require('ethers');
 const { runDeploymentScript, getLatestDeployment } = require('../utils/helpers');
 
+// Test route
+router.get('/test', (req, res) => {
+  console.log('🧪 Factories test route called');
+  res.json({ message: 'Factories route is working' });
+});
+
 // Get factories
 router.get('/', (req, res) => {
   try {
@@ -29,6 +35,12 @@ router.get('/', (req, res) => {
   }
 });
 
+
+// Test deployments route
+router.get('/deployments/test', (req, res) => {
+  console.log('🧪 Deployments test route called');
+  res.json({ message: 'Deployments route is working' });
+});
 
 // Get all deployments
 router.get('/deployments', (req, res) => {
