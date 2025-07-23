@@ -29,21 +29,6 @@ router.get('/', (req, res) => {
   }
 });
 
-// Get all deployments
-router.get('/deployments', (req, res) => {
-  try {
-    const deploymentsPath = path.join(__dirname, '../../deployments.json');
-    if (fs.existsSync(deploymentsPath)) {
-      const deployments = JSON.parse(fs.readFileSync(deploymentsPath, 'utf8'));
-      res.json(deployments);
-    } else {
-      res.json([]);
-    }
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
 // Get specific deployment by ID
 router.get('/deployments/:deploymentId', (req, res) => {
   try {
@@ -65,6 +50,21 @@ router.get('/deployments/:deploymentId', (req, res) => {
       deployment.latestToken = latestToken;
     }
     res.json(deployment);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get all deployments
+router.get('/deployments', (req, res) => {
+  try {
+    const deploymentsPath = path.join(__dirname, '../../deployments.json');
+    if (fs.existsSync(deploymentsPath)) {
+      const deployments = JSON.parse(fs.readFileSync(deploymentsPath, 'utf8'));
+      res.json(deployments);
+    } else {
+      res.json([]);
+    }
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
