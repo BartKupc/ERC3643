@@ -118,7 +118,7 @@ router.post('/claim-issuer', async (req, res) => {
     const wallet = new ethers.Wallet(process.env.PRIVATE_KEY || '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80', provider);
     const deployerAddress = await wallet.getAddress();
     console.log('🔑 Deploying ClaimIssuer with deployer address:', deployerAddress);
-    const claimIssuerArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/contracts/src/@onchain-id/solidity/contracts/ClaimIssuer.sol/ClaimIssuer.json');
+    const claimIssuerArtifactsPath = path.join(__dirname, '../../trex-scaffold/packages/react-app/src/contracts/ClaimIssuer.json');
     if (!fs.existsSync(claimIssuerArtifactsPath)) {
       throw new Error('ClaimIssuer artifacts not found. Please compile contracts first.');
     }
@@ -141,7 +141,7 @@ router.post('/claim-issuer', async (req, res) => {
     if (latestDeployment && latestDeployment.suite && latestDeployment.suite.trustedIssuersRegistry) {
       try {
         const tirAddress = latestDeployment.suite.trustedIssuersRegistry;
-        const tirArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/contracts/src/contracts/registries/TrustedIssuersRegistry.sol/TrustedIssuersRegistry.json');
+        const tirArtifactsPath = path.join(__dirname, '../../trex-scaffold/packages/react-app/src/contracts/TrustedIssuersRegistry.json');
         if (fs.existsSync(tirArtifactsPath)) {
           const tirArtifacts = JSON.parse(fs.readFileSync(tirArtifactsPath, 'utf8'));
           const tir = new ethers.Contract(tirAddress, tirArtifacts.abi, wallet);
@@ -181,7 +181,7 @@ router.post('/save', (req, res) => {
     if (!deployment) {
       return res.status(400).json({ error: 'Deployment data is required' });
     }
-    const deploymentsPath = path.join(__dirname, '../deployments.json');
+    const deploymentsPath = path.join(__dirname, '../../deployments.json');
     let deployments = [];
     if (fs.existsSync(deploymentsPath)) {
       deployments = JSON.parse(fs.readFileSync(deploymentsPath, 'utf8'));
