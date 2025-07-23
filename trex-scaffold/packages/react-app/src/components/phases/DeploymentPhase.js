@@ -1,6 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
 import axios from 'axios';
+import DeployCoreContractsTab from './advanced/steps/DeployCoreContractsTab';
+import InitializeContractsTab from './advanced/steps/InitializeContractsTab';
+import ConfigureIdentityRegistryTab from './advanced/steps/ConfigureIdentityRegistryTab';
+import AddClaimTopicsTab from './advanced/steps/AddClaimTopicsTab';
+import TokenManagementTab from './advanced/steps/TokenManagementTab';
+import UserManagementTab from './advanced/steps/UserManagementTab';
 
 const STORAGE_KEY = 'trex_deployment_state';
 
@@ -372,60 +378,103 @@ const DeploymentPhase = () => {
     setLogs([]);
   };
 
+  // Stepper logic
+  const steps = [
+    {
+      title: 'Deploy Core Contracts',
+      component: (
+        <DeployCoreContractsTab
+          deployedContracts={deployedContracts}
+          deploying={deploying}
+          deployContract={deployContract}
+        />
+      )
+    },
+    {
+      title: 'Initialize Contracts',
+      component: (
+        <InitializeContractsTab
+          deployedContracts={deployedContracts}
+          initializing={initializing}
+          initializeContract={initializeContract}
+        />
+      )
+    },
+    {
+      title: 'Configure Identity Registry',
+      component: (
+        <ConfigureIdentityRegistryTab
+          deployedContracts={deployedContracts}
+          configuring={deploying} // or a separate configuring state if needed
+          configureIdentityRegistry={configureIdentityRegistry}
+        />
+      )
+    },
+    {
+      title: 'Add Claim Topics',
+      component: (
+        <AddClaimTopicsTab
+          deployedContracts={deployedContracts}
+          availableClaimTopics={availableClaimTopics}
+          loadingClaimTopics={loadingClaimTopics}
+          addClaimTopic={addClaimTopic}
+          removeClaimTopic={removeClaimTopic}
+          loadClaimTopics={loadClaimTopics}
+        />
+      )
+    },
+    {
+      title: 'Token Management',
+      component: (
+        <TokenManagementTab
+          deployedContracts={deployedContracts}
+          deployedTokens={deployedTokens}
+          selectedContracts={selectedContracts}
+          setSelectedContracts={setSelectedContracts}
+          // ...other token management handlers...
+        />
+      )
+    },
+    {
+      title: 'User Management',
+      component: (
+        <UserManagementTab
+          deployedContracts={deployedContracts}
+          selectedContracts={selectedContracts}
+          // ...other user management handlers...
+        />
+      )
+    }
+  ];
+
   return (
     <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
       <h1>Deployment Phase</h1>
-      
-      {/* Step Navigation */}
-      <div style={{ marginBottom: '20px' }}>
-        <button 
-          onClick={() => setCurrentStep(1)} 
-          style={{ 
-            marginRight: '10px', 
-            backgroundColor: currentStep === 1 ? '#007bff' : '#6c757d',
-            color: 'white',
-            border: 'none',
-            padding: '10px 20px',
-            borderRadius: '5px',
-            cursor: 'pointer'
-          }}
-        >
-          Step 1: Deploy Contracts
-        </button>
-        <button 
-          onClick={() => setCurrentStep(2)} 
-          style={{ 
-            marginRight: '10px', 
-            backgroundColor: currentStep === 2 ? '#007bff' : '#6c757d',
-            color: 'white',
-            border: 'none',
-            padding: '10px 20px',
-            borderRadius: '5px',
-            cursor: 'pointer'
-          }}
-        >
-          Step 2: Initialize Contracts
-        </button>
-        <button 
-          onClick={() => setCurrentStep(3)} 
-          style={{ 
-            backgroundColor: currentStep === 3 ? '#007bff' : '#6c757d',
-            color: 'white',
-            border: 'none',
-            padding: '10px 20px',
-            borderRadius: '5px',
-            cursor: 'pointer'
-          }}
-        >
-          Step 3: Configure
-        </button>
+      {/* Stepper/Progress Bar */}
+      <div style={{ marginBottom: '20px', display: 'flex', gap: '10px' }}>
+        {steps.map((step, idx) => (
+          <button
+            key={step.title}
+            onClick={() => setCurrentStep(idx + 1)}
+            style={{
+              backgroundColor: currentStep === idx + 1 ? '#007bff' : '#6c757d',
+              color: 'white',
+              border: 'none',
+              padding: '10px 20px',
+              borderRadius: '5px',
+              cursor: 'pointer',
+              flex: 1
+            }}
+          >
+            Step {idx + 1}: {step.title}
+          </button>
+        ))}
       </div>
-
       {/* Message Display */}
       {message && (
-        <div style={{ 
-          padding: '10px', 
-          marginBottom: '20px', 
+        <div style={{
+          padding: '10px',
+          marginBottom: '20px',
           backgroundColor: message.includes('Error') ? '#f8d7da' : '#d4edda',
           border: `1px solid ${message.includes('Error') ? '#f5c6cb' : '#c3e6cb'}`,
           borderRadius: '5px',
@@ -434,161 +483,10 @@ const DeploymentPhase = () => {
           {message}
         </div>
       )}
-
-      {/* Step 1: Deploy Contracts */}
-      {currentStep === 1 && (
-        <div>
-          <h2>Step 1: Deploy Core Contracts</h2>
-          
-          <div style={{ marginBottom: '20px' }}>
-            <button 
-              onClick={() => deployContract('ClaimTopicsRegistry')}
-              disabled={deploying}
-              style={{ marginRight: '10px', marginBottom: '10px' }}
-            >
-              {deploying ? 'Deploying...' : 'Deploy ClaimTopicsRegistry'}
-            </button>
-            
-            <button 
-              onClick={() => deployContract('TrustedIssuersRegistry')}
-              disabled={deploying}
-              style={{ marginRight: '10px', marginBottom: '10px' }}
-            >
-              {deploying ? 'Deploying...' : 'Deploy TrustedIssuersRegistry'}
-            </button>
-            
-            <button 
-              onClick={() => deployContract('IdentityRegistry')}
-              disabled={deploying}
-              style={{ marginRight: '10px', marginBottom: '10px' }}
-            >
-              {deploying ? 'Deploying...' : 'Deploy IdentityRegistry'}
-            </button>
-            
-            <button 
-              onClick={() => deployContract('Compliance')}
-              disabled={deploying}
-              style={{ marginRight: '10px', marginBottom: '10px' }}
-            >
-              {deploying ? 'Deploying...' : 'Deploy Compliance'}
-            </button>
-          </div>
-
-          {/* Deployed Contracts Display */}
-          <div style={{ marginBottom: '20px' }}>
-            <h3>Deployed Contracts:</h3>
-            {Object.entries(deployedContracts).map(([contractType, addresses]) => (
-              <div key={contractType} style={{ marginBottom: '10px' }}>
-                <strong>{contractType}:</strong> {addresses.join(', ')}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Step 2: Initialize Contracts */}
-      {currentStep === 2 && (
-        <div>
-          <h2>Step 2: Initialize Contracts</h2>
-          
-          <div style={{ marginBottom: '20px' }}>
-            <button 
-              onClick={checkContractInitStatus}
-              disabled={checkingInitStatus}
-              style={{ marginRight: '10px', marginBottom: '10px' }}
-            >
-              {checkingInitStatus ? 'Checking...' : 'Check Initialization Status'}
-            </button>
-          </div>
-
-          {/* Initialization Status */}
-          {Object.keys(contractInitStatus).length > 0 && (
-            <div style={{ marginBottom: '20px' }}>
-              <h3>Initialization Status:</h3>
-              {Object.entries(contractInitStatus).map(([contractType, status]) => (
-                <div key={contractType} style={{ marginBottom: '10px' }}>
-                  <strong>{contractType}:</strong> {status ? 'Initialized' : 'Not Initialized'}
-                  {!status && (
-                    <button 
-                      onClick={() => initializeContract(contractType)}
-                      disabled={initializing}
-                      style={{ marginLeft: '10px' }}
-                    >
-                      {initializing ? 'Initializing...' : 'Initialize'}
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Step 3: Configure */}
-      {currentStep === 3 && (
-        <div>
-          <h2>Step 3: Configure Claim Topics</h2>
-          
-          <div style={{ marginBottom: '20px' }}>
-            <button 
-              onClick={() => addClaimTopic(1)}
-              disabled={deploying}
-              style={{ marginRight: '10px', marginBottom: '10px' }}
-            >
-              Add Claim Topic 1
-            </button>
-            
-            <button 
-              onClick={() => addClaimTopic(2)}
-              disabled={deploying}
-              style={{ marginRight: '10px', marginBottom: '10px' }}
-            >
-              Add Claim Topic 2
-            </button>
-            
-            <button 
-              onClick={() => addClaimTopic(3)}
-              disabled={deploying}
-              style={{ marginRight: '10px', marginBottom: '10px' }}
-            >
-              Add Claim Topic 3
-            </button>
-          </div>
-
-          {/* Available Claim Topics */}
-          <div style={{ marginBottom: '20px' }}>
-            <h3>Available Claim Topics:</h3>
-            {loadingClaimTopics ? (
-              <div>Loading claim topics...</div>
-            ) : (
-              <div>
-                {availableClaimTopics.length > 0 ? (
-                  availableClaimTopics.map(topic => (
-                    <span key={topic} style={{ 
-                      marginRight: '10px', 
-                      padding: '5px 10px', 
-                      backgroundColor: '#e9ecef', 
-                      borderRadius: '15px' 
-                    }}>
-                      {topic}
-                      <button 
-                        onClick={() => removeClaimTopic(topic)}
-                        disabled={deploying}
-                        style={{ marginLeft: '5px', border: 'none', background: 'none', color: 'red', cursor: 'pointer' }}
-                      >
-                        ×
-                      </button>
-                    </span>
-                  ))
-                ) : (
-                  <div>No claim topics available</div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
+      {/* Render current step */}
+      <div style={{ marginBottom: '30px' }}>
+        {steps[currentStep - 1].component}
+      </div>
       {/* Logs */}
       <div style={{ marginTop: '30px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
@@ -597,37 +495,36 @@ const DeploymentPhase = () => {
             Clear Logs
           </button>
         </div>
-        <div style={{ 
-          height: '300px', 
-          overflowY: 'auto', 
-          border: '1px solid #ccc', 
-          padding: '10px', 
+        <div style={{
+          height: '300px',
+          overflowY: 'auto',
+          border: '1px solid #ccc',
+          padding: '10px',
           backgroundColor: '#f8f9fa',
           fontFamily: 'monospace',
           fontSize: '12px'
         }}>
           {logs.map((log, index) => (
-            <div key={index} style={{ 
+            <div key={index} style={{
               marginBottom: '5px',
-              color: log.type === 'error' ? '#dc3545' : 
-                     log.type === 'success' ? '#28a745' : 
-                     log.type === 'warning' ? '#ffc107' : '#6c757d'
+              color: log.type === 'error' ? '#dc3545' :
+                log.type === 'success' ? '#28a745' :
+                  log.type === 'warning' ? '#ffc107' : '#6c757d'
             }}>
               [{log.timestamp}] {log.message}
             </div>
           ))}
         </div>
       </div>
-
       {/* Clear State Button */}
       <div style={{ marginTop: '20px' }}>
-        <button 
+        <button
           onClick={clearDeploymentState}
-          style={{ 
-            backgroundColor: '#dc3545', 
-            color: 'white', 
-            border: 'none', 
-            padding: '10px 20px', 
+          style={{
+            backgroundColor: '#dc3545',
+            color: 'white',
+            border: 'none',
+            padding: '10px 20px',
             borderRadius: '5px',
             cursor: 'pointer'
           }}

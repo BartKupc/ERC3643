@@ -1,76 +1,71 @@
 import React from 'react';
-import { Button, ContractSelector } from '../../shared';
 
 const InitializeContractsTab = ({
   deployedContracts,
-  selectedContracts,
-  setSelectedContracts,
-  reloadDeploymentState,
-  addLog,
-  deploying
+  initializing,
+  initializeContract
 }) => (
-  <div>
+  <div style={{ maxWidth: '100%', overflowX: 'auto' }}>
     <h3>Step 2: Initialize Contracts</h3>
     <p>Initialize the deployed contracts with their required setup.</p>
-    <div style={{ marginBottom: '1rem', padding: '1rem', backgroundColor: '#e3f2fd', borderRadius: '4px', border: '1px solid #2196f3' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <h4 style={{ margin: '0 0 0.5rem 0', color: '#1976d2' }}>🔄 Auto-Select Latest Contracts</h4>
-          <p style={{ margin: 0, fontSize: '0.9rem', color: '#1976d2' }}>
-            Click to refresh deployment state and automatically select the latest deployed contracts
-          </p>
-        </div>
-        <Button
-          onClick={() => {
-            reloadDeploymentState();
-            addLog && addLog("Manually refreshed and auto-selected latest contracts", "info");
-          }}
-          style={{ backgroundColor: '#2196f3', color: 'white', padding: '0.5rem 1rem' }}
-        >
-          🔄 Refresh & Auto-Select
-        </Button>
+    {Object.keys(deployedContracts).length === 0 ? (
+      <div style={{ padding: '1rem', backgroundColor: '#f8d7da', borderRadius: '4px', color: '#721c24' }}>
+        No contracts deployed yet. Please deploy contracts in Step 1 first.
       </div>
-    </div>
-    <ContractSelector
-      contractType="ClaimTopicsRegistry"
-      contracts={deployedContracts}
-      selectedAddress={selectedContracts.ClaimTopicsRegistry}
-      onSelect={address => setSelectedContracts(prev => ({ ...prev, ClaimTopicsRegistry: address }))}
-      title="Claim Topics Registry"
-      description="Select the ClaimTopicsRegistry to initialize"
-    />
-    <ContractSelector
-      contractType="TrustedIssuersRegistry"
-      contracts={deployedContracts}
-      selectedAddress={selectedContracts.TrustedIssuersRegistry}
-      onSelect={address => setSelectedContracts(prev => ({ ...prev, TrustedIssuersRegistry: address }))}
-      title="Trusted Issuers Registry"
-      description="Select the TrustedIssuersRegistry to initialize"
-    />
-    <ContractSelector
-      contractType="IdentityRegistryStorage"
-      contracts={deployedContracts}
-      selectedAddress={selectedContracts.IdentityRegistryStorage}
-      onSelect={address => setSelectedContracts(prev => ({ ...prev, IdentityRegistryStorage: address }))}
-      title="Identity Registry Storage"
-      description="Select the IdentityRegistryStorage to initialize"
-    />
-    <ContractSelector
-      contractType="IdentityRegistry"
-      contracts={deployedContracts}
-      selectedAddress={selectedContracts.IdentityRegistry}
-      onSelect={address => setSelectedContracts(prev => ({ ...prev, IdentityRegistry: address }))}
-      title="Identity Registry"
-      description="Select the IdentityRegistry to initialize"
-    />
-    <ContractSelector
-      contractType="ModularCompliance"
-      contracts={deployedContracts}
-      selectedAddress={selectedContracts.ModularCompliance}
-      onSelect={address => setSelectedContracts(prev => ({ ...prev, ModularCompliance: address }))}
-      title="ModularCompliance"
-      description="Select the ModularCompliance contract to initialize"
-    />
+    ) : (
+      <div>
+        <h4>Available Contracts for Initialization:</h4>
+        {Object.entries(deployedContracts).map(([name, addresses]) => (
+          <div key={name} style={{ marginBottom: '1rem', padding: '1rem', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
+            <h5>{name}</h5>
+            {Array.isArray(addresses) ? (
+              addresses.map((address, index) => (
+                <div key={index} style={{ 
+                  fontFamily: 'monospace', 
+                  fontSize: '0.9rem',
+                  padding: '0.5rem',
+                  backgroundColor: 'white',
+                  borderRadius: '4px',
+                  marginBottom: '0.5rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between'
+                }}>
+                  <span>{address} {index === 0 ? '(Latest)' : ''}</span>
+                  <button
+                    onClick={() => initializeContract(name, address)}
+                    disabled={initializing}
+                    style={{ backgroundColor: '#28a745', color: 'white', padding: '0.25rem 0.75rem', border: 'none', borderRadius: '4px', cursor: initializing ? 'not-allowed' : 'pointer', opacity: initializing ? 0.6 : 1 }}
+                  >
+                    {initializing ? 'Initializing...' : 'Initialize'}
+                  </button>
+                </div>
+              ))
+            ) : (
+              <div style={{ 
+                fontFamily: 'monospace', 
+                fontSize: '0.9rem',
+                padding: '0.5rem',
+                backgroundColor: 'white',
+                borderRadius: '4px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between'
+              }}>
+                <span>{addresses}</span>
+                <button
+                  onClick={() => initializeContract(name, addresses)}
+                  disabled={initializing}
+                  style={{ backgroundColor: '#28a745', color: 'white', padding: '0.25rem 0.75rem', border: 'none', borderRadius: '4px', cursor: initializing ? 'not-allowed' : 'pointer', opacity: initializing ? 0.6 : 1 }}
+                >
+                  {initializing ? 'Initializing...' : 'Initialize'}
+                </button>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    )}
   </div>
 );
 

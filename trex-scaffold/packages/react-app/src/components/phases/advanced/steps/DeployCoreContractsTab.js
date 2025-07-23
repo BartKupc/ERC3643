@@ -1,5 +1,4 @@
 import React from 'react';
-import { Button } from '../../shared';
 
 const DeployCoreContractsTab = ({
   deployedContracts,
@@ -11,41 +10,41 @@ const DeployCoreContractsTab = ({
     <p>Deploy the essential T-REX contracts in the correct order.</p>
     
     <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
-      <Button
+      <button
         onClick={() => deployContract('ClaimTopicsRegistry')}
         disabled={deploying}
-        style={{ backgroundColor: '#007bff', color: 'white' }}
+        style={{ backgroundColor: '#007bff', color: 'white', padding: '0.5rem 1rem', border: 'none', borderRadius: '4px', cursor: deploying ? 'not-allowed' : 'pointer', opacity: deploying ? 0.6 : 1 }}
       >
         {deploying ? 'Deploying...' : 'Deploy ClaimTopicsRegistry'}
-      </Button>
-      <Button
+      </button>
+      <button
         onClick={() => deployContract('TrustedIssuersRegistry')}
         disabled={deploying}
-        style={{ backgroundColor: '#007bff', color: 'white' }}
+        style={{ backgroundColor: '#007bff', color: 'white', padding: '0.5rem 1rem', border: 'none', borderRadius: '4px', cursor: deploying ? 'not-allowed' : 'pointer', opacity: deploying ? 0.6 : 1 }}
       >
         {deploying ? 'Deploying...' : 'Deploy TrustedIssuersRegistry'}
-      </Button>
-      <Button
+      </button>
+      <button
         onClick={() => deployContract('IdentityRegistryStorage')}
         disabled={deploying}
-        style={{ backgroundColor: '#007bff', color: 'white' }}
+        style={{ backgroundColor: '#007bff', color: 'white', padding: '0.5rem 1rem', border: 'none', borderRadius: '4px', cursor: deploying ? 'not-allowed' : 'pointer', opacity: deploying ? 0.6 : 1 }}
       >
         {deploying ? 'Deploying...' : 'Deploy IdentityRegistryStorage'}
-      </Button>
-      <Button
+      </button>
+      <button
         onClick={() => deployContract('IdentityRegistry')}
         disabled={deploying}
-        style={{ backgroundColor: '#007bff', color: 'white' }}
+        style={{ backgroundColor: '#007bff', color: 'white', padding: '0.5rem 1rem', border: 'none', borderRadius: '4px', cursor: deploying ? 'not-allowed' : 'pointer', opacity: deploying ? 0.6 : 1 }}
       >
         {deploying ? 'Deploying...' : 'Deploy IdentityRegistry'}
-      </Button>
-      <Button
+      </button>
+      <button
         onClick={() => deployContract('ModularCompliance')}
         disabled={deploying}
-        style={{ backgroundColor: '#007bff', color: 'white' }}
+        style={{ backgroundColor: '#007bff', color: 'white', padding: '0.5rem 1rem', border: 'none', borderRadius: '4px', cursor: deploying ? 'not-allowed' : 'pointer', opacity: deploying ? 0.6 : 1 }}
       >
         {deploying ? 'Deploying...' : 'Deploy ModularCompliance'}
-      </Button>
+      </button>
     </div>
 
     {/* Show deployed contracts */}
