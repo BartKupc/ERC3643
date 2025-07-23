@@ -6,7 +6,7 @@ const { ethers } = require('ethers');
 const { runDeploymentScript, getLatestDeployment } = require('../utils/helpers');
 
 // Get factories
-router.get('/factories', (req, res) => {
+router.get('/', (req, res) => {
   try {
     const deploymentsPath = path.join(__dirname, '../deployments.json');
     if (!fs.existsSync(deploymentsPath)) {
