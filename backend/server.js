@@ -44,6 +44,94 @@ app.use('/api/diagnostics', diagnosticsRoutes);
 const factoriesRoutes = require('./routes/factories');
 app.use('/api/factories', factoriesRoutes);
 
+// Get Identity Registries with trusted issuers
+app.get('/api/identity-registries', async (req, res) => {
+  try {
+    console.log(`🎯 Getting Identity Registries from all factories`);
+    
+    const provider = createProvider();
+    const wallet = new ethers.Wallet(process.env.PRIVATE_KEY || '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80', provider);
+    
+    // Load deployments to get all factories
+    const deploymentsPath = path.join(__dirname, '../deployments.json');
+    if (!fs.existsSync(deploymentsPath)) {
+      throw new Error('No deployments found. Please deploy factory first.');
+    }
+    
+    const deployments = JSON.parse(fs.readFileSync(deploymentsPath, 'utf8'));
+    const factoryDeployments = deployments.filter(d => d.factory && d.factory.address);
+    
+    const irs = [];
+    
+    for (const factoryDeployment of factoryDeployments) {
+      const tokens = factoryDeployment.tokens || [];
+      
+      for (const token of tokens) {
+        try {
+          const irAddress = token.suite?.identityRegistry;
+          if (!irAddress) continue;
+          
+          // Get the Identity Registry contract
+          const irArtifactsPath = path.join(__dirname, '../../trex-scaffold/packages/react-app/src/contracts/IdentityRegistry.json');
+          if (!fs.existsSync(irArtifactsPath)) {
+            throw new Error('IdentityRegistry artifacts not found. Please compile contracts first.');
+          }
+          const irArtifacts = JSON.parse(fs.readFileSync(irArtifactsPath, 'utf8'));
+          const ir = new ethers.Contract(irAddress, irArtifacts.abi, wallet);
+          
+          // Get the TrustedIssuersRegistry for this IR
+          const tirAddress = await ir.issuersRegistry();
+          const tirArtifactsPath = path.join(__dirname, '../../trex-scaffold/packages/react-app/src/contracts/TrustedIssuersRegistry.json');
+          if (!fs.existsSync(tirArtifactsPath)) {
+            throw new Error('TrustedIssuersRegistry artifacts not found. Please compile contracts first.');
+          }
+          const tirArtifacts = JSON.parse(fs.readFileSync(tirArtifactsPath, 'utf8'));
+          const tir = new ethers.Contract(tirAddress, tirArtifacts.abi, wallet);
+          
+          // Get trusted issuers for this IR
+          const issuers = await tir.getTrustedIssuers();
+          const issuersWithTopics = await Promise.all(
+            issuers.map(async (issuer) => {
+              const topics = await tir.getTrustedIssuerClaimTopics(issuer);
+              return {
+                address: issuer,
+                topics: topics.map(t => t.toNumber())
+              };
+            })
+          );
+          
+          irs.push({
+            address: irAddress,
+            trustedIssuers: issuersWithTopics,
+            tirAddress: tirAddress,
+            timestamp: token.timestamp,
+            tokenName: token.token.name,
+            tokenSymbol: token.token.symbol,
+            deploymentId: token.deploymentId
+          });
+          
+          console.log(`IR ${irAddress} (${token.token.name}): ${issuersWithTopics.length} trusted issuers`);
+        } catch (error) {
+          console.log(`Error loading IR ${token.suite?.identityRegistry}: ${error.message}`);
+        }
+      }
+    }
+    
+    console.log(`✅ Found ${irs.length} Identity Registries`);
+    
+    res.json({
+      success: true,
+      identityRegistries: irs
+    });
+  } catch (error) {
+    console.error('❌ Error getting Identity Registries:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 // Clear all deployment data
 app.delete('/api/addresses', (req, res) => {
   try {
