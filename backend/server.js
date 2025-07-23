@@ -65,31 +65,46 @@ app.get('/api/identity-registries', async (req, res) => {
     
     for (const factoryDeployment of factoryDeployments) {
       const tokens = factoryDeployment.tokens || [];
+      console.log(`🔍 Processing factory ${factoryDeployment.factory.address} with ${tokens.length} tokens`);
       
       for (const token of tokens) {
         try {
           const irAddress = token.suite?.identityRegistry;
-          if (!irAddress) continue;
+          console.log(`🔍 Token ${token.token.name} (${token.token.address}) - IR: ${irAddress}`);
+          if (!irAddress) {
+            console.log(`❌ No Identity Registry found for token ${token.token.name}`);
+            continue;
+          }
           
           // Get the Identity Registry contract
           const irArtifactsPath = path.join(__dirname, '../../trex-scaffold/packages/react-app/src/contracts/IdentityRegistry.json');
+          console.log(`🔍 Loading IR artifacts from: ${irArtifactsPath}`);
           if (!fs.existsSync(irArtifactsPath)) {
             throw new Error('IdentityRegistry artifacts not found. Please compile contracts first.');
           }
           const irArtifacts = JSON.parse(fs.readFileSync(irArtifactsPath, 'utf8'));
+          console.log(`✅ IR artifacts loaded successfully`);
           const ir = new ethers.Contract(irAddress, irArtifacts.abi, wallet);
+          console.log(`✅ IR contract instance created for ${irAddress}`);
           
           // Get the TrustedIssuersRegistry for this IR
+          console.log(`🔍 Getting TrustedIssuersRegistry address from IR...`);
           const tirAddress = await ir.issuersRegistry();
+          console.log(`✅ TrustedIssuersRegistry address: ${tirAddress}`);
           const tirArtifactsPath = path.join(__dirname, '../../trex-scaffold/packages/react-app/src/contracts/TrustedIssuersRegistry.json');
+          console.log(`🔍 Loading TIR artifacts from: ${tirArtifactsPath}`);
           if (!fs.existsSync(tirArtifactsPath)) {
             throw new Error('TrustedIssuersRegistry artifacts not found. Please compile contracts first.');
           }
           const tirArtifacts = JSON.parse(fs.readFileSync(tirArtifactsPath, 'utf8'));
+          console.log(`✅ TIR artifacts loaded successfully`);
           const tir = new ethers.Contract(tirAddress, tirArtifacts.abi, wallet);
+          console.log(`✅ TIR contract instance created for ${tirAddress}`);
           
           // Get trusted issuers for this IR
+          console.log(`🔍 Getting trusted issuers from TIR...`);
           const issuers = await tir.getTrustedIssuers();
+          console.log(`✅ Found ${issuers.length} trusted issuers`);
           const issuersWithTopics = await Promise.all(
             issuers.map(async (issuer) => {
               const topics = await tir.getTrustedIssuerClaimTopics(issuer);
