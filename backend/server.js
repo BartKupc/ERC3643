@@ -228,11 +228,16 @@ app.get('/api/deployments/:deploymentId', (req, res) => {
 app.get('/api/deployments', (req, res) => {
   try {
     const deploymentsPath = path.join(__dirname, '../deployments.json');
-    if (!fs.existsSync(deploymentsPath)) {
-      return res.status(404).json({ error: 'deployments.json not found' });
+    let deploymentsObj = { easydeploy: [], advanced: [] };
+    if (fs.existsSync(deploymentsPath)) {
+      const raw = fs.readFileSync(deploymentsPath, 'utf8');
+      if (raw.trim().startsWith('{')) {
+        deploymentsObj = JSON.parse(raw);
+        if (!deploymentsObj.easydeploy) deploymentsObj.easydeploy = [];
+        if (!deploymentsObj.advanced) deploymentsObj.advanced = [];
+      }
     }
-    const deployments = JSON.parse(fs.readFileSync(deploymentsPath, 'utf8'));
-    res.json(deployments);
+    res.json(deploymentsObj);
   } catch (err) {
     console.error('Error reading deployments.json:', err);
     res.status(500).json({ error: 'Failed to read deployments.json' });

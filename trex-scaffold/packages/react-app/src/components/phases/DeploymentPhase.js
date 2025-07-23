@@ -160,9 +160,10 @@ const DeploymentPhase = () => {
   const reloadDeploymentState = async () => {
     try {
       const response = await axios.get('/api/deployments');
-      console.log('Backend deployments array:', response.data); // DEBUG LOG
-      if (Array.isArray(response.data)) {
-        const parsed = parseDeploymentsArray(response.data);
+      const deployments = response.data.advanced || [];
+      console.log('Backend deployments array:', deployments); // DEBUG LOG
+      if (Array.isArray(deployments)) {
+        const parsed = parseDeploymentsArray(deployments);
         setDeployedContracts(parsed);
         addLog('Reloaded deployment state from backend', 'info');
       }

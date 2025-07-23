@@ -213,19 +213,32 @@ router.post('/claim-issuer', async (req, res) => {
 });
 
 // Save deployment to deployments.json
+const deploymentsPath = path.join(__dirname, '../../deployments.json');
+function loadDeploymentsObj() {
+  if (fs.existsSync(deploymentsPath)) {
+    const raw = fs.readFileSync(deploymentsPath, 'utf8');
+    if (raw.trim().startsWith('{')) {
+      const obj = JSON.parse(raw);
+      if (!obj.easydeploy) obj.easydeploy = [];
+      if (!obj.advanced) obj.advanced = [];
+      return obj;
+    }
+  }
+  return { easydeploy: [], advanced: [] };
+}
+function saveDeploymentsObj(obj) {
+  fs.writeFileSync(deploymentsPath, JSON.stringify(obj, null, 2));
+}
+
 router.post('/save', (req, res) => {
   try {
     const { deployment } = req.body;
     if (!deployment) {
       return res.status(400).json({ error: 'Deployment data is required' });
     }
-    const deploymentsPath = path.join(__dirname, '../../deployments.json');
-    let deployments = [];
-    if (fs.existsSync(deploymentsPath)) {
-      deployments = JSON.parse(fs.readFileSync(deploymentsPath, 'utf8'));
-    }
-    deployments.push(deployment);
-    fs.writeFileSync(deploymentsPath, JSON.stringify(deployments, null, 2));
+    let deploymentsObj = loadDeploymentsObj();
+    deploymentsObj.easydeploy.push(deployment);
+    saveDeploymentsObj(deploymentsObj);
     console.log(`✅ Saved deployment: ${deployment.component} at ${deployment.address}`);
     res.json({ success: true, deployment });
   } catch (error) {

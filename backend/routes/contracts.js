@@ -126,6 +126,15 @@ async function handleDeploy(contractName, res) {
     
     console.log(`📋 ${contractName} deployed at:`, contractAddress);
     
+    // After contractAddress is determined and before sending the response:
+    // Only save to advanced if this is a single contract deployment (not Factory, Token, or ClaimIssuer)
+    if (!['Factory', 'Token', 'ClaimIssuer'].includes(contractName) && contractAddress) {
+      let deploymentsObj = loadDeploymentsObj();
+      deploymentsObj.advanced.push({ component: contractName, address: contractAddress, timestamp: new Date().toISOString() });
+      saveDeploymentsObj(deploymentsObj);
+      console.log(`✅ Saved advanced deployment: ${contractName} at ${contractAddress}`);
+    }
+    
     res.json({
       success: true,
       contractAddress: contractAddress,
