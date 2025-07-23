@@ -10,7 +10,7 @@ import AgentManagementTab from './easy-deploy/AgentManagementTab';
 import UserManagementTab from './easy-deploy/UserManagementTab';
 import TokenOperationsTab from './easy-deploy/TokenOperationsTab';
 import config from '../../config.json';
-import { Button } from '../shared/uiComponents';
+import { Button } from './shared/uiComponents';
 
 const EasyDeployPhase = () => {
   // State management
@@ -73,6 +73,42 @@ const EasyDeployPhase = () => {
   // Additional state
   const [selectedOperationsToken, setSelectedOperationsToken] = useState(null);
 
+  // Deployment State
+  const [deployedContracts, setDeployedContracts] = useState({});
+  const [addingClaimIssuer, setAddingClaimIssuer] = useState(false);
+  const [tokenOnchainId, setTokenOnchainId] = useState('');
+  const [loadingTokenOnchainId, setLoadingTokenOnchainId] = useState(false);
+  const [loadingClaimIssuers, setLoadingClaimIssuers] = useState(false);
+  const [addingClaimTopic, setAddingClaimTopic] = useState(false);
+  const [removingClaimTopicState, setRemovingClaimTopicState] = useState(false);
+  const [issuerAddress, setIssuerAddress] = useState('');
+  const [issuerClaimTopics, setIssuerClaimTopics] = useState([]);
+  const [newClaimTopic, setNewClaimTopic] = useState('');
+  const [addingIssuer, setAddingIssuer] = useState(false);
+  const [deployedClaimIssuers, setDeployedClaimIssuers] = useState([]);
+  const [agents, setAgents] = useState([]);
+  const [removingAgentState, setRemovingAgentState] = useState(false);
+  const [selectedAgentContractType, setSelectedAgentContractType] = useState('');
+  const [agentAddressInput, setAgentAddressInput] = useState('');
+  const [selectedTokenForAgent, setSelectedTokenForAgent] = useState('');
+  const [selectedIRForAgent, setSelectedIRForAgent] = useState('');
+
+  // Helper functions for deployment state
+  const loadDeploymentState = () => {
+    try {
+      const saved = localStorage.getItem('trex_deployment_state');
+      return saved ? JSON.parse(saved) : {};
+    } catch (error) {
+      console.error('Error loading deployment state:', error);
+      return {};
+    }
+  };
+
+  const clearDeploymentState = () => {
+    localStorage.removeItem('trex_deployment_state');
+    setDeployedContracts({});
+  };
+
   // Simple logging
   const addLog = useCallback((message, type = "info") => {
     const timestamp = new Date().toLocaleTimeString();
@@ -121,7 +157,7 @@ const EasyDeployPhase = () => {
     };
 
     loadUserIdentities();
-  }, []);
+  }, [addLog]);
 
   // Load deployment state and factories
   useEffect(() => {
@@ -158,7 +194,7 @@ const EasyDeployPhase = () => {
 
     loadState();
     loadFactories();
-  }, []);
+  }, [addLog, loadDeploymentDetails]);
 
   // Synchronize claimIssuers with availableClaimIssuers
   useEffect(() => {
