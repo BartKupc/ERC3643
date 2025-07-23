@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { ethers } from 'ethers';
 import axios from 'axios';
 import DeployCoreContractsTab from './advanced/steps/DeployCoreContractsTab';
 import InitializeContractsTab from './advanced/steps/InitializeContractsTab';
@@ -23,7 +22,6 @@ const DeploymentPhase = () => {
   const [loadingClaimTopics, setLoadingClaimTopics] = useState(false);
   const [contractInitStatus, setContractInitStatus] = useState({});
   const [checkingInitStatus, setCheckingInitStatus] = useState(false);
-  const [tokenAgentInput, setTokenAgentInput] = useState("");
 
   // Logging function
   const addLog = (message, type = "info") => {
@@ -74,24 +72,6 @@ const DeploymentPhase = () => {
       const newState = {
         ...parsedState,
         contracts: updated
-      };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(newState));
-      
-      return updated;
-    });
-  };
-
-  // Save deployed token to storage
-  const saveDeployedToken = (tokenDetails) => {
-    setDeployedTokens(prev => {
-      const updated = [...prev, tokenDetails];
-      
-      // Save to localStorage
-      const savedState = localStorage.getItem(STORAGE_KEY);
-      const parsedState = savedState ? JSON.parse(savedState) : {};
-      const newState = {
-        ...parsedState,
-        tokens: updated
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(newState));
       
@@ -367,11 +347,41 @@ const DeploymentPhase = () => {
     }
   };
 
+  // Configure Identity Registry using new API
+  const configureIdentityRegistry = async (registryAddress, config) => {
+    try {
+      setDeploying(true);
+      setMessage(`Configuring Identity Registry at ${registryAddress}...`);
+      addLog(`Starting Identity Registry configuration via backend API`, "info");
+
+      const result = await contractInteraction('configure', {
+        contractName: 'IdentityRegistry',
+        contractAddress: registryAddress,
+        method: 'setConfig',
+        params: [config]
+      });
+
+      setMessage(`Identity Registry configured successfully at ${registryAddress}`);
+      addLog(`Identity Registry configured successfully at ${registryAddress}`, "success");
+      addLog(`Transaction hash: ${result.transactionHash}`, "info");
+
+      // Reload state to reflect new configuration
+      await reloadDeploymentState();
+    } catch (error) {
+      console.error(`Error configuring Identity Registry at ${registryAddress}:`, error);
+      const cleanError = extractCleanError(error);
+      setMessage(`Error configuring Identity Registry at ${registryAddress}: ${cleanError}`);
+      addLog(`Error configuring Identity Registry at ${registryAddress}: ${cleanError}`, "error");
+    } finally {
+      setDeploying(false);
+    }
+  };
+
   // Load state on component mount
   useEffect(() => {
     loadDeploymentState();
     reloadDeploymentState();
-  }, []);
+  }, [loadDeploymentState, reloadDeploymentState]);
 
   // Clear logs
   const clearLogs = () => {

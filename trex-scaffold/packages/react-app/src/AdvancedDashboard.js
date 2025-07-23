@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "./components";
-import AdvancedPhase from "./components/phases/AdvancedPhase";
+import DeploymentPhase from './components/phases/DeploymentPhase';
 
 const AdvancedDashboard = ({ account, handleClearAddresses }) => {
   return (
     <div style={{ marginLeft: "250px", padding: "2rem" }}>
-      <AdvancedPhase />
+      <DeploymentPhase />
     </div>
   );
 };
