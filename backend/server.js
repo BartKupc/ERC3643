@@ -21,7 +21,7 @@ app.use(express.static(path.join(__dirname, 'build')));
 
 // Mount modular routers
 const deploymentRoutes = require('./routes/deployment');
-app.use('/api/deployment', deploymentRoutes);
+app.use('/api/deploy', deploymentRoutes);
 
 const identityRoutes = require('./routes/identity');
 app.use('/api/identity', identityRoutes);
@@ -43,6 +43,9 @@ app.use('/api/diagnostics', diagnosticsRoutes);
 
 const factoriesRoutes = require('./routes/factories');
 app.use('/api/factories', factoriesRoutes);
+
+// Mount deployments routes separately for frontend compatibility
+app.use('/api/deployments', factoriesRoutes);
 
 // Start server
 app.listen(PORT, () => {
