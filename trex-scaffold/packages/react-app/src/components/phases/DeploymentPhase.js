@@ -126,9 +126,7 @@ const DeploymentPhase = () => {
         addLog("Reloaded deployment state from backend", "info");
         
         // Auto-select latest contracts
-        setTimeout(() => {
-          autoSelectLatestContracts();
-        }, 100);
+        // Do NOT call autoSelectLatestContracts here
       }
     } catch (error) {
       console.error("Error reloading deployment state:", error);
@@ -147,7 +145,17 @@ const DeploymentPhase = () => {
     });
     
     setSelectedContracts(newSelectedContracts);
-    addLog("Auto-selected latest deployed contracts", "info");
+    // Only update if changed
+    setSelectedContracts(prev => {
+      const changed = Object.keys(newSelectedContracts).some(
+        key => prev[key] !== newSelectedContracts[key]
+      );
+      if (changed) {
+        addLog("Auto-selected latest deployed contracts", "info");
+        return newSelectedContracts;
+      }
+      return prev;
+    });
   };
 
   // Deploy contract using new API
@@ -383,6 +391,14 @@ const DeploymentPhase = () => {
     reloadDeploymentState();
   }, [loadDeploymentState, reloadDeploymentState]);
 
+  // Add useEffect to auto-select contracts when deployedContracts changes
+  useEffect(() => {
+    if (Object.keys(deployedContracts).length > 0) {
+      autoSelectLatestContracts();
+    }
+    // eslint-disable-next-line
+  }, [deployedContracts]);
+
   // Clear logs
   const clearLogs = () => {
     setLogs([]);
@@ -458,8 +474,8 @@ const DeploymentPhase = () => {
   ];
 
   return (
-    <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
-      <h1>Deployment Phase</h1>
+    <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto', color: '#222', background: 'white' }}>
+      <h1 style={{ color: '#222' }}>Deployment Phase</h1>
       {/* Stepper/Progress Bar */}
       <div style={{ marginBottom: '20px', display: 'flex', gap: '10px' }}>
         {steps.map((step, idx) => (
@@ -467,13 +483,15 @@ const DeploymentPhase = () => {
             key={step.title}
             onClick={() => setCurrentStep(idx + 1)}
             style={{
-              backgroundColor: currentStep === idx + 1 ? '#007bff' : '#6c757d',
-              color: 'white',
+              backgroundColor: currentStep === idx + 1 ? '#007bff' : '#e9ecef',
+              color: currentStep === idx + 1 ? 'white' : '#222',
               border: 'none',
               padding: '10px 20px',
               borderRadius: '5px',
               cursor: 'pointer',
-              flex: 1
+              flex: 1,
+              fontWeight: currentStep === idx + 1 ? 'bold' : 'normal',
+              fontSize: '1rem',
             }}
           >
             Step {idx + 1}: {step.title}
@@ -488,20 +506,21 @@ const DeploymentPhase = () => {
           backgroundColor: message.includes('Error') ? '#f8d7da' : '#d4edda',
           border: `1px solid ${message.includes('Error') ? '#f5c6cb' : '#c3e6cb'}`,
           borderRadius: '5px',
-          color: message.includes('Error') ? '#721c24' : '#155724'
+          color: message.includes('Error') ? '#721c24' : '#222',
+          fontWeight: 'bold',
         }}>
           {message}
         </div>
       )}
       {/* Render current step */}
-      <div style={{ marginBottom: '30px' }}>
+      <div style={{ marginBottom: '30px', color: '#222' }}>
         {steps[currentStep - 1].component}
       </div>
       {/* Logs */}
       <div style={{ marginTop: '30px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-          <h3>Logs</h3>
-          <button onClick={clearLogs} style={{ padding: '5px 10px' }}>
+          <h3 style={{ color: '#222' }}>Logs</h3>
+          <button onClick={clearLogs} style={{ padding: '5px 10px', color: '#222', background: '#e9ecef', border: '1px solid #ccc', borderRadius: '4px' }}>
             Clear Logs
           </button>
         </div>
@@ -512,14 +531,15 @@ const DeploymentPhase = () => {
           padding: '10px',
           backgroundColor: '#f8f9fa',
           fontFamily: 'monospace',
-          fontSize: '12px'
+          fontSize: '12px',
+          color: '#222',
         }}>
           {logs.map((log, index) => (
             <div key={index} style={{
               marginBottom: '5px',
               color: log.type === 'error' ? '#dc3545' :
                 log.type === 'success' ? '#28a745' :
-                  log.type === 'warning' ? '#ffc107' : '#6c757d'
+                  log.type === 'warning' ? '#ffc107' : '#222'
             }}>
               [{log.timestamp}] {log.message}
             </div>
