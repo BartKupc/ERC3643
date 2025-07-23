@@ -43,8 +43,6 @@ app.use('/api/diagnostics', diagnosticsRoutes);
 
 const factoriesRoutes = require('./routes/factories');
 app.use('/api/factories', factoriesRoutes);
-
-// Mount deployments routes separately for frontend compatibility
 app.use('/api/deployments', factoriesRoutes);
 
 // Start server

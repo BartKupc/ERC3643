@@ -29,10 +29,20 @@ router.get('/', (req, res) => {
   }
 });
 
-// Test route to verify mounting
-router.get('/deployments/test', (req, res) => {
-  console.log('🧪 Test route called');
-  res.json({ message: 'Deployments route is working' });
+
+// Get all deployments
+router.get('/deployments', (req, res) => {
+  try {
+    const deploymentsPath = path.join(__dirname, '../../deployments.json');
+    if (fs.existsSync(deploymentsPath)) {
+      const deployments = JSON.parse(fs.readFileSync(deploymentsPath, 'utf8'));
+      res.json(deployments);
+    } else {
+      res.json([]);
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // Get specific deployment by ID
@@ -64,21 +74,6 @@ router.get('/deployments/:deploymentId', (req, res) => {
     res.json(deployment);
   } catch (error) {
     console.log('❌ Error in deployment route:', error.message);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Get all deployments
-router.get('/deployments', (req, res) => {
-  try {
-    const deploymentsPath = path.join(__dirname, '../../deployments.json');
-    if (fs.existsSync(deploymentsPath)) {
-      const deployments = JSON.parse(fs.readFileSync(deploymentsPath, 'utf8'));
-      res.json(deployments);
-    } else {
-      res.json([]);
-    }
-  } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
