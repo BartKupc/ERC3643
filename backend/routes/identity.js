@@ -22,7 +22,7 @@ router.post('/create-onchainid', async (req, res) => {
     let transactionHash = null;
     let isNewOnchainId = false;
     const identityFactoryAddress = deploymentDetails.factories.identityFactory;
-    const iidFactoryArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/contracts/src/@onchain-id/solidity/contracts/factory/IIdFactory.sol/IIdFactory.json');
+    const iidFactoryArtifactsPath = path.join(__dirname, '../../trex-scaffold/packages/react-app/src/contracts/IIdFactory.json');
     if (!fs.existsSync(iidFactoryArtifactsPath)) {
       throw new Error('IIdFactory artifacts not found. Please compile contracts first.');
     }
@@ -88,7 +88,7 @@ router.post('/register-identity', async (req, res) => {
     const provider = createProvider();
     const wallet = new ethers.Wallet(process.env.PRIVATE_KEY || '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80', provider);
     const deployerAddress = await wallet.getAddress();
-    const irArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/contracts/src/contracts/registry/implementation/IdentityRegistry.sol/IdentityRegistry.json');
+    const irArtifactsPath = path.join(__dirname, '../../trex-scaffold/packages/react-app/src/contracts/IdentityRegistry.json');
     if (!fs.existsSync(irArtifactsPath)) {
       throw new Error('IdentityRegistry artifacts not found. Please compile contracts first.');
     }

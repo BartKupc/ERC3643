@@ -216,16 +216,14 @@ const UserManagementTab = ({ deploymentDetails, addLog, getSigner, factories }) 
       addLog && addLog('Sending OnchainID creation request to backend...', "info");
       
       // Use backend API instead of direct blockchain interaction
-      const response = await fetch('/api/hardhat-interaction', {
+      const response = await fetch('/api/identity/create-onchainid', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          contractName: 'IdentityFactory',
-          contractAddress: deploymentDetails.factories.identityFactory,
-          method: 'createIdentity',
-          params: [userAddress, userCountry]
+          userAddress: userAddress,
+          deploymentDetails: deploymentDetails
         })
       });
       
@@ -297,16 +295,16 @@ const UserManagementTab = ({ deploymentDetails, addLog, getSigner, factories }) 
       addLog && addLog('Sending identity registration request to backend...', "info");
       
       // Use backend API instead of direct blockchain interaction
-      const response = await fetch('/api/hardhat-interaction', {
+      const response = await fetch('/api/identity/register-identity', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          contractName: 'IdentityRegistry',
-          contractAddress: selectedIR,
-          method: 'registerIdentity',
-          params: [userAddress, onchainIdAddress, userCountry]
+          userAddress: userAddress,
+          onchainIdAddress: onchainIdAddress,
+          userCountry: userCountry,
+          selectedIR: selectedIR
         })
       });
       
@@ -385,16 +383,14 @@ const UserManagementTab = ({ deploymentDetails, addLog, getSigner, factories }) 
       addLog && addLog('Sending ClaimIssuer keys request to backend...', "info");
       
       // Use backend API instead of direct blockchain interaction
-      const response = await fetch('/api/hardhat-interaction', {
+      const response = await fetch('/api/identity/add-claim-issuer-keys', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          contractName: 'ClaimIssuer',
-          contractAddress: finalIssuerAddress,
-          method: 'addClaimIssuerKeys',
-          params: [onchainIdAddress]
+          onchainIdAddress: onchainIdAddress,
+          finalIssuerAddress: finalIssuerAddress
         })
       });
       
@@ -457,16 +453,17 @@ const UserManagementTab = ({ deploymentDetails, addLog, getSigner, factories }) 
       addLog && addLog('Sending claim addition request to backend...', "info");
       
       // Use backend API instead of direct blockchain interaction
-      const response = await fetch('/api/hardhat-interaction', {
+      const response = await fetch('/api/identity/add-claim-to-identity', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          contractName: 'ClaimIssuer',
-          contractAddress: finalIssuerAddress,
-          method: 'addClaim',
-          params: [onchainIdAddress, claimTopic, claimValue]
+          onchainIdAddress: onchainIdAddress,
+          claimTopic: claimTopic,
+          claimValue: claimValue,
+          finalIssuerAddress: finalIssuerAddress,
+          userAddress: userAddress
         })
       });
       
@@ -527,7 +524,7 @@ const UserManagementTab = ({ deploymentDetails, addLog, getSigner, factories }) 
       addLog && addLog(`Checking claims on OnchainID: ${onchainIdAddress}`, "info");
       
       // Use backend API instead of direct blockchain interaction
-      const response = await fetch(`/api/check-onchainid-claims/${onchainIdAddress}`);
+      const response = await fetch(`/api/identity/check-onchainid-claims/${onchainIdAddress}`);
       
       if (!response.ok) {
         throw new Error(`Backend request failed: ${response.status}`);
