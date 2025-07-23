@@ -10,17 +10,27 @@ const { createProvider, getContractArtifacts } = require('../utils/helpers');
 router.post('/pause', async (req, res) => {
   try {
     const { tokenAddress, paused } = req.body;
+    console.log(`🎯 Pause/Unpause request for token: ${tokenAddress}, paused: ${paused}`);
     if (!tokenAddress) throw new Error('Token address is required');
     const provider = createProvider();
     const wallet = new ethers.Wallet(process.env.PRIVATE_KEY || '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80', provider);
     const tokenArtifactsPath = path.join(__dirname, '../../trex-scaffold/packages/react-app/src/contracts/Token.json');
-    if (!fs.existsSync(tokenArtifactsPath)) throw new Error('Token artifacts not found. Please compile contracts first.');
+    console.log(`🔍 Looking for Token artifacts at: ${tokenArtifactsPath}`);
+    if (!fs.existsSync(tokenArtifactsPath)) {
+      console.log(`❌ Token artifacts not found at: ${tokenArtifactsPath}`);
+      throw new Error('Token artifacts not found. Please compile contracts first.');
+    }
+    console.log(`✅ Token artifacts found at: ${tokenArtifactsPath}`);
     const tokenArtifacts = JSON.parse(fs.readFileSync(tokenArtifactsPath, 'utf8'));
     const token = new ethers.Contract(tokenAddress, tokenArtifacts.abi, wallet);
+    console.log(`✅ Token contract instance created for ${tokenAddress}`);
     const tx = await token.setPaused(paused);
+    console.log(`✅ Pause/Unpause transaction sent: ${tx.hash}`);
     await tx.wait();
+    console.log(`✅ Pause/Unpause transaction confirmed`);
     res.json({ success: true, tokenAddress, paused, transactionHash: tx.hash });
   } catch (error) {
+    console.error('❌ Error in pause/unpause:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -125,15 +135,24 @@ router.get('/token-status/:tokenAddress', async (req, res) => {
 router.get('/verify-user/:tokenAddress/:userAddress', async (req, res) => {
   try {
     const { tokenAddress, userAddress } = req.params;
+    console.log(`🎯 Verify user request for token: ${tokenAddress}, user: ${userAddress}`);
     if (!tokenAddress || !userAddress) throw new Error('Token address and user address are required');
     const provider = createProvider();
     const tokenArtifactsPath = path.join(__dirname, '../../trex-scaffold/packages/react-app/src/contracts/Token.json');
-    if (!fs.existsSync(tokenArtifactsPath)) throw new Error('Token artifacts not found. Please compile contracts first.');
+    console.log(`🔍 Looking for Token artifacts at: ${tokenArtifactsPath}`);
+    if (!fs.existsSync(tokenArtifactsPath)) {
+      console.log(`❌ Token artifacts not found at: ${tokenArtifactsPath}`);
+      throw new Error('Token artifacts not found. Please compile contracts first.');
+    }
+    console.log(`✅ Token artifacts found at: ${tokenArtifactsPath}`);
     const tokenArtifacts = JSON.parse(fs.readFileSync(tokenArtifactsPath, 'utf8'));
     const token = new ethers.Contract(tokenAddress, tokenArtifacts.abi, provider);
+    console.log(`✅ Token contract instance created for ${tokenAddress}`);
     const isVerified = await token.isVerified(userAddress);
+    console.log(`✅ User verification result: ${isVerified}`);
     res.json({ success: true, tokenAddress, userAddress, isVerified });
   } catch (error) {
+    console.error('❌ Error in verify user:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
