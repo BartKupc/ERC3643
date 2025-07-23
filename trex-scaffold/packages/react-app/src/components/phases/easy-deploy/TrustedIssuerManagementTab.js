@@ -69,7 +69,7 @@ const TrustedIssuerManagementTab = ({ deploymentDetails, addLog, getSigner, fact
       addLog && addLog(`Loading trusted issuers for token ${tokenAddress} via backend...`, 'info');
       
       // Use backend API instead of direct blockchain interaction
-      const response = await fetch(`/api/trusted-issuers/${tokenAddress}`);
+      const response = await fetch(`/api/claims/trusted-issuers/${tokenAddress}`);
       if (!response.ok) {
         throw new Error(`Backend request failed: ${response.status}`);
       }

@@ -159,16 +159,8 @@ const EasyDeployPhase = () => {
     loadUserIdentities();
   }, [addLog]);
 
-  // State to track if data has been cleared
-  const [dataCleared, setDataCleared] = useState(false);
-
   // Load deployment state and factories
   useEffect(() => {
-    // Don't load data if it has been cleared
-    if (dataCleared) {
-      return;
-    }
-
     const loadState = () => {
       try {
         const savedState = loadDeploymentState();
@@ -202,7 +194,7 @@ const EasyDeployPhase = () => {
 
     loadState();
     loadFactories();
-  }, [addLog, loadDeploymentDetails, dataCleared]);
+  }, [addLog, loadDeploymentDetails]);
 
   // Synchronize claimIssuers with availableClaimIssuers
   useEffect(() => {
@@ -663,27 +655,7 @@ const EasyDeployPhase = () => {
         justifyContent: 'flex-end',
         marginBottom: '1rem',
         marginTop: '0.5rem',
-        gap: '10px'
       }}>
-        {dataCleared && (
-          <Button
-            onClick={() => {
-              setDataCleared(false);
-              addLog("Data loading re-enabled", "info");
-            }}
-            style={{
-              backgroundColor: '#28a745',
-              color: 'white',
-              padding: '4px 8px',
-              fontSize: '12px',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer'
-            }}
-          >
-            Load Data
-          </Button>
-        )}
         <Button
           onClick={async () => {
             // Clear backend data
@@ -754,9 +726,6 @@ const EasyDeployPhase = () => {
             setAgentAddressInput('');
             setSelectedTokenForAgent(null);
             setSelectedIRForAgent(null);
-
-            // Set the flag to prevent reloading data
-            setDataCleared(true);
 
             addLog("All data cleared - starting fresh", "info");
           }}

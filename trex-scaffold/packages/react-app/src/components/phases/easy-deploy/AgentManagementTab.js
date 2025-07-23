@@ -68,7 +68,7 @@ const AgentManagementTab = ({ deploymentDetails, addLog, getSigner, factories })
       addLog && addLog(`Loading agents for token ${tokenAddress} via backend...`, 'info');
       
       // Use backend API instead of direct blockchain interaction
-      const response = await fetch(`/api/agents/${tokenAddress}`);
+      const response = await fetch(`/api/claims/agents/${tokenAddress}`);
       if (!response.ok) {
         throw new Error(`Backend request failed: ${response.status}`);
       }

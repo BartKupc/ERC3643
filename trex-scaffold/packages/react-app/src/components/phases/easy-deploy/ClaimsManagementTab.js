@@ -71,7 +71,7 @@ const ClaimsManagementTab = ({ deploymentDetails, addLog, getSigner, factories }
       addLog && addLog(`Loading claim topics for token ${tokenAddress} via backend...`, 'info');
       
       // Use backend API instead of direct blockchain interaction
-      const response = await fetch(`/api/claim-topics/${tokenAddress}`);
+      const response = await fetch(`/api/claims/claim-topics/${tokenAddress}`);
       if (!response.ok) {
         throw new Error(`Backend request failed: ${response.status}`);
       }

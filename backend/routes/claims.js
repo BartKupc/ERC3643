@@ -12,17 +12,17 @@ router.get('/claim-topics/:tokenAddress', async (req, res) => {
     const { tokenAddress } = req.params;
     const provider = createProvider();
     const wallet = new ethers.Wallet(process.env.PRIVATE_KEY || '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80', provider);
-    const tokenArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/contracts/src/contracts/token/Token.sol/Token.json');
+    const tokenArtifactsPath = path.join(__dirname, '../../trex-scaffold/packages/react-app/src/contracts/Token.json');
     if (!fs.existsSync(tokenArtifactsPath)) throw new Error('Token artifacts not found. Please compile contracts first.');
     const tokenArtifacts = JSON.parse(fs.readFileSync(tokenArtifactsPath, 'utf8'));
     const token = new ethers.Contract(tokenAddress, tokenArtifacts.abi, wallet);
     const identityRegistry = await token.identityRegistry();
-    const irArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/contracts/src/contracts/registry/implementation/IdentityRegistry.sol/IdentityRegistry.json');
+    const irArtifactsPath = path.join(__dirname, '../../trex-scaffold/packages/react-app/src/contracts/IdentityRegistry.json');
     if (!fs.existsSync(irArtifactsPath)) throw new Error('IdentityRegistry artifacts not found. Please compile contracts first.');
     const irArtifacts = JSON.parse(fs.readFileSync(irArtifactsPath, 'utf8'));
     const identityRegistryContract = new ethers.Contract(identityRegistry, irArtifacts.abi, wallet);
     const claimTopicsRegistry = await identityRegistryContract.topicsRegistry();
-    const ctrArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/contracts/src/contracts/registry/implementation/ClaimTopicsRegistry.sol/ClaimTopicsRegistry.json');
+    const ctrArtifactsPath = path.join(__dirname, '../../trex-scaffold/packages/react-app/src/contracts/ClaimTopicsRegistry.json');
     if (!fs.existsSync(ctrArtifactsPath)) throw new Error('ClaimTopicsRegistry artifacts not found. Please compile contracts first.');
     const ctrArtifacts = JSON.parse(fs.readFileSync(ctrArtifactsPath, 'utf8'));
     const ctr = new ethers.Contract(claimTopicsRegistry, ctrArtifacts.abi, wallet);
@@ -41,7 +41,7 @@ router.get('/agents/:tokenAddress', async (req, res) => {
     const provider = createProvider();
     const wallet = new ethers.Wallet(process.env.PRIVATE_KEY || '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80', provider);
     const deployerAddress = await wallet.getAddress();
-    const tokenArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/contracts/src/contracts/token/Token.sol/Token.json');
+    const tokenArtifactsPath = path.join(__dirname, '../../trex-scaffold/packages/react-app/src/contracts/Token.json');
     if (!fs.existsSync(tokenArtifactsPath)) throw new Error('Token artifacts not found. Please compile contracts first.');
     const tokenArtifacts = JSON.parse(fs.readFileSync(tokenArtifactsPath, 'utf8'));
     const token = new ethers.Contract(tokenAddress, tokenArtifacts.abi, wallet);
@@ -52,7 +52,7 @@ router.get('/agents/:tokenAddress', async (req, res) => {
       if (isTokenAgent) agents.token.push(deployerAddress);
     } catch (err) {}
     try {
-      const irArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/contracts/src/contracts/registry/implementation/IdentityRegistry.sol/IdentityRegistry.json');
+      const irArtifactsPath = path.join(__dirname, '../../trex-scaffold/packages/react-app/src/contracts/IdentityRegistry.json');
       if (!fs.existsSync(irArtifactsPath)) throw new Error('IdentityRegistry artifacts not found. Please compile contracts first.');
       const irArtifacts = JSON.parse(fs.readFileSync(irArtifactsPath, 'utf8'));
       const ir = new ethers.Contract(identityRegistry, irArtifacts.abi, wallet);
@@ -73,17 +73,17 @@ router.get('/trusted-issuers/:tokenAddress', async (req, res) => {
     const { tokenAddress } = req.params;
     const provider = createProvider();
     const wallet = new ethers.Wallet(process.env.PRIVATE_KEY || '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80', provider);
-    const tokenArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/contracts/src/contracts/token/Token.sol/Token.json');
+    const tokenArtifactsPath = path.join(__dirname, '../../trex-scaffold/packages/react-app/src/contracts/Token.json');
     if (!fs.existsSync(tokenArtifactsPath)) throw new Error('Token artifacts not found. Please compile contracts first.');
     const tokenArtifacts = JSON.parse(fs.readFileSync(tokenArtifactsPath, 'utf8'));
     const token = new ethers.Contract(tokenAddress, tokenArtifacts.abi, wallet);
     const identityRegistry = await token.identityRegistry();
-    const irArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/contracts/src/contracts/registry/implementation/IdentityRegistry.sol/IdentityRegistry.json');
+    const irArtifactsPath = path.join(__dirname, '../../trex-scaffold/packages/react-app/src/contracts/IdentityRegistry.json');
     if (!fs.existsSync(irArtifactsPath)) throw new Error('IdentityRegistry artifacts not found. Please compile contracts first.');
     const irArtifacts = JSON.parse(fs.readFileSync(irArtifactsPath, 'utf8'));
     const identityRegistryContract = new ethers.Contract(identityRegistry, irArtifacts.abi, wallet);
     const trustedIssuersRegistry = await identityRegistryContract.issuersRegistry();
-    const tirArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/contracts/src/contracts/registry/implementation/TrustedIssuersRegistry.sol/TrustedIssuersRegistry.json');
+    const tirArtifactsPath = path.join(__dirname, '../../trex-scaffold/packages/react-app/src/contracts/TrustedIssuersRegistry.json');
     if (!fs.existsSync(tirArtifactsPath)) throw new Error('TrustedIssuersRegistry artifacts not found. Please compile contracts first.');
     const tirArtifacts = JSON.parse(fs.readFileSync(tirArtifactsPath, 'utf8'));
     const tir = new ethers.Contract(trustedIssuersRegistry, tirArtifacts.abi, wallet);
