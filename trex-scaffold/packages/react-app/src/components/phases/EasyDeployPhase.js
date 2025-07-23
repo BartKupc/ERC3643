@@ -128,7 +128,7 @@ const EasyDeployPhase = () => {
   };
 
   // Load deployment details
-  const loadDeploymentDetails = async (deploymentId) => {
+  const loadDeploymentDetails = useCallback(async (deploymentId) => {
     try {
       addLog(`Loading deployment details for: ${deploymentId}`, "info");
       const response = await axios.get(`/api/deployments/${deploymentId}`);
@@ -138,7 +138,7 @@ const EasyDeployPhase = () => {
       console.error('Error loading deployment details:', error);
       addLog(`Error loading deployment details: ${error.message}`, "error");
     }
-  };
+  }, [addLog]);
 
   // Load user identities from localStorage
   useEffect(() => {
