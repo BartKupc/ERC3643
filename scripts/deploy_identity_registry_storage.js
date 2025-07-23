@@ -13,8 +13,8 @@ async function main() {
   try {
     const IdentityRegistryStorage = await ethers.getContractFactory('IdentityRegistryStorage', signer);
     const identityRegistryStorage = await IdentityRegistryStorage.deploy();
-    await identityRegistryStorage.deployed();
-    const address = identityRegistryStorage.address;
+    await identityRegistryStorage.waitForDeployment();
+    const address = await identityRegistryStorage.getAddress();
     
     console.log("✅ IdentityRegistryStorage deployed successfully at:", address);
     console.log("DEPLOYED_ADDRESS:" + address);

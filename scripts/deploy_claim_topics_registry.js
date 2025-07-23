@@ -13,8 +13,8 @@ async function main() {
   try {
     const ClaimTopicsRegistry = await ethers.getContractFactory('ClaimTopicsRegistry', signer);
     const claimTopicsRegistry = await ClaimTopicsRegistry.deploy();
-    await claimTopicsRegistry.deployed();
-    const address = claimTopicsRegistry.address;
+    await claimTopicsRegistry.waitForDeployment();
+    const address = await claimTopicsRegistry.getAddress();
     
     // Initialize the contract to set the owner
     console.log("🔧 Initializing ClaimTopicsRegistry...");

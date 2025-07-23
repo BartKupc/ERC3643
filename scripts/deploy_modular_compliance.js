@@ -13,8 +13,8 @@ async function main() {
   try {
     const ModularCompliance = await ethers.getContractFactory('ModularCompliance', signer);
     const modularCompliance = await ModularCompliance.deploy();
-    await modularCompliance.deployed();
-    const address = modularCompliance.address;
+    await modularCompliance.waitForDeployment();
+    const address = await modularCompliance.getAddress();
     
     console.log("✅ ModularCompliance deployed successfully at:", address);
     console.log("DEPLOYED_ADDRESS:" + address);

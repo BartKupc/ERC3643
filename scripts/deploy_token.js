@@ -42,8 +42,8 @@ async function main() {
       name: "TestPatternToken",                   // name of the token
       symbol: "TPT",                              // symbol / ticker of the token
       decimals: 18,                               // decimals of the token (can be between 0 and 18)
-      irs: ethers.constants.AddressZero,          // identity registry storage address (set to ZERO for new storage)
-      ONCHAINID: ethers.constants.AddressZero,    // ONCHAINID of the token (set to ZERO for auto-generation)
+          irs: ethers.ZeroAddress,          // identity registry storage address (set to ZERO for new storage)
+    ONCHAINID: ethers.ZeroAddress,    // ONCHAINID of the token (set to ZERO for auto-generation)
       irAgents: [],                               // list of agents of the identity registry
       tokenAgents: [],                            // list of agents of the token
       complianceModules: [],                      // modules to bind to the compliance

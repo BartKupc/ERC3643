@@ -50,8 +50,8 @@ async function main() {
       TREX_FACTORY_ADDRESS,  // factory address
       true                   // publicDeploymentStatus - allow public deployments
     );
-    await trexGateway.deployed();
-    console.log("✅ TREXGateway deployed:", trexGateway.address);
+    await trexGateway.waitForDeployment();
+    console.log("✅ TREXGateway deployed:", await trexGateway.getAddress());
     
     console.log("\n📋 Step 2: Configuring TREXGateway...");
     
@@ -101,7 +101,7 @@ async function main() {
       network: hre.network.name,
       deployer: deployerAddress,
       gateway: {
-        address: trexGateway.address,
+        address: await trexGateway.getAddress(),
         owner: await trexGateway.owner(),
         factory: factoryFromGateway,
         publicDeploymentStatus: publicDeploymentStatus,
@@ -128,14 +128,14 @@ async function main() {
 
     // Update the main deployments.json to include gateway info
     latestFactory.gateway = {
-      address: trexGateway.address,
+      address: await trexGateway.getAddress(),
       deploymentId: gatewayDeploymentData.deploymentId
     };
     fs.writeFileSync(deploymentsPath, JSON.stringify(deployments, null, 2));
 
     console.log("\n🎉 TREXGateway deployed successfully!");
     console.log("\n📋 Gateway saved to gateway_deployments.json");
-    console.log("📋 Gateway Address:", trexGateway.address);
+    console.log("📋 Gateway Address:", await trexGateway.getAddress());
     console.log("📋 Deployment ID:", gatewayDeploymentData.deploymentId);
     
     // Update addresses.js with the new gateway
@@ -147,7 +147,7 @@ const addresses = {
   ceaErc20: "0xa6dF0C88916f3e2831A329CE46566dDfBe9E74b7",
   // T-REX Addresses
   TREXFactory: "${latestFactory.factory.address}",
-  TREXGateway: "${trexGateway.address}",
+  TREXGateway: "${await trexGateway.getAddress()}",
   Token: "0x0000000000000000000000000000000000000000",
   ModularCompliance: "0x0000000000000000000000000000000000000000",
   IdentityRegistry: "0x0000000000000000000000000000000000000000",

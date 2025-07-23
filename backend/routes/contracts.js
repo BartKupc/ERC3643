@@ -203,8 +203,8 @@ async function handleClaimIssuerDeploy(res) {
     console.log('✅ ClaimIssuer deployed at:', claimIssuer.address);
     
     // Add signing key to ClaimIssuer
-    const signingKeyHash = ethers.utils.keccak256(
-      ethers.utils.defaultAbiCoder.encode(['address'], [deployerAddress])
+    const signingKeyHash = ethers.keccak256(
+      ethers.AbiCoder.defaultAbiCoder().encode(['address'], [deployerAddress])
     );
     const addKeyTx = await claimIssuer.addKey(signingKeyHash, 3, 1); // purpose=3 (signing), keyType=1 (ECDSA)
     await addKeyTx.wait();
@@ -219,10 +219,11 @@ async function handleClaimIssuerDeploy(res) {
         if (fs.existsSync(tirArtifactsPath)) {
           const tirArtifacts = JSON.parse(fs.readFileSync(tirArtifactsPath, 'utf8'));
           const tir = new ethers.Contract(tirAddress, tirArtifacts.abi, wallet);
-          const exists = await tir.isTrustedIssuer(claimIssuer.address);
+          const claimIssuerAddress = await claimIssuer.getAddress();
+          const exists = await tir.isTrustedIssuer(claimIssuerAddress);
           if (!exists) {
             const defaultClaimTopics = [1, 2, 3];
-            const addTrustedTx = await tir.addTrustedIssuer(claimIssuer.address, defaultClaimTopics);
+            const addTrustedTx = await tir.addTrustedIssuer(claimIssuerAddress, defaultClaimTopics);
             await addTrustedTx.wait();
             console.log('✅ ClaimIssuer added as trusted issuer with default claim topics [1, 2, 3]');
           } else {
@@ -236,7 +237,7 @@ async function handleClaimIssuerDeploy(res) {
     
     res.json({
       success: true,
-      contractAddress: claimIssuer.address,
+      contractAddress: await claimIssuer.getAddress(),
       transactionHash: 'claim_issuer_deployed',
       message: 'ClaimIssuer deployed successfully',
       claimIssuerAddress: claimIssuer.address,

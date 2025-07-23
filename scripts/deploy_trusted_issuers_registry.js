@@ -13,8 +13,8 @@ async function main() {
   try {
     const TrustedIssuersRegistry = await ethers.getContractFactory('TrustedIssuersRegistry', signer);
     const trustedIssuersRegistry = await TrustedIssuersRegistry.deploy();
-    await trustedIssuersRegistry.deployed();
-    const address = trustedIssuersRegistry.address;
+    await trustedIssuersRegistry.waitForDeployment();
+    const address = await trustedIssuersRegistry.getAddress();
     
     // Initialize the contract to set the owner
     console.log("🔧 Initializing TrustedIssuersRegistry...");

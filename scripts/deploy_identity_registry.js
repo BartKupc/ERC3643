@@ -13,8 +13,8 @@ async function main() {
   try {
     const IdentityRegistry = await ethers.getContractFactory('IdentityRegistry', signer);
     const identityRegistry = await IdentityRegistry.deploy();
-    await identityRegistry.deployed();
-    const address = identityRegistry.address;
+    await identityRegistry.waitForDeployment();
+    const address = await identityRegistry.getAddress();
     
     // Note: IdentityRegistry requires initialization with other registry addresses
     // For individual component deployment, we'll skip initialization for now
