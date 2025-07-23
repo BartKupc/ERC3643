@@ -328,6 +328,60 @@ async function handleRpcCall(method, params, res) {
   }
 }
 
+// Helper function to aggregate deployments
+function aggregateDeployments(deployments) {
+  const result = {};
+  deployments.forEach(entry => {
+    // Individual component deployments
+    if (entry.component && entry.address) {
+      if (!result[entry.component]) result[entry.component] = [];
+      if (!result[entry.component].includes(entry.address)) {
+        result[entry.component].push(entry.address);
+      }
+    }
+    // Factory/suite deployments
+    if (entry.suite) {
+      Object.entries(entry.suite).forEach(([key, address]) => {
+        const name =
+          key === 'claimTopicsRegistry' ? 'ClaimTopicsRegistry' :
+          key === 'trustedIssuersRegistry' ? 'TrustedIssuersRegistry' :
+          key === 'identityRegistryStorage' ? 'IdentityRegistryStorage' :
+          key === 'identityRegistry' ? 'IdentityRegistry' :
+          key === 'modularCompliance' ? 'ModularCompliance' :
+          key === 'compliance' ? 'ModularCompliance' :
+          key.charAt(0).toUpperCase() + key.slice(1);
+        if (!result[name]) result[name] = [];
+        if (address && !result[name].includes(address)) {
+          result[name].push(address);
+        }
+      });
+    }
+    if (entry.implementations) {
+      Object.entries(entry.implementations).forEach(([key, address]) => {
+        const name =
+          key === 'claimTopicsRegistry' ? 'ClaimTopicsRegistry' :
+          key === 'trustedIssuersRegistry' ? 'TrustedIssuersRegistry' :
+          key === 'identityRegistryStorage' ? 'IdentityRegistryStorage' :
+          key === 'identityRegistry' ? 'IdentityRegistry' :
+          key === 'modularCompliance' ? 'ModularCompliance' :
+          key === 'compliance' ? 'ModularCompliance' :
+          key.charAt(0).toUpperCase() + key.slice(1);
+        if (!result[name]) result[name] = [];
+        if (address && !result[name].includes(address)) {
+          result[name].push(address);
+        }
+      });
+    }
+    if (entry.factory && entry.factory.address) {
+      if (!result.Factory) result.Factory = [];
+      if (!result.Factory.includes(entry.factory.address)) {
+        result.Factory.push(entry.factory.address);
+      }
+    }
+  });
+  return result;
+}
+
 // Replace the /state route with an aggregation of all deployments
 router.get('/state', async (req, res) => {
   try {
@@ -336,56 +390,8 @@ router.get('/state', async (req, res) => {
       return res.json({ success: true, deployment: {} });
     }
     const deployments = JSON.parse(fs.readFileSync(deploymentsPath, 'utf8'));
-    // Aggregate all deployments
-    const result = {};
-    deployments.forEach(entry => {
-      // Individual component deployments
-      if (entry.component && entry.address) {
-        if (!result[entry.component]) result[entry.component] = [];
-        if (!result[entry.component].includes(entry.address)) {
-          result[entry.component].push(entry.address);
-        }
-      }
-      // Factory/suite deployments
-      if (entry.suite) {
-        Object.entries(entry.suite).forEach(([key, address]) => {
-          const name =
-            key === 'claimTopicsRegistry' ? 'ClaimTopicsRegistry' :
-            key === 'trustedIssuersRegistry' ? 'TrustedIssuersRegistry' :
-            key === 'identityRegistryStorage' ? 'IdentityRegistryStorage' :
-            key === 'identityRegistry' ? 'IdentityRegistry' :
-            key === 'modularCompliance' ? 'ModularCompliance' :
-            key === 'compliance' ? 'ModularCompliance' :
-            key.charAt(0).toUpperCase() + key.slice(1);
-          if (!result[name]) result[name] = [];
-          if (address && !result[name].includes(address)) {
-            result[name].push(address);
-          }
-        });
-      }
-      if (entry.implementations) {
-        Object.entries(entry.implementations).forEach(([key, address]) => {
-          const name =
-            key === 'claimTopicsRegistry' ? 'ClaimTopicsRegistry' :
-            key === 'trustedIssuersRegistry' ? 'TrustedIssuersRegistry' :
-            key === 'identityRegistryStorage' ? 'IdentityRegistryStorage' :
-            key === 'identityRegistry' ? 'IdentityRegistry' :
-            key === 'modularCompliance' ? 'ModularCompliance' :
-            key === 'compliance' ? 'ModularCompliance' :
-            key.charAt(0).toUpperCase() + key.slice(1);
-          if (!result[name]) result[name] = [];
-          if (address && !result[name].includes(address)) {
-            result[name].push(address);
-          }
-        });
-      }
-      if (entry.factory && entry.factory.address) {
-        if (!result.Factory) result.Factory = [];
-        if (!result.Factory.includes(entry.factory.address)) {
-          result.Factory.push(entry.factory.address);
-        }
-      }
-    });
+    const result = aggregateDeployments(deployments);
+    console.log('Aggregated contracts:', result); // DEBUG LOG
     res.json({
       success: true,
       deployment: result
