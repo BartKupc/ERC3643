@@ -44,6 +44,9 @@ app.use('/api/diagnostics', diagnosticsRoutes);
 const factoriesRoutes = require('./routes/factories');
 app.use('/api/factories', factoriesRoutes);
 
+const contractsRoutes = require('./routes/contracts');
+app.use('/api/contracts', contractsRoutes);
+
 // Get Identity Registries with trusted issuers
 app.get('/api/identity-registries', async (req, res) => {
   try {

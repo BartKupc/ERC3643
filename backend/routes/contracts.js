@@ -1,0 +1,348 @@
+const express = require('express');
+const router = express.Router();
+const path = require('path');
+const fs = require('fs');
+const { ethers } = require('ethers');
+
+// Import helpers
+const { createProvider, runDeploymentScript, getLatestDeployment } = require('../utils/helpers');
+
+// General contract interaction endpoint (replaces hardhat-interaction)
+router.post('/interaction', async (req, res) => {
+  try {
+    const { action, contractName, contractAddress, method, params, ...options } = req.body;
+    
+    console.log('🔧 Contract interaction request:', { action, contractName, contractAddress, method, params });
+    
+    const provider = createProvider();
+    const wallet = new ethers.Wallet(process.env.PRIVATE_KEY || '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80', provider);
+    
+    switch (action) {
+      case 'deploy':
+        return await handleDeploy(contractName, res);
+      
+      case 'send':
+        return await handleContractCall(contractName, contractAddress, method, params, wallet, res);
+      
+      case 'call':
+        return await handleContractView(contractName, contractAddress, method, params, wallet, res);
+      
+      case 'initialize':
+        return await handleInitialize(contractName, contractAddress, wallet, res);
+      
+      case 'rpc':
+        return await handleRpcCall(method, params, res);
+      
+      default:
+        return res.status(400).json({
+          success: false,
+          error: `Unknown action: ${action}`
+        });
+    }
+  } catch (error) {
+    console.error('❌ Contract interaction failed:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Handle contract deployment
+async function handleDeploy(contractName, res) {
+  try {
+    console.log(`🚀 Deploying ${contractName}...`);
+    
+    // Map contract names to deployment scripts
+    const deploymentScripts = {
+      'ClaimTopicsRegistry': 'deploy_claim_topics_registry.js',
+      'TrustedIssuersRegistry': 'deploy_trusted_issuers_registry.js',
+      'IdentityRegistryStorage': 'deploy_identity_registry_storage.js',
+      'IdentityRegistry': 'deploy_identity_registry.js',
+      'ModularCompliance': 'deploy_modular_compliance.js',
+      'Compliance': 'deploy_modular_compliance.js', // Alias for ModularCompliance
+      'Token': 'deploy_token_enhanced.js',
+      'Factory': 'deploy_factory_enhanced.js'
+    };
+    
+    // Special handling for ClaimIssuer (deployed directly, not via script)
+    if (contractName === 'ClaimIssuer') {
+      return await handleClaimIssuerDeploy(res);
+    }
+    
+    const scriptName = deploymentScripts[contractName];
+    if (!scriptName) {
+      throw new Error(`No deployment script found for contract: ${contractName}`);
+    }
+    
+    // Run the deployment script
+    const output = await runDeploymentScript(scriptName);
+    console.log('✅ Deployment script completed');
+    console.log('Output:', output);
+    
+    // Add delay to ensure deployments.json is written
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Get the latest deployment
+    const latestDeployment = getLatestDeployment();
+    if (!latestDeployment) {
+      throw new Error('Deployment failed - no deployment data found');
+    }
+    
+    // Find the deployed contract address
+    let contractAddress = null;
+    if (contractName === 'Factory' && latestDeployment.factory) {
+      contractAddress = latestDeployment.factory.address;
+    } else if (contractName === 'Token' && latestDeployment.tokens && latestDeployment.tokens.length > 0) {
+      contractAddress = latestDeployment.tokens[latestDeployment.tokens.length - 1].token.address;
+    } else if (latestDeployment.suite) {
+      contractAddress = latestDeployment.suite[contractName.toLowerCase()];
+    }
+    
+    if (!contractAddress) {
+      throw new Error(`Could not find deployed address for ${contractName}`);
+    }
+    
+    console.log(`📋 ${contractName} deployed at:`, contractAddress);
+    
+    res.json({
+      success: true,
+      contractAddress: contractAddress,
+      transactionHash: 'deployment_script_completed', // Scripts don't return individual tx hashes
+      message: `${contractName} deployed successfully`
+    });
+  } catch (error) {
+    throw error;
+  }
+}
+
+// Handle contract method calls (transactions)
+async function handleContractCall(contractName, contractAddress, method, params, wallet, res) {
+  try {
+    console.log(`📤 Calling ${method} on ${contractName} at ${contractAddress}`);
+    
+    // Load contract artifacts
+    const artifactsPath = path.join(__dirname, `../../trex-scaffold/packages/react-app/src/contracts/${contractName}.json`);
+    if (!fs.existsSync(artifactsPath)) {
+      throw new Error(`${contractName} artifacts not found`);
+    }
+    
+    const artifacts = JSON.parse(fs.readFileSync(artifactsPath, 'utf8'));
+    const contract = new ethers.Contract(contractAddress, artifacts.abi, wallet);
+    
+    // Call the method
+    const tx = await contract[method](...(params || []));
+    const receipt = await tx.wait();
+    
+    console.log(`✅ ${method} called successfully`);
+    console.log('Transaction hash:', receipt.transactionHash);
+    
+    res.json({
+      success: true,
+      transactionHash: receipt.transactionHash,
+      gasUsed: receipt.gasUsed.toString(),
+      message: `${method} called successfully`
+    });
+  } catch (error) {
+    throw error;
+  }
+}
+
+// Handle contract view calls (read-only)
+async function handleContractView(contractName, contractAddress, method, params, wallet, res) {
+  try {
+    console.log(`📖 Reading ${method} from ${contractName} at ${contractAddress}`);
+    
+    // Load contract artifacts
+    const artifactsPath = path.join(__dirname, `../../trex-scaffold/packages/react-app/src/contracts/${contractName}.json`);
+    if (!fs.existsSync(artifactsPath)) {
+      throw new Error(`${contractName} artifacts not found`);
+    }
+    
+    const artifacts = JSON.parse(fs.readFileSync(artifactsPath, 'utf8'));
+    const contract = new ethers.Contract(contractAddress, artifacts.abi, wallet);
+    
+    // Call the view method
+    const result = await contract[method](...(params || []));
+    
+    console.log(`✅ ${method} result:`, result);
+    
+    res.json({
+      success: true,
+      result: result,
+      message: `${method} read successfully`
+    });
+  } catch (error) {
+    throw error;
+  }
+}
+
+// Handle ClaimIssuer deployment (direct deployment, not via script)
+async function handleClaimIssuerDeploy(res) {
+  try {
+    console.log('🎯 Starting ClaimIssuer deployment...');
+    const provider = createProvider();
+    const wallet = new ethers.Wallet(process.env.PRIVATE_KEY || '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80', provider);
+    const deployerAddress = await wallet.getAddress();
+    console.log('🔑 Deploying ClaimIssuer with deployer address:', deployerAddress);
+    
+    const claimIssuerArtifactsPath = path.join(__dirname, '../../trex-scaffold/packages/react-app/src/contracts/ClaimIssuer.json');
+    if (!fs.existsSync(claimIssuerArtifactsPath)) {
+      throw new Error('ClaimIssuer artifacts not found. Please compile contracts first.');
+    }
+    
+    const claimIssuerArtifacts = JSON.parse(fs.readFileSync(claimIssuerArtifactsPath, 'utf8'));
+    const claimIssuerFactory = new ethers.ContractFactory(
+      claimIssuerArtifacts.abi,
+      claimIssuerArtifacts.bytecode,
+      wallet
+    );
+    
+    const claimIssuer = await claimIssuerFactory.deploy(deployerAddress);
+    await claimIssuer.deployed();
+    console.log('✅ ClaimIssuer deployed at:', claimIssuer.address);
+    
+    // Add signing key to ClaimIssuer
+    const signingKeyHash = ethers.utils.keccak256(
+      ethers.utils.defaultAbiCoder.encode(['address'], [deployerAddress])
+    );
+    const addKeyTx = await claimIssuer.addKey(signingKeyHash, 3, 1); // purpose=3 (signing), keyType=1 (ECDSA)
+    await addKeyTx.wait();
+    console.log('✅ Signing key added to ClaimIssuer');
+    
+    // Try to add to TrustedIssuersRegistry if available
+    const latestDeployment = getLatestDeployment();
+    if (latestDeployment && latestDeployment.suite && latestDeployment.suite.trustedIssuersRegistry) {
+      try {
+        const tirAddress = latestDeployment.suite.trustedIssuersRegistry;
+        const tirArtifactsPath = path.join(__dirname, '../../trex-scaffold/packages/react-app/src/contracts/TrustedIssuersRegistry.json');
+        if (fs.existsSync(tirArtifactsPath)) {
+          const tirArtifacts = JSON.parse(fs.readFileSync(tirArtifactsPath, 'utf8'));
+          const tir = new ethers.Contract(tirAddress, tirArtifacts.abi, wallet);
+          const exists = await tir.isTrustedIssuer(claimIssuer.address);
+          if (!exists) {
+            const defaultClaimTopics = [1, 2, 3];
+            const addTrustedTx = await tir.addTrustedIssuer(claimIssuer.address, defaultClaimTopics);
+            await addTrustedTx.wait();
+            console.log('✅ ClaimIssuer added as trusted issuer with default claim topics [1, 2, 3]');
+          } else {
+            console.log('ℹ️ ClaimIssuer already exists as trusted issuer');
+          }
+        }
+      } catch (error) {
+        console.warn('⚠️ Could not add ClaimIssuer to trusted issuers:', error.message);
+      }
+    }
+    
+    res.json({
+      success: true,
+      contractAddress: claimIssuer.address,
+      transactionHash: 'claim_issuer_deployed',
+      message: 'ClaimIssuer deployed successfully',
+      claimIssuerAddress: claimIssuer.address,
+      deployerAddress: deployerAddress
+    });
+  } catch (error) {
+    throw error;
+  }
+}
+
+// Handle contract initialization
+async function handleInitialize(contractName, contractAddress, wallet, res) {
+  try {
+    console.log(`🔧 Initializing ${contractName} at ${contractAddress}`);
+    
+    // Load contract artifacts
+    const artifactsPath = path.join(__dirname, `../../trex-scaffold/packages/react-app/src/contracts/${contractName}.json`);
+    if (!fs.existsSync(artifactsPath)) {
+      throw new Error(`${contractName} artifacts not found`);
+    }
+    
+    const artifacts = JSON.parse(fs.readFileSync(artifactsPath, 'utf8'));
+    const contract = new ethers.Contract(contractAddress, artifacts.abi, wallet);
+    
+    // Check if contract has initialize method
+    if (!contract.initialize) {
+      throw new Error(`${contractName} does not have an initialize method`);
+    }
+    
+    // Call initialize (you might need to pass parameters based on the contract)
+    const tx = await contract.initialize();
+    const receipt = await tx.wait();
+    
+    console.log(`✅ ${contractName} initialized successfully`);
+    console.log('Transaction hash:', receipt.transactionHash);
+    
+    res.json({
+      success: true,
+      transactionHash: receipt.transactionHash,
+      message: `${contractName} initialized successfully`
+    });
+  } catch (error) {
+    throw error;
+  }
+}
+
+// Handle RPC calls
+async function handleRpcCall(method, params, res) {
+  try {
+    console.log(`🔧 RPC call: ${method}`, params);
+    
+    const provider = createProvider();
+    const result = await provider.send(method, params);
+    
+    console.log(`✅ RPC result:`, result);
+    
+    res.json({
+      success: true,
+      result: result
+    });
+  } catch (error) {
+    console.error(`❌ RPC call failed:`, error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+}
+
+// Get deployment state
+router.get('/state', async (req, res) => {
+  try {
+    const latestDeployment = getLatestDeployment();
+    res.json({
+      success: true,
+      deployment: latestDeployment
+    });
+  } catch (error) {
+    console.error('❌ Failed to get deployment state:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Get available contracts
+router.get('/available', async (req, res) => {
+  try {
+    const contractsDir = path.join(__dirname, '../../trex-scaffold/packages/react-app/src/contracts');
+    const files = fs.readdirSync(contractsDir);
+    const contracts = files
+      .filter(file => file.endsWith('.json'))
+      .map(file => file.replace('.json', ''));
+    
+    res.json({
+      success: true,
+      contracts: contracts
+    });
+  } catch (error) {
+    console.error('❌ Failed to get available contracts:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+module.exports = router; 

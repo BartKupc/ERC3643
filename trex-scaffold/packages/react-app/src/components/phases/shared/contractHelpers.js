@@ -111,7 +111,7 @@ export const deployContractHelper = async (contractName, constructorArgs = []) =
 
 // Helper to call backend for any JSON-RPC method
 export const rpcCall = async (method, params = []) => {
-  const response = await fetch('/api/hardhat-interaction', {
+  const response = await fetch('/api/contracts/interaction', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ action: 'rpc', method, params })
