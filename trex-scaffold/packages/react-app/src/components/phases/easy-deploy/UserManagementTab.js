@@ -96,7 +96,7 @@ const UserManagementTab = ({ deploymentDetails, addLog, getSigner, factories }) 
         addLog && addLog('Loading Identity Registries from all factories via backend...', 'info');
         
         // Use backend API instead of direct blockchain interaction
-        const response = await fetch('/api/identity-registries');
+        const response = await fetch('/api/claim-issuers/identity-registries');
         if (!response.ok) {
           throw new Error(`Backend request failed: ${response.status}`);
         }
