@@ -24,11 +24,28 @@ router.post('/pause', async (req, res) => {
     const tokenArtifacts = JSON.parse(fs.readFileSync(tokenArtifactsPath, 'utf8'));
     const token = new ethers.Contract(tokenAddress, tokenArtifacts.abi, wallet);
     console.log(`✅ Token contract instance created for ${tokenAddress}`);
-    const tx = await token.setPaused(paused);
+    // Check if deployer is an agent
+    const deployerAddress = await wallet.getAddress();
+    const isAgent = await token.isAgent(deployerAddress);
+    console.log(`🔍 Is deployer agent on token: ${isAgent}`);
+    
+    if (!isAgent) {
+      throw new Error('Deployer is not an agent on this token');
+    }
+    
+    // Pause or unpause the token
+    const tx = paused ? await token.pause() : await token.unpause();
     console.log(`✅ Pause/Unpause transaction sent: ${tx.hash}`);
     await tx.wait();
     console.log(`✅ Pause/Unpause transaction confirmed`);
-    res.json({ success: true, tokenAddress, paused, transactionHash: tx.hash });
+    
+    res.json({
+      success: true,
+      message: `Token ${paused ? 'paused' : 'unpaused'} successfully`,
+      tokenAddress: tokenAddress,
+      paused: paused,
+      transactionHash: tx.hash
+    });
   } catch (error) {
     console.error('❌ Error in pause/unpause:', error);
     res.status(500).json({ success: false, error: error.message });
@@ -135,9 +152,16 @@ router.get('/token-status/:tokenAddress', async (req, res) => {
 router.get('/verify-user/:tokenAddress/:userAddress', async (req, res) => {
   try {
     const { tokenAddress, userAddress } = req.params;
-    console.log(`🎯 Verify user request for token: ${tokenAddress}, user: ${userAddress}`);
-    if (!tokenAddress || !userAddress) throw new Error('Token address and user address are required');
+    console.log(`🎯 Checking verification for user: ${userAddress} on token: ${tokenAddress}`);
+    
+    if (!tokenAddress || !userAddress) {
+      throw new Error('Token address and user address are required');
+    }
+    
     const provider = createProvider();
+    const wallet = new ethers.Wallet(process.env.PRIVATE_KEY || '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80', provider);
+    
+    // Get the Token contract
     const tokenArtifactsPath = path.join(__dirname, '../../trex-scaffold/packages/react-app/src/contracts/Token.json');
     console.log(`🔍 Looking for Token artifacts at: ${tokenArtifactsPath}`);
     if (!fs.existsSync(tokenArtifactsPath)) {
@@ -146,11 +170,55 @@ router.get('/verify-user/:tokenAddress/:userAddress', async (req, res) => {
     }
     console.log(`✅ Token artifacts found at: ${tokenArtifactsPath}`);
     const tokenArtifacts = JSON.parse(fs.readFileSync(tokenArtifactsPath, 'utf8'));
-    const token = new ethers.Contract(tokenAddress, tokenArtifacts.abi, provider);
+    const token = new ethers.Contract(tokenAddress, tokenArtifacts.abi, wallet);
     console.log(`✅ Token contract instance created for ${tokenAddress}`);
-    const isVerified = await token.isVerified(userAddress);
+    
+    // Get the Identity Registry from the token
+    const identityRegistryAddress = await token.identityRegistry();
+    console.log(`🔍 Identity Registry: ${identityRegistryAddress}`);
+    
+    const irArtifactsPath = path.join(__dirname, '../../trex-scaffold/packages/react-app/src/contracts/IdentityRegistry.json');
+    console.log(`🔍 Looking for IR artifacts at: ${irArtifactsPath}`);
+    if (!fs.existsSync(irArtifactsPath)) {
+      console.log(`❌ IdentityRegistry artifacts not found at: ${irArtifactsPath}`);
+      throw new Error('IdentityRegistry artifacts not found. Please compile contracts first.');
+    }
+    console.log(`✅ IdentityRegistry artifacts found at: ${irArtifactsPath}`);
+    const irArtifacts = JSON.parse(fs.readFileSync(irArtifactsPath, 'utf8'));
+    const ir = new ethers.Contract(identityRegistryAddress, irArtifacts.abi, wallet);
+    console.log(`✅ Identity Registry contract instance created for ${identityRegistryAddress}`);
+    
+    // Get user's OnchainID
+    const onchainIdAddress = await ir.identity(userAddress);
+    console.log(`🔍 User's OnchainID address: ${onchainIdAddress}`);
+    
+    if (onchainIdAddress === '0x0000000000000000000000000000000000000000') {
+      res.json({
+        success: true,
+        verified: false,
+        reason: 'User has no OnchainID registered',
+        details: {
+          userAddress: userAddress,
+          onchainIdAddress: null,
+          identityRegistry: identityRegistryAddress
+        }
+      });
+      return;
+    }
+    
+    // Check if user is verified
+    const isVerified = await ir.isVerified(userAddress);
     console.log(`✅ User verification result: ${isVerified}`);
-    res.json({ success: true, tokenAddress, userAddress, isVerified });
+    
+    res.json({
+      success: true,
+      verified: isVerified,
+      details: {
+        userAddress: userAddress,
+        onchainIdAddress: onchainIdAddress,
+        identityRegistry: identityRegistryAddress
+      }
+    });
   } catch (error) {
     console.error('❌ Error in verify user:', error);
     res.status(500).json({ success: false, error: error.message });
