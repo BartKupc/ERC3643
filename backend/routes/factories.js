@@ -8,7 +8,7 @@ const { runDeploymentScript, getLatestDeployment } = require('../utils/helpers')
 // Get factories
 router.get('/', (req, res) => {
   try {
-    const deploymentsPath = path.join(__dirname, '../deployments.json');
+    const deploymentsPath = path.join(__dirname, '../../deployments.json');
     if (!fs.existsSync(deploymentsPath)) {
       return res.json([]);
     }
