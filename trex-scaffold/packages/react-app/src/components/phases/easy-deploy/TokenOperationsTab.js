@@ -56,7 +56,7 @@ const TokenOperationsTab = ({
       addLog && addLog(`Loading token information from ${tokenAddress} via backend...`, 'info');
       
       // Use backend API instead of direct blockchain interaction
-      const response = await fetch(`/api/token-info/${tokenAddress}`);
+      const response = await fetch(`/api/token/token-info/${tokenAddress}`);
       if (!response.ok) {
         throw new Error(`Backend request failed: ${response.status}`);
       }
@@ -91,7 +91,7 @@ const TokenOperationsTab = ({
       addLog && addLog(`Checking token status for ${tokenAddress} via backend...`, 'info');
       
       // Use backend API instead of direct blockchain interaction
-      const response = await fetch(`/api/token-status/${tokenAddress}`);
+      const response = await fetch(`/api/token/token-status/${tokenAddress}`);
       if (!response.ok) {
         throw new Error(`Backend request failed: ${response.status}`);
       }

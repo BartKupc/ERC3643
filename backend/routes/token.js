@@ -13,7 +13,7 @@ router.post('/pause', async (req, res) => {
     if (!tokenAddress) throw new Error('Token address is required');
     const provider = createProvider();
     const wallet = new ethers.Wallet(process.env.PRIVATE_KEY || '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80', provider);
-    const tokenArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/contracts/src/contracts/token/Token.sol/Token.json');
+    const tokenArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/react-app/src/contracts/Token.json');
     if (!fs.existsSync(tokenArtifactsPath)) throw new Error('Token artifacts not found. Please compile contracts first.');
     const tokenArtifacts = JSON.parse(fs.readFileSync(tokenArtifactsPath, 'utf8'));
     const token = new ethers.Contract(tokenAddress, tokenArtifacts.abi, wallet);
@@ -31,7 +31,7 @@ router.get('/token-info/:tokenAddress', async (req, res) => {
     const { tokenAddress } = req.params;
     if (!tokenAddress) throw new Error('Token address is required');
     const provider = createProvider();
-    const tokenArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/contracts/src/contracts/token/Token.sol/Token.json');
+    const tokenArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/react-app/src/contracts/Token.json');
     if (!fs.existsSync(tokenArtifactsPath)) throw new Error('Token artifacts not found. Please compile contracts first.');
     const tokenArtifacts = JSON.parse(fs.readFileSync(tokenArtifactsPath, 'utf8'));
     const token = new ethers.Contract(tokenAddress, tokenArtifacts.abi, provider);
@@ -51,7 +51,7 @@ router.get('/token-status/:tokenAddress', async (req, res) => {
     const { tokenAddress } = req.params;
     if (!tokenAddress) throw new Error('Token address is required');
     const provider = createProvider();
-    const tokenArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/contracts/src/contracts/token/Token.sol/Token.json');
+    const tokenArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/react-app/src/contracts/Token.json');
     if (!fs.existsSync(tokenArtifactsPath)) throw new Error('Token artifacts not found. Please compile contracts first.');
     const tokenArtifacts = JSON.parse(fs.readFileSync(tokenArtifactsPath, 'utf8'));
     const token = new ethers.Contract(tokenAddress, tokenArtifacts.abi, provider);
@@ -68,7 +68,7 @@ router.get('/verify-user/:tokenAddress/:userAddress', async (req, res) => {
     const { tokenAddress, userAddress } = req.params;
     if (!tokenAddress || !userAddress) throw new Error('Token address and user address are required');
     const provider = createProvider();
-    const tokenArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/contracts/src/contracts/token/Token.sol/Token.json');
+    const tokenArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/react-app/src/contracts/Token.json');
     if (!fs.existsSync(tokenArtifactsPath)) throw new Error('Token artifacts not found. Please compile contracts first.');
     const tokenArtifacts = JSON.parse(fs.readFileSync(tokenArtifactsPath, 'utf8'));
     const token = new ethers.Contract(tokenAddress, tokenArtifacts.abi, provider);
@@ -86,7 +86,7 @@ router.post('/mint', async (req, res) => {
     if (!tokenAddress || !toAddress || !amount) throw new Error('Token address, to address, and amount are required');
     const provider = createProvider();
     const wallet = new ethers.Wallet(process.env.PRIVATE_KEY || '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80', provider);
-    const tokenArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/contracts/src/contracts/token/Token.sol/Token.json');
+    const tokenArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/react-app/src/contracts/Token.json');
     if (!fs.existsSync(tokenArtifactsPath)) throw new Error('Token artifacts not found. Please compile contracts first.');
     const tokenArtifacts = JSON.parse(fs.readFileSync(tokenArtifactsPath, 'utf8'));
     const token = new ethers.Contract(tokenAddress, tokenArtifacts.abi, wallet);
@@ -94,7 +94,6 @@ router.post('/mint', async (req, res) => {
     const decimalsNumber = typeof decimals === 'object' && decimals.toNumber ? decimals.toNumber() : Number(decimals);
     const amountInWei = ethers.utils.parseUnits(amount, decimalsNumber);
     const tx = await token.mint(toAddress, amountInWei);
-    await tx.wait();
     res.json({ success: true, tokenAddress, toAddress, amount, transactionHash: tx.hash });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -108,7 +107,7 @@ router.post('/burn', async (req, res) => {
     if (!tokenAddress || !fromAddress || !amount) throw new Error('Token address, from address, and amount are required');
     const provider = createProvider();
     const wallet = new ethers.Wallet(process.env.PRIVATE_KEY || '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80', provider);
-    const tokenArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/contracts/src/contracts/token/Token.sol/Token.json');
+    const tokenArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/react-app/src/contracts/Token.json');
     if (!fs.existsSync(tokenArtifactsPath)) throw new Error('Token artifacts not found. Please compile contracts first.');
     const tokenArtifacts = JSON.parse(fs.readFileSync(tokenArtifactsPath, 'utf8'));
     const token = new ethers.Contract(tokenAddress, tokenArtifacts.abi, wallet);
@@ -116,7 +115,6 @@ router.post('/burn', async (req, res) => {
     const decimalsNumber = typeof decimals === 'object' && decimals.toNumber ? decimals.toNumber() : Number(decimals);
     const amountInWei = ethers.utils.parseUnits(amount, decimalsNumber);
     const tx = await token.burn(fromAddress, amountInWei);
-    await tx.wait();
     res.json({ success: true, tokenAddress, fromAddress, amount, transactionHash: tx.hash });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -130,7 +128,7 @@ router.post('/transfer', async (req, res) => {
     if (!tokenAddress || !fromAddress || !toAddress || !amount) throw new Error('Token address, from address, to address, and amount are required');
     const provider = createProvider();
     const wallet = new ethers.Wallet(process.env.PRIVATE_KEY || '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80', provider);
-    const tokenArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/contracts/src/contracts/token/Token.sol/Token.json');
+    const tokenArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/react-app/src/contracts/Token.json');
     if (!fs.existsSync(tokenArtifactsPath)) throw new Error('Token artifacts not found. Please compile contracts first.');
     const tokenArtifacts = JSON.parse(fs.readFileSync(tokenArtifactsPath, 'utf8'));
     const token = new ethers.Contract(tokenAddress, tokenArtifacts.abi, wallet);
@@ -140,7 +138,6 @@ router.post('/transfer', async (req, res) => {
     const fromBalance = await token.balanceOf(fromAddress);
     if (fromBalance.lt(amountInWei)) throw new Error(`Insufficient balance. Need ${amount} tokens, but ${fromAddress} only has ${ethers.utils.formatUnits(fromBalance, decimalsNumber)}`);
     const tx = await token.forcedTransfer(fromAddress, toAddress, amountInWei);
-    await tx.wait();
     res.json({ success: true, tokenAddress, fromAddress, toAddress, amount, transactionHash: tx.hash });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -154,7 +151,7 @@ router.post('/transfer-from', async (req, res) => {
     if (!tokenAddress || !fromAddress || !toAddress || !amount) throw new Error('Token address, from address, to address, and amount are required');
     const provider = createProvider();
     const wallet = new ethers.Wallet(process.env.PRIVATE_KEY || '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80', provider);
-    const tokenArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/contracts/src/contracts/token/Token.sol/Token.json');
+    const tokenArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/react-app/src/contracts/Token.json');
     if (!fs.existsSync(tokenArtifactsPath)) throw new Error('Token artifacts not found. Please compile contracts first.');
     const tokenArtifacts = JSON.parse(fs.readFileSync(tokenArtifactsPath, 'utf8'));
     const token = new ethers.Contract(tokenAddress, tokenArtifacts.abi, wallet);
@@ -165,10 +162,8 @@ router.post('/transfer-from', async (req, res) => {
     if (fromBalance.lt(amountInWei)) throw new Error(`Insufficient balance. Need ${amount} tokens, but ${fromAddress} only has ${ethers.utils.formatUnits(fromBalance, decimalsNumber)}`);
     // Step 1: Transfer tokens from source to agent (using forcedTransfer)
     const tx1 = await token.forcedTransfer(fromAddress, wallet.address, amountInWei);
-    await tx1.wait();
     // Step 2: Transfer tokens from agent to destination (using regular transfer with compliance)
     const tx2 = await token.transfer(toAddress, amountInWei);
-    await tx2.wait();
     res.json({ success: true, tokenAddress, amount, fromAddress, toAddress, transactionHash1: tx1.hash, transactionHash2: tx2.hash });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
