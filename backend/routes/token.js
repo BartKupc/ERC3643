@@ -29,18 +29,46 @@ router.post('/pause', async (req, res) => {
 router.get('/token-info/:tokenAddress', async (req, res) => {
   try {
     const { tokenAddress } = req.params;
+    console.log(`🎯 Getting token info for: ${tokenAddress}`);
     if (!tokenAddress) throw new Error('Token address is required');
     const provider = createProvider();
     const tokenArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/react-app/src/contracts/Token.json');
-    if (!fs.existsSync(tokenArtifactsPath)) throw new Error('Token artifacts not found. Please compile contracts first.');
+    console.log(`🔍 Looking for Token artifacts at: ${tokenArtifactsPath}`);
+    if (!fs.existsSync(tokenArtifactsPath)) {
+      console.log(`❌ Token artifacts not found at: ${tokenArtifactsPath}`);
+      throw new Error('Token artifacts not found. Please compile contracts first.');
+    }
+    console.log(`✅ Token artifacts found at: ${tokenArtifactsPath}`);
     const tokenArtifacts = JSON.parse(fs.readFileSync(tokenArtifactsPath, 'utf8'));
     const token = new ethers.Contract(tokenAddress, tokenArtifacts.abi, provider);
-    const name = await token.name();
-    const symbol = await token.symbol();
-    const decimals = await token.decimals();
-    const totalSupply = await token.totalSupply();
-    res.json({ success: true, tokenAddress, name, symbol, decimals, totalSupply: totalSupply.toString() });
+    const [name, symbol, decimals, totalSupply, owner] = await Promise.all([
+      token.name(),
+      token.symbol(),
+      token.decimals(),
+      token.totalSupply(),
+      token.owner()
+    ]);
+    
+    // Handle BigNumber conversion properly
+    const decimalsNumber = typeof decimals === 'object' && decimals.toNumber ? decimals.toNumber() : Number(decimals);
+    
+    const tokenInfo = {
+      name,
+      symbol,
+      decimals: decimalsNumber,
+      totalSupply: ethers.utils.formatUnits(totalSupply, decimalsNumber),
+      owner,
+      address: tokenAddress
+    };
+    
+    console.log(`✅ Token info loaded: ${name} (${symbol})`);
+    
+    res.json({
+      success: true,
+      tokenInfo: tokenInfo
+    });
   } catch (error) {
+    console.error('❌ Error getting token info:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -49,15 +77,46 @@ router.get('/token-info/:tokenAddress', async (req, res) => {
 router.get('/token-status/:tokenAddress', async (req, res) => {
   try {
     const { tokenAddress } = req.params;
+    console.log(`🎯 Checking token status for: ${tokenAddress}`);
     if (!tokenAddress) throw new Error('Token address is required');
     const provider = createProvider();
     const tokenArtifactsPath = path.join(__dirname, '../trex-scaffold/packages/react-app/src/contracts/Token.json');
-    if (!fs.existsSync(tokenArtifactsPath)) throw new Error('Token artifacts not found. Please compile contracts first.');
+    console.log(`🔍 Looking for Token artifacts at: ${tokenArtifactsPath}`);
+    if (!fs.existsSync(tokenArtifactsPath)) {
+      console.log(`❌ Token artifacts not found at: ${tokenArtifactsPath}`);
+      throw new Error('Token artifacts not found. Please compile contracts first.');
+    }
+    console.log(`✅ Token artifacts found at: ${tokenArtifactsPath}`);
     const tokenArtifacts = JSON.parse(fs.readFileSync(tokenArtifactsPath, 'utf8'));
     const token = new ethers.Contract(tokenAddress, tokenArtifacts.abi, provider);
-    const paused = await token.paused();
-    res.json({ success: true, tokenAddress, paused });
+    
+    // Check if the contract has the paused function
+    const hasPausedFunction = tokenArtifacts.abi.some(item => 
+      item.type === 'function' && item.name === 'paused'
+    );
+    
+    if (!hasPausedFunction) {
+      res.json({
+        success: true,
+        status: '⚠️ No pause function found',
+        hasPauseFunction: false
+      });
+      return;
+    }
+    
+    const isPaused = await token.paused();
+    const status = isPaused ? '⏸️ PAUSED' : '▶️ ACTIVE';
+    
+    console.log(`✅ Token status: ${status}`);
+    
+    res.json({
+      success: true,
+      status: status,
+      isPaused: isPaused,
+      hasPauseFunction: true
+    });
   } catch (error) {
+    console.error('❌ Error checking token status:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
