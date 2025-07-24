@@ -25,6 +25,7 @@ router.post('/interaction', async (req, res) => {
         return await handleContractCall(contractName, contractAddress, method, params, wallet, res);
       
       case 'call':
+      case 'view':
         return await handleContractView(contractName, contractAddress, method, params, wallet, res);
       
       case 'initialize':

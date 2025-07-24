@@ -339,12 +339,14 @@ const DeploymentPhase = () => {
       for (const [contractType, addresses] of Object.entries(deployedContracts)) {
         if (addresses && addresses.length > 0) {
           const address = addresses[0];
+          addLog(`Checking ${contractType} at ${address}...`, "info");
           try {
             const isInitialized = await isContractInitialized(contractType, address);
+            addLog(`${contractType} check result: ${isInitialized}`, "info");
             status[contractType] = { address, isInitialized };
           } catch (error) {
-            status[contractType] = { address, isInitialized: false };
             addLog(`Error checking ${contractType} initialization: ${error.message}`, "error");
+            status[contractType] = { address, isInitialized: false };
           }
         }
       }
