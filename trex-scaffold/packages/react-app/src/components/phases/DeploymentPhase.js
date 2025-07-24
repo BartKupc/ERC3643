@@ -23,6 +23,8 @@ const DeploymentPhase = () => {
   const [contractInitStatus, setContractInitStatus] = useState({});
   const [checkingInitStatus, setCheckingInitStatus] = useState(false);
   const [initializingContract, setInitializingContract] = useState({});
+  const [tokenStatus, setTokenStatus] = useState('Not checked');
+  const [checkingVerification, setCheckingVerification] = useState(false);
 
   // Logging function
   const addLog = (message, type = "info") => {
@@ -682,6 +684,319 @@ const DeploymentPhase = () => {
     setLogs([]);
   };
 
+  // Token Management Functions
+  const deployToken = async (tokenDetails) => {
+    try {
+      setDeploying(true);
+      setMessage('Deploying token...');
+      addLog('Starting token deployment via backend API', "info");
+
+      // Get the addresses to use (selected if available, otherwise latest deployed)
+      const identityRegistryAddress = selectedContracts.IdentityRegistry || (deployedContracts.IdentityRegistry && deployedContracts.IdentityRegistry[0]);
+      const complianceAddress = selectedContracts.ModularCompliance || (deployedContracts.ModularCompliance && deployedContracts.ModularCompliance[0]);
+      
+      if (!identityRegistryAddress) {
+        throw new Error('No Identity Registry found. Please deploy one first.');
+      }
+      
+      if (!complianceAddress) {
+        throw new Error('No ModularCompliance found. Please deploy one first.');
+      }
+
+      addLog(`Using Identity Registry: ${identityRegistryAddress}`, "info");
+      addLog(`Using ModularCompliance: ${complianceAddress}`, "info");
+
+      // Deploy token using backend API
+      const result = await contractInteraction('deploy', {
+        contractName: 'Token',
+        tokenDetails: {
+          ...tokenDetails,
+          identityRegistryAddress,
+          complianceAddress
+        }
+      });
+      
+      const tokenInfo = {
+        address: result.contractAddress,
+        name: tokenDetails.name,
+        symbol: tokenDetails.symbol,
+        decimals: tokenDetails.decimals,
+        deployedAt: new Date().toISOString()
+      };
+      
+      // Save to deployed tokens
+      setDeployedTokens(prev => [...prev, tokenInfo]);
+      
+      setMessage(`Token deployed successfully at ${result.contractAddress}`);
+      addLog(`Token deployed successfully at ${result.contractAddress}`, "success");
+      addLog(`Transaction hash: ${result.transactionHash}`, "info");
+      
+      await reloadDeploymentState();
+      
+      return result.contractAddress;
+    } catch (error) {
+      console.error('Error deploying token:', error);
+      const cleanError = extractCleanError(error);
+      setMessage(`Error deploying token: ${cleanError}`);
+      addLog(`Error deploying token: ${cleanError}`, "error");
+      throw error;
+    } finally {
+      setDeploying(false);
+    }
+  };
+
+  const addTokenAgent = async (agentAddress) => {
+    try {
+      setDeploying(true);
+      setMessage('Adding token agent...');
+      addLog('Starting token agent addition via backend API', "info");
+
+      if (!selectedContracts.Token) {
+        throw new Error('Please select a token first');
+      }
+
+      addLog(`Selected token address: ${selectedContracts.Token}`, "info");
+      addLog(`Agent address: ${agentAddress}`, "info");
+
+      // Add agent using backend API
+      const result = await contractInteraction('send', {
+        contractName: 'Token',
+        contractAddress: selectedContracts.Token,
+        method: 'addAgent',
+        params: [agentAddress]
+      });
+      
+      setMessage('Token agent added successfully');
+      addLog('Token agent added successfully', "success");
+      addLog(`Transaction hash: ${result.transactionHash}`, "info");
+    } catch (error) {
+      console.error('Error adding token agent:', error);
+      const cleanError = extractCleanError(error);
+      setMessage(`Error adding token agent: ${cleanError}`);
+      addLog(`Error adding token agent: ${cleanError}`, "error");
+    } finally {
+      setDeploying(false);
+    }
+  };
+
+  const setTokenPaused = async (paused) => {
+    try {
+      setDeploying(true);
+      setMessage(`${paused ? 'Pausing' : 'Unpausing'} token...`);
+      addLog(`Starting token ${paused ? 'pause' : 'unpause'} via backend API`, "info");
+
+      if (!selectedContracts.Token) {
+        throw new Error('Please select a token first');
+      }
+
+      const method = paused ? 'pause' : 'unpause';
+      const result = await contractInteraction('send', {
+        contractName: 'Token',
+        contractAddress: selectedContracts.Token,
+        method: method,
+        params: []
+      });
+      
+      setMessage(`Token ${paused ? 'paused' : 'unpaused'} successfully`);
+      addLog(`Token ${paused ? 'paused' : 'unpaused'} successfully`, "success");
+      addLog(`Transaction hash: ${result.transactionHash}`, "info");
+    } catch (error) {
+      console.error(`Error ${paused ? 'pausing' : 'unpausing'} token:`, error);
+      const cleanError = extractCleanError(error);
+      setMessage(`Error ${paused ? 'pausing' : 'unpausing'} token: ${cleanError}`);
+      addLog(`Error ${paused ? 'pausing' : 'unpausing'} token: ${cleanError}`, "error");
+    } finally {
+      setDeploying(false);
+    }
+  };
+
+  const mintTokens = async (recipient, amount) => {
+    try {
+      setDeploying(true);
+      setMessage('Minting tokens...');
+      addLog('Starting token minting via backend API', "info");
+
+      if (!selectedContracts.Token) {
+        throw new Error('Please select a token first');
+      }
+
+      if (!recipient || !amount) {
+        throw new Error('Please provide recipient address and amount');
+      }
+
+      addLog(`Minting ${amount} tokens to ${recipient}`, "info");
+
+      const result = await contractInteraction('send', {
+        contractName: 'Token',
+        contractAddress: selectedContracts.Token,
+        method: 'mint',
+        params: [recipient, amount]
+      });
+      
+      setMessage(`Successfully minted ${amount} tokens to ${recipient}`);
+      addLog(`Successfully minted ${amount} tokens to ${recipient}`, "success");
+      addLog(`Transaction hash: ${result.transactionHash}`, "info");
+    } catch (error) {
+      console.error('Error minting tokens:', error);
+      const cleanError = extractCleanError(error);
+      setMessage(`Error minting tokens: ${cleanError}`);
+      addLog(`Error minting tokens: ${cleanError}`, "error");
+    } finally {
+      setDeploying(false);
+    }
+  };
+
+  const burnTokens = async (fromAddress, amount) => {
+    try {
+      setDeploying(true);
+      setMessage('Burning tokens...');
+      addLog('Starting token burning via backend API', "info");
+
+      if (!selectedContracts.Token) {
+        throw new Error('Please select a token first');
+      }
+
+      if (!fromAddress || !amount) {
+        throw new Error('Please provide address to burn from and amount');
+      }
+
+      addLog(`Burning ${amount} tokens from ${fromAddress}`, "info");
+
+      const result = await contractInteraction('send', {
+        contractName: 'Token',
+        contractAddress: selectedContracts.Token,
+        method: 'burn',
+        params: [fromAddress, amount]
+      });
+      
+      setMessage(`Successfully burned ${amount} tokens from ${fromAddress}`);
+      addLog(`Successfully burned ${amount} tokens from ${fromAddress}`, "success");
+      addLog(`Transaction hash: ${result.transactionHash}`, "info");
+    } catch (error) {
+      console.error('Error burning tokens:', error);
+      const cleanError = extractCleanError(error);
+      setMessage(`Error burning tokens: ${cleanError}`);
+      addLog(`Error burning tokens: ${cleanError}`, "error");
+    } finally {
+      setDeploying(false);
+    }
+  };
+
+  const transferTokens = async (toAddress, amount) => {
+    try {
+      setDeploying(true);
+      setMessage('Transferring tokens...');
+      addLog('Starting token transfer via backend API', "info");
+
+      if (!selectedContracts.Token) {
+        throw new Error('Please select a token first');
+      }
+
+      if (!toAddress || !amount) {
+        throw new Error('Please provide recipient address and amount');
+      }
+
+      addLog(`Transferring ${amount} tokens to ${toAddress}`, "info");
+
+      const result = await contractInteraction('send', {
+        contractName: 'Token',
+        contractAddress: selectedContracts.Token,
+        method: 'transfer',
+        params: [toAddress, amount]
+      });
+      
+      setMessage(`Successfully transferred ${amount} tokens to ${toAddress}`);
+      addLog(`Successfully transferred ${amount} tokens to ${toAddress}`, "success");
+      addLog(`Transaction hash: ${result.transactionHash}`, "info");
+    } catch (error) {
+      console.error('Error transferring tokens:', error);
+      const cleanError = extractCleanError(error);
+      setMessage(`Error transferring tokens: ${cleanError}`);
+      addLog(`Error transferring tokens: ${cleanError}`, "error");
+    } finally {
+      setDeploying(false);
+    }
+  };
+
+  const checkTokenStatus = async () => {
+    try {
+      if (!selectedContracts.Token) {
+        setTokenStatus('No token selected');
+        return;
+      }
+
+      addLog('Checking token status via backend API', "info");
+
+      const result = await contractInteraction('call', {
+        contractName: 'Token',
+        contractAddress: selectedContracts.Token,
+        method: 'paused',
+        params: []
+      });
+      
+      const isPaused = result.result;
+      const status = isPaused ? 'PAUSED' : 'ACTIVE';
+      
+      setTokenStatus(status);
+      addLog(`Token status: ${status}`, "info");
+    } catch (error) {
+      console.error('Error checking token status:', error);
+      setTokenStatus('Error checking status');
+      addLog(`Error checking token status: ${error.message}`, "error");
+    }
+  };
+
+  const runComprehensiveDiagnostics = async (userAddress) => {
+    try {
+      setCheckingVerification(true);
+      setMessage('Running comprehensive diagnostics...');
+      addLog('Starting comprehensive diagnostics', "info");
+
+      if (!selectedContracts.Token) {
+        throw new Error('Please select a token first');
+      }
+
+      if (!userAddress) {
+        throw new Error('Please provide a user address to check');
+      }
+
+      addLog(`Checking verification for user: ${userAddress}`, "info");
+
+      // Check if user is verified
+      const verificationResult = await contractInteraction('call', {
+        contractName: 'Token',
+        contractAddress: selectedContracts.Token,
+        method: 'isVerified',
+        params: [userAddress]
+      });
+      
+      const isVerified = verificationResult.result;
+      
+      let diagnosticMessage = `Comprehensive Diagnostics for ${userAddress}:\n\n`;
+      diagnosticMessage += `Token: ${selectedContracts.Token}\n`;
+      diagnosticMessage += `Verification Status: ${isVerified ? '✅ VERIFIED' : '❌ NOT VERIFIED'}\n\n`;
+      
+      if (isVerified) {
+        diagnosticMessage += '✅ User is verified and can perform token operations\n';
+      } else {
+        diagnosticMessage += '❌ User is not verified. Possible reasons:\n';
+        diagnosticMessage += '   - Missing required claim topics\n';
+        diagnosticMessage += '   - Claims not issued by trusted issuers\n';
+        diagnosticMessage += '   - Identity not properly registered\n';
+        diagnosticMessage += '   - Compliance rules not satisfied\n';
+      }
+      
+      setMessage(diagnosticMessage);
+      addLog(`Diagnostics completed. User verified: ${isVerified}`, "info");
+    } catch (error) {
+      console.error('Error running diagnostics:', error);
+      const cleanError = extractCleanError(error);
+      setMessage(`Error running diagnostics: ${cleanError}`);
+      addLog(`Error running diagnostics: ${cleanError}`, "error");
+    } finally {
+      setCheckingVerification(false);
+    }
+  };
 
 
   // Stepper logic
@@ -754,7 +1069,19 @@ const DeploymentPhase = () => {
           deployedTokens={deployedTokens}
           selectedContracts={selectedContracts}
           setSelectedContracts={setSelectedContracts}
-          // ...other token management handlers...
+          deployToken={deployToken}
+          addTokenAgent={addTokenAgent}
+          setTokenPaused={setTokenPaused}
+          mintTokens={mintTokens}
+          burnTokens={burnTokens}
+          transferTokens={transferTokens}
+          checkTokenStatus={checkTokenStatus}
+          runComprehensiveDiagnostics={runComprehensiveDiagnostics}
+          tokenStatus={tokenStatus}
+          checkingVerification={checkingVerification}
+          deploying={deploying}
+          reloadDeploymentState={reloadDeploymentState}
+          addLog={addLog}
         />
       )
     },
