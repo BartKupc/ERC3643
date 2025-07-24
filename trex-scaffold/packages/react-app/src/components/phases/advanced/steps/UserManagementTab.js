@@ -126,6 +126,19 @@ const UserManagementTab = ({ deployedContracts = {}, selectedContracts = {}, set
       if (!response.data.success) throw new Error(response.data.error || 'Unknown error');
       setOnchainIdAddress(response.data.onchainIdAddress);
       setMessage(`OnchainID created at ${response.data.onchainIdAddress}`);
+
+      // --- ADD THIS BLOCK ---
+      const newIdentity = {
+        userAddress,
+        onchainIdAddress: response.data.onchainIdAddress,
+        country: userCountry,
+        createdAt: new Date().toISOString(),
+        status: 'created',
+        claims: []
+      };
+      saveUserIdentity(newIdentity);
+      // --- END BLOCK ---
+
     } catch (error) {
       setMessage(`Error creating OnchainID: ${error.message}`);
     } finally {
