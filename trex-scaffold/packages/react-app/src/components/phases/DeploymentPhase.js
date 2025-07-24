@@ -377,12 +377,39 @@ const DeploymentPhase = () => {
         params: []
       });
       
-      setAvailableClaimTopics(result.result || []);
-      addLog(`Loaded ${result.result?.length || 0} claim topics`, "success");
+      const topicIds = result.result;
+      
+      // Map topic IDs to standard names (like the old copy)
+      const standardTopics = {
+        1: "KYC (Know Your Customer)",
+        2: "AML (Anti-Money Laundering)", 
+        3: "Accredited Investor",
+        4: "EU Nationality Confirmed",
+        5: "US Nationality Confirmed",
+        6: "Blacklist",
+        7: "Employment",
+        8: "Residency",
+        9: "Nationality",
+        10: "Accreditation"
+      };
+      
+      const topics = topicIds
+        .filter(id => id !== undefined && id !== null && id !== '' && !Number.isNaN((typeof id === 'object' && id.toNumber) ? id.toNumber() : Number(id)))
+        .map(id => {
+          const num = (typeof id === 'object' && id.toNumber) ? id.toNumber() : Number(id);
+          return {
+            id: num,
+            name: standardTopics[num] || `Custom Topic ${num}`,
+            description: standardTopics[num] ? `Standard claim topic for ${standardTopics[num].split(' ')[0]}` : `Custom claim topic with ID ${num}`
+          };
+        });
+      
+      setAvailableClaimTopics(topics);
+      addLog(`Loaded ${topics.length} claim topics from registry`, "info");
     } catch (error) {
       console.error("Error loading claim topics:", error);
-      const cleanError = extractCleanError(error);
-      addLog(`Error loading claim topics: ${cleanError}`, "error");
+      setAvailableClaimTopics([]);
+      addLog(`Error loading claim topics: ${error.message}`, "error");
     } finally {
       setLoadingClaimTopics(false);
     }
@@ -638,11 +665,16 @@ const DeploymentPhase = () => {
       component: (
         <AddClaimTopicsTab
           deployedContracts={deployedContracts}
+          selectedContracts={selectedContracts}
+          setSelectedContracts={setSelectedContracts}
           availableClaimTopics={availableClaimTopics}
           loadingClaimTopics={loadingClaimTopics}
           addClaimTopic={addClaimTopic}
           removeClaimTopic={removeClaimTopic}
           loadClaimTopics={loadClaimTopics}
+          reloadDeploymentState={reloadDeploymentState}
+          addLog={addLog}
+          deploying={deploying}
         />
       )
     },
