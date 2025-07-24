@@ -420,7 +420,11 @@ const DeploymentPhase = () => {
           
           // Handle BigNumber objects and other formats
           let num;
-          if (id && typeof id === 'object' && id._hex) {
+          if (id && typeof id === 'object' && id.type === 'BigNumber' && id.hex) {
+            // BigNumber object with type and hex properties
+            num = parseInt(id.hex, 16);
+            console.log("🔍 Parsed from BigNumber hex:", num);
+          } else if (id && typeof id === 'object' && id._hex) {
             // BigNumber object with _hex property
             num = parseInt(id._hex, 16);
             console.log("🔍 Parsed from _hex:", num);
@@ -443,7 +447,10 @@ const DeploymentPhase = () => {
           
           // Handle BigNumber objects and other formats
           let num;
-          if (id && typeof id === 'object' && id._hex) {
+          if (id && typeof id === 'object' && id.type === 'BigNumber' && id.hex) {
+            // BigNumber object with type and hex properties
+            num = parseInt(id.hex, 16);
+          } else if (id && typeof id === 'object' && id._hex) {
             // BigNumber object with _hex property
             num = parseInt(id._hex, 16);
           } else if (id && typeof id === 'object' && id.toNumber) {
