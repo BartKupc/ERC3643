@@ -81,12 +81,21 @@ const DeploymentPhase = () => {
   };
 
   // Clear deployment state
-  const clearDeploymentState = () => {
-    setDeployedContracts({});
-    setDeployedTokens([]);
-    setSelectedContracts({});
-    localStorage.removeItem(STORAGE_KEY);
-    addLog("Cleared deployment state", "info");
+  const clearDeploymentState = async () => {
+    try {
+      // Clear backend deployments.json
+      await axios.delete('/api/deployments');
+      
+      // Clear frontend state
+      setDeployedContracts({});
+      setDeployedTokens([]);
+      setSelectedContracts({});
+      localStorage.removeItem(STORAGE_KEY);
+      addLog("Cleared deployment state from both frontend and backend", "info");
+    } catch (error) {
+      console.error('Error clearing deployment state:', error);
+      addLog("Error clearing deployment state: " + error.message, "error");
+    }
   };
 
   // New contract interaction function using updated API

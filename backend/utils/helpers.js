@@ -60,9 +60,19 @@ async function runDeploymentScript(scriptName, options = {}) {
   console.log(`🔧 Running script: ${scriptPath}`);
   console.log(`📁 Working directory: ${path.join(__dirname, '../../')}`);
   
-  const env = { ...process.env, ...options };
+  // Ensure we're using the correct environment and working directory
+  const env = { 
+    ...process.env, 
+    ...options,
+    NODE_ENV: 'development'
+  };
+  
   try {
-    const { stdout, stderr } = await execAsync(`npx hardhat run ${scriptPath} --network localhost`, {
+    // Use absolute path for hardhat config to ensure it's found
+    const hardhatConfigPath = path.join(__dirname, '../../hardhat.config.ts');
+    console.log(`🔧 Hardhat config path: ${hardhatConfigPath}`);
+    
+    const { stdout, stderr } = await execAsync(`npx hardhat run ${scriptPath} --network localhost --config ${hardhatConfigPath}`, {
       env,
       cwd: path.join(__dirname, '../../'),
       timeout: 10 * 60 * 1000 // 10 minute timeout

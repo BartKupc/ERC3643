@@ -244,6 +244,30 @@ app.get('/api/deployments', (req, res) => {
   }
 });
 
+// New endpoint: DELETE /api/deployments
+app.delete('/api/deployments', (req, res) => {
+  try {
+    console.log('🧹 Clearing all deployment data...');
+    const deploymentsPath = path.join(__dirname, '../deployments.json');
+    
+    // Clear the deployments.json file by writing an empty object structure
+    const emptyDeployments = { easydeploy: [], advanced: [] };
+    fs.writeFileSync(deploymentsPath, JSON.stringify(emptyDeployments, null, 2));
+    console.log('✅ Deployments file cleared (reset to empty object structure)');
+    
+    res.json({ 
+      success: true, 
+      message: 'All deployment data cleared successfully' 
+    });
+  } catch (error) {
+    console.error('❌ Error clearing deployment data:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+});
+
 // Start server
 app.listen(PORT, () => {
   console.log(`🚀 T-REX Backend Server running on port ${PORT}`);
