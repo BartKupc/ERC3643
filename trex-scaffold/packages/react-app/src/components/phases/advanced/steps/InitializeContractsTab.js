@@ -137,18 +137,18 @@ const InitializeContractsTab = ({
                 marginBottom: '10px',
                 padding: '8px',
                 borderRadius: '4px',
-                backgroundColor: contractInitStatus[name] === 'Initialized' ? '#d4edda' : '#f8d7da',
-                color: contractInitStatus[name] === 'Initialized' ? '#155724' : '#721c24',
+                backgroundColor: (typeof contractInitStatus[name] === 'string' ? contractInitStatus[name] === 'Initialized' : contractInitStatus[name].isInitialized) ? '#d4edda' : '#f8d7da',
+                color: (typeof contractInitStatus[name] === 'string' ? contractInitStatus[name] === 'Initialized' : contractInitStatus[name].isInitialized) ? '#155724' : '#721c24',
                 fontSize: '0.9rem'
               }}>
-                <strong>Status:</strong> {contractInitStatus[name]}
+                <strong>Status:</strong> {typeof contractInitStatus[name] === 'string' ? contractInitStatus[name] : (contractInitStatus[name].isInitialized ? 'Initialized' : 'Not initialized')}
               </div>
             )}
 
             {/* Initialize Button */}
             {selectedContracts[name] && (
               <button
-                onClick={() => initializeContract(name, selectedContracts[name])}
+                onClick={() => initializeContract(name)}
                 disabled={initializing || initializingContract[name]}
                 style={{ 
                   backgroundColor: '#28a745', 
