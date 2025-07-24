@@ -45,6 +45,10 @@ const UserManagementTab = ({ deployedContracts = {}, selectedContracts = {}, set
   const [selectedClaimIssuer, setSelectedClaimIssuer] = useState('');
   const [irError, setIRError] = useState('');
 
+  // Add state for user identities and selected identity
+  const [userIdentities, setUserIdentities] = useState([]);
+  const [selectedIdentity, setSelectedIdentity] = useState(null);
+
   // Load available claim issuers (from localStorage)
   useEffect(() => {
     try {
@@ -56,6 +60,59 @@ const UserManagementTab = ({ deployedContracts = {}, selectedContracts = {}, set
       setMessage('Error loading claim issuers');
     }
   }, []);
+
+  // Load user identities from localStorage on mount
+  useEffect(() => {
+    try {
+      const savedIdentities = localStorage.getItem('trex_user_identities');
+      if (savedIdentities) {
+        setUserIdentities(JSON.parse(savedIdentities));
+      }
+    } catch (error) {
+      setMessage('Error loading user identities');
+    }
+  }, []);
+
+  // Save user identity to localStorage and update state
+  const saveUserIdentity = (identity) => {
+    setUserIdentities(prev => {
+      const existingIndex = prev.findIndex(id => id.userAddress.toLowerCase() === identity.userAddress.toLowerCase());
+      let updated;
+      if (existingIndex >= 0) {
+        updated = [...prev];
+        updated[existingIndex] = { ...updated[existingIndex], ...identity };
+      } else {
+        updated = [...prev, identity];
+      }
+      localStorage.setItem('trex_user_identities', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  // Select an identity and set all relevant state
+  const loadExistingIdentity = (identity) => {
+    setSelectedIdentity(identity);
+    setUserAddress(identity.userAddress);
+    setOnchainIdAddress(identity.onchainIdAddress);
+    setUserCountry(identity.country || '840');
+  };
+
+  // After creating a new identity, auto-select it
+  const handleCreateOnchainId = async () => {
+    await createOnchainId();
+    // After creation, reload identities and auto-select the new one
+    try {
+      const savedIdentities = localStorage.getItem('trex_user_identities');
+      if (savedIdentities) {
+        const parsed = JSON.parse(savedIdentities);
+        setUserIdentities(parsed);
+        const newIdentity = parsed.find(id => id.userAddress.toLowerCase() === userAddress.toLowerCase());
+        if (newIdentity) {
+          loadExistingIdentity(newIdentity);
+        }
+      }
+    } catch {}
+  };
 
   const createOnchainId = async () => {
     try {
@@ -217,7 +274,7 @@ const UserManagementTab = ({ deployedContracts = {}, selectedContracts = {}, set
           <input type="text" value={userAddress} onChange={e => setUserAddress(e.target.value)} placeholder="0x..." style={{ width: '100%', padding: '0.5rem', border: '1px solid #ced4da', borderRadius: '4px', marginBottom: '1rem' }} />
           <label>Country Code:</label>
           <input type="text" value={userCountry} onChange={e => setUserCountry(e.target.value)} placeholder="840" style={{ width: '100%', padding: '0.5rem', border: '1px solid #ced4da', borderRadius: '4px', marginBottom: '1rem' }} />
-          <Button onClick={createOnchainId} disabled={creatingUser || !userAddress.trim()} style={{ backgroundColor: '#28a745', color: 'white' }}>{creatingUser ? 'Creating...' : 'Create OnchainID'}</Button>
+          <Button onClick={handleCreateOnchainId} disabled={creatingUser || !userAddress.trim()} style={{ backgroundColor: '#28a745', color: 'white' }}>{creatingUser ? 'Creating...' : 'Create OnchainID'}</Button>
         </div>
       )}
       {activeSubtab === 'register' && (
@@ -275,6 +332,54 @@ const UserManagementTab = ({ deployedContracts = {}, selectedContracts = {}, set
       {activeSubtab === 'view-claims' && (
         <div>
           <Button onClick={handleCheckClaims} style={{ backgroundColor: '#007bff', color: 'white' }}>Check Claims</Button>
+        </div>
+      )}
+      {/* Add a section to display and select identities */}
+      <div style={{ marginBottom: '2rem' }}>
+        <h4 style={{ color: '#1a237e', marginBottom: '1rem' }}>Existing Identities</h4>
+        {userIdentities.length === 0 ? (
+          <div style={{ color: '#6c757d', fontStyle: 'italic' }}>No identities created yet.</div>
+        ) : (
+          <div style={{ maxHeight: '300px', overflow: 'auto', border: '1px solid #dee2e6', borderRadius: '4px' }}>
+            {userIdentities.map((identity, index) => (
+              <div key={index} style={{
+                border: selectedIdentity?.userAddress === identity.userAddress ? '2px solid #007bff' : '1px solid #dee2e6',
+                borderRadius: '4px',
+                padding: '1rem',
+                marginBottom: '1rem',
+                background: selectedIdentity?.userAddress === identity.userAddress ? '#e7f3ff' : '#fff',
+                boxShadow: selectedIdentity?.userAddress === identity.userAddress ? '0 2px 8px rgba(0, 123, 255, 0.2)' : 'none'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                  <strong style={{ color: '#333' }}>{identity.userAddress}</strong>
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <Button
+                      onClick={() => loadExistingIdentity(identity)}
+                      style={{
+                        backgroundColor: selectedIdentity?.userAddress === identity.userAddress ? "#28a745" : "#007bff",
+                        color: "white",
+                        padding: '0.25rem 0.5rem',
+                        fontSize: '0.8rem',
+                        fontWeight: selectedIdentity?.userAddress === identity.userAddress ? 'bold' : 'normal'
+                      }}
+                    >
+                      {selectedIdentity?.userAddress === identity.userAddress ? 'Selected' : 'Select'}
+                    </Button>
+                  </div>
+                </div>
+                <div style={{ color: '#555', fontSize: '0.9rem' }}>OnchainID: {identity.onchainIdAddress}</div>
+                <div style={{ color: '#888', fontSize: '0.8rem' }}>Country: {identity.country}</div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+      {/* Show selected identity details at the top of each subtab/step */}
+      {selectedIdentity && (
+        <div style={{ background: '#e7f3ff', borderRadius: 8, border: '1px solid #b3d9ff', padding: '1rem', marginBottom: '1rem' }}>
+          <strong>Selected Identity:</strong> {selectedIdentity.userAddress} <br />
+          <strong>OnchainID:</strong> {selectedIdentity.onchainIdAddress} <br />
+          <strong>Country:</strong> {selectedIdentity.country}
         </div>
       )}
     </div>

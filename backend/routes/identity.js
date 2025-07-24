@@ -323,13 +323,21 @@ router.post('/create-onchainid-direct', async (req, res) => {
     const identity = await identityFactory.deploy(wallet.address, false); // Deployer is initial owner, not a library
     await identity.deployed();
     const onchainIdAddress = identity.address;
-    // Add user as management key (purpose=1, keyType=1)
+    // Add user as management key (purpose=1, keyType=1) and action key (purpose=2, keyType=1) if not already present
     const userKeyHash = ethers.utils.keccak256(ethers.utils.defaultAbiCoder.encode(['address'], [userAddress]));
-    try {
+    // Helper to check if key has purpose
+    const keyHasPurpose = async (purpose) => {
+      try {
+        return await identity.keyHasPurpose(userKeyHash, purpose);
+      } catch {
+        return false;
+      }
+    };
+    if (!(await keyHasPurpose(1))) {
       await identity.addKey(userKeyHash, 1, 1); // management key
+    }
+    if (!(await keyHasPurpose(2))) {
       await identity.addKey(userKeyHash, 2, 1); // action key
-    } catch (e) {
-      // Ignore if already added
     }
     res.json({ success: true, onchainIdAddress });
   } catch (error) {
