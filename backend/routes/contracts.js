@@ -306,14 +306,68 @@ async function handleInitialize(contractName, contractAddress, wallet, res) {
     const artifacts = JSON.parse(fs.readFileSync(artifactsPath, 'utf8'));
     const contract = new ethers.Contract(contractAddress, artifacts.abi, wallet);
     
-    // Check if contract has initialize method in ABI
-    const hasInitialize = artifacts.abi.some(method => method.name === 'initialize');
-    if (!hasInitialize) {
-      throw new Error(`${contractName} does not have an initialize method`);
+    // Check if contract has init method in ABI (T-REX contracts use 'init' not 'initialize')
+    const hasInit = artifacts.abi.some(method => method.name === 'init');
+    if (!hasInit) {
+      throw new Error(`${contractName} does not have an init method`);
     }
     
-    // Call initialize (you might need to pass parameters based on the contract)
-    const tx = await contract.initialize();
+    // Call init with parameters based on the contract
+    let tx;
+    if (contractName === 'IdentityRegistry') {
+      // IdentityRegistry needs parameters: TrustedIssuersRegistry, ClaimTopicsRegistry, IdentityRegistryStorage
+      const deploymentsPath = path.join(__dirname, '../../deployments.json');
+      const raw = fs.readFileSync(deploymentsPath, 'utf8');
+      let deploymentsObj = { easydeploy: [], advanced: [] };
+      
+      if (raw.trim().startsWith('{')) {
+        deploymentsObj = JSON.parse(raw);
+        if (!deploymentsObj.easydeploy) deploymentsObj.easydeploy = [];
+        if (!deploymentsObj.advanced) deploymentsObj.advanced = [];
+      }
+      
+      const allDeployments = [...deploymentsObj.easydeploy, ...deploymentsObj.advanced];
+      
+      // Find the latest addresses for the required contracts
+      let trustedIssuersAddress, claimTopicsAddress, storageAddress;
+      
+      // Find TrustedIssuersRegistry
+      const trustedIssuersDeployments = allDeployments
+        .filter(d => d.component === 'TrustedIssuersRegistry' || (d.implementations && d.implementations.trustedIssuersRegistry))
+        .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+      if (trustedIssuersDeployments.length > 0) {
+        const latest = trustedIssuersDeployments[0];
+        trustedIssuersAddress = latest.component ? latest.address : latest.implementations.trustedIssuersRegistry;
+      }
+      
+      // Find ClaimTopicsRegistry
+      const claimTopicsDeployments = allDeployments
+        .filter(d => d.component === 'ClaimTopicsRegistry' || (d.implementations && d.implementations.claimTopicsRegistry))
+        .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+      if (claimTopicsDeployments.length > 0) {
+        const latest = claimTopicsDeployments[0];
+        claimTopicsAddress = latest.component ? latest.address : latest.implementations.claimTopicsRegistry;
+      }
+      
+      // Find IdentityRegistryStorage
+      const storageDeployments = allDeployments
+        .filter(d => d.component === 'IdentityRegistryStorage' || (d.implementations && d.implementations.identityRegistryStorage))
+        .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+      if (storageDeployments.length > 0) {
+        const latest = storageDeployments[0];
+        storageAddress = latest.component ? latest.address : latest.implementations.identityRegistryStorage;
+      }
+      
+      if (!trustedIssuersAddress || !claimTopicsAddress || !storageAddress) {
+        throw new Error('Missing required contract addresses for IdentityRegistry initialization');
+      }
+      
+      console.log(`Initializing IdentityRegistry with params: ${trustedIssuersAddress}, ${claimTopicsAddress}, ${storageAddress}`);
+      tx = await contract.init(trustedIssuersAddress, claimTopicsAddress, storageAddress);
+    } else {
+      // Other contracts don't need parameters
+      tx = await contract.init();
+    }
     const receipt = await tx.wait();
     
     console.log(`✅ ${contractName} initialized successfully`);

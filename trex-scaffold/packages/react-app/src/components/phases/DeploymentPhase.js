@@ -298,6 +298,26 @@ const DeploymentPhase = () => {
     }
   };
 
+  // Check if contract is initialized (like the old copy)
+  const isContractInitialized = async (contractName, address) => {
+    try {
+      const result = await contractInteraction('view', {
+        contractName,
+        contractAddress: address,
+        method: 'owner',
+        params: []
+      });
+      
+      // Check if owner is not zero address and is the current deployer
+      const isInitialized = result.result && result.result !== '0x0000000000000000000000000000000000000000';
+      console.log(`${contractName} owner: ${result.result}, initialized: ${isInitialized}`);
+      return isInitialized;
+    } catch (error) {
+      console.log(`${contractName} owner check failed:`, error.message);
+      return false;
+    }
+  };
+
   // Check contract initialization status
   const checkContractInitStatus = async () => {
     try {
@@ -311,44 +331,7 @@ const DeploymentPhase = () => {
         if (addresses && addresses.length > 0) {
           const address = addresses[0];
           try {
-            // Try different methods to check if contract is initialized
-            let isInitialized = false;
-            
-            // Method 1: Try to get owner
-            try {
-              const ownerResult = await contractInteraction('view', {
-                contractName: contractType,
-                contractAddress: address,
-                method: 'owner',
-                params: []
-              });
-              isInitialized = ownerResult.result && ownerResult.result !== '0x0000000000000000000000000000000000000000';
-            } catch (ownerError) {
-              // Method 2: Try to get implementation
-              try {
-                const implResult = await contractInteraction('view', {
-                  contractName: contractType,
-                  contractAddress: address,
-                  method: 'implementation',
-                  params: []
-                });
-                isInitialized = implResult.result && implResult.result !== '0x0000000000000000000000000000000000000000';
-              } catch (implError) {
-                // Method 3: Try to get a simple getter
-                try {
-                  const getterResult = await contractInteraction('view', {
-                    contractName: contractType,
-                    contractAddress: address,
-                    method: 'getClaimTopics',
-                    params: []
-                  });
-                  isInitialized = true; // If we can call a method, it's probably initialized
-                } catch (getterError) {
-                  isInitialized = false;
-                }
-              }
-            }
-            
+            const isInitialized = await isContractInitialized(contractType, address);
             status[contractType] = isInitialized ? 'Initialized' : 'Not initialized';
           } catch (error) {
             status[contractType] = 'Error checking';
@@ -394,68 +377,91 @@ const DeploymentPhase = () => {
     }
   };
 
-  // Initialize contract using new API
-  const initializeContract = async (contractName, address) => {
+  // Initialize contract (like the old copy)
+  const initializeContract = async (contractName) => {
+    setInitializingContract(prev => ({ ...prev, [contractName]: true }));
     try {
-      setInitializingContract(prev => ({ ...prev, [contractName]: true }));
-      setMessage(`Initializing ${contractName}...`);
-      addLog(`Starting initialization of ${contractName} via backend API`, "info");
-
-      const contractAddress = address || selectedContracts[contractName] || (deployedContracts[contractName] && deployedContracts[contractName][0]);
-      
-      if (!contractAddress) {
-        throw new Error(`No ${contractName} found. Please deploy one first.`);
+      const address = selectedContracts[contractName] || (deployedContracts[contractName] && deployedContracts[contractName][0]);
+      if (!address) {
+        addLog(`No address found for ${contractName}, skipping initialization`, "warning");
+        setInitializingContract(prev => ({ ...prev, [contractName]: false }));
+        return;
       }
+      
+      const isInitialized = await isContractInitialized(contractName, address);
+      if (isInitialized) {
+        addLog(`${contractName} at ${address} is already initialized, skipping`, "info");
+        setContractInitStatus(prev => ({
+          ...prev,
+          [contractName]: { address, isInitialized }
+        }));
+        setInitializingContract(prev => ({ ...prev, [contractName]: false }));
+        return;
+      }
+      
+      addLog(`Initializing ${contractName} at ${address}...`, "info");
       
       const result = await contractInteraction('initialize', {
         contractName,
-        contractAddress: contractAddress
+        contractAddress: address
       });
       
-      setMessage(`${contractName} initialized successfully`);
       addLog(`${contractName} initialized successfully`, "success");
       addLog(`Transaction hash: ${result.transactionHash}`, "info");
       
-      await checkContractInitStatus();
+      await reloadDeploymentState();
+      
+      // After initializing, check only this contract's status
+      const newStatus = await isContractInitialized(contractName, address);
+      setContractInitStatus(prev => ({
+        ...prev,
+        [contractName]: { address, isInitialized: newStatus }
+      }));
     } catch (error) {
       console.error(`Error initializing ${contractName}:`, error);
-      const cleanError = extractCleanError(error);
-      setMessage(`Error initializing ${contractName}: ${cleanError}`);
-      addLog(`Error initializing ${contractName}: ${cleanError}`, "error");
+      addLog(`Error initializing ${contractName}: ${error.message}`, "error");
+      throw error;
     } finally {
       setInitializingContract(prev => ({ ...prev, [contractName]: false }));
     }
   };
 
-  // Initialize all contracts
+  // Initialize all contracts (like the old copy)
   const initializeAllContracts = async () => {
     try {
       setInitializing(true);
-      addLog("Starting initialization of selected contracts...", "info");
-      
-      // Only initialize contracts that have been selected
-      const contractsToInitialize = Object.keys(selectedContracts).filter(
-        contractName => selectedContracts[contractName] && deployedContracts[contractName]
-      );
-      
-      if (contractsToInitialize.length === 0) {
-        addLog("No contracts selected for initialization", "warning");
-        return;
-      }
-      
-      addLog(`Initializing ${contractsToInitialize.length} selected contracts: ${contractsToInitialize.join(', ')}`, "info");
-      
+      setMessage('Initializing contracts...');
+      addLog('Starting contract initialization', "info");
+
+      // Initialize all deployed contracts (use selected if available, otherwise use latest deployed)
+      const contractsToInitialize = [
+        'ClaimTopicsRegistry',
+        'TrustedIssuersRegistry', 
+        'IdentityRegistryStorage',
+        'IdentityRegistry'
+      ];
+
       for (const contractName of contractsToInitialize) {
-        try {
-          await initializeContract(contractName, selectedContracts[contractName]);
-        } catch (error) {
-          addLog(`Failed to initialize ${contractName}: ${extractCleanError(error)}`, "error");
+        // Use selected contract if available, otherwise use the latest deployed
+        const hasSelected = selectedContracts[contractName];
+        const hasDeployed = deployedContracts[contractName] && deployedContracts[contractName].length > 0;
+        
+        if (hasSelected || hasDeployed) {
+          await initializeContract(contractName);
         }
       }
-      
-      addLog("Selected contracts initialization completed", "success");
+
+      // Initialize ModularCompliance if it exists
+      if (selectedContracts.ModularCompliance || (deployedContracts.ModularCompliance && deployedContracts.ModularCompliance.length > 0)) {
+        await initializeContract('ModularCompliance');
+      }
+
+      setMessage('Contract initialization completed');
+      addLog('Contract initialization completed', "success");
     } catch (error) {
-      addLog(`Error during bulk initialization: ${extractCleanError(error)}`, "error");
+      console.error('Error during contract initialization:', error);
+      setMessage(`Error during contract initialization: ${error.message}`);
+      addLog(`Error during contract initialization: ${error.message}`, "error");
     } finally {
       setInitializing(false);
     }
