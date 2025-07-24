@@ -89,17 +89,31 @@ async function handleDeploy(contractName, res) {
       throw new Error('Deployment failed - no deployment data found');
     }
     
-    const allDeployments = JSON.parse(fs.readFileSync(deploymentsPath, 'utf8'));
+    const raw = fs.readFileSync(deploymentsPath, 'utf8');
+    let deploymentsObj = { easydeploy: [], advanced: [] };
+    let allDeployments = [];
+    
+    if (raw.trim().startsWith('{')) {
+      deploymentsObj = JSON.parse(raw);
+      if (!deploymentsObj.easydeploy) deploymentsObj.easydeploy = [];
+      if (!deploymentsObj.advanced) deploymentsObj.advanced = [];
+      allDeployments = [...deploymentsObj.easydeploy, ...deploymentsObj.advanced];
+    } else {
+      allDeployments = JSON.parse(raw);
+    }
+    
     let contractAddress = null;
     
     // First, check if the latest deployment is a factory deployment with suite
-    const latestDeployment = allDeployments[allDeployments.length - 1];
-    if (latestDeployment.suite && latestDeployment.suite[contractName.toLowerCase()]) {
-      contractAddress = latestDeployment.suite[contractName.toLowerCase()];
-    } else if (contractName === 'Factory' && latestDeployment.factory) {
-      contractAddress = latestDeployment.factory.address;
-    } else if (contractName === 'Token' && latestDeployment.tokens && latestDeployment.tokens.length > 0) {
-      contractAddress = latestDeployment.tokens[latestDeployment.tokens.length - 1].token.address;
+    if (allDeployments.length > 0) {
+      const latestDeployment = allDeployments[allDeployments.length - 1];
+      if (latestDeployment.suite && latestDeployment.suite[contractName.toLowerCase()]) {
+        contractAddress = latestDeployment.suite[contractName.toLowerCase()];
+      } else if (contractName === 'Factory' && latestDeployment.factory) {
+        contractAddress = latestDeployment.factory.address;
+      } else if (contractName === 'Token' && latestDeployment.tokens && latestDeployment.tokens.length > 0) {
+        contractAddress = latestDeployment.tokens[latestDeployment.tokens.length - 1].token.address;
+      }
     }
     
     // If not found in latest, search for individual component deployments
@@ -116,7 +130,7 @@ async function handleDeploy(contractName, res) {
     if (!contractAddress) {
       console.log(`❌ Could not find deployed address for ${contractName}`);
       console.log('Available deployments:', allDeployments.map(d => ({ 
-        type: d.component ? 'component' : 'factory', 
+        type: d.component ? 'component' : (d.factory ? 'factory' : 'other'), 
         component: d.component, 
         hasSuite: !!d.suite,
         timestamp: d.timestamp 
