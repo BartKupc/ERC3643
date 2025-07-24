@@ -245,8 +245,9 @@ app.get('/api/deployments', (req, res) => {
 });
 
 // Start server
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 T-REX Backend Server running on port ${PORT}`);
+  console.log(`🌐 Accessible at: http://0.0.0.0:${PORT}`);
 });
 
 module.exports = app; 
