@@ -2,8 +2,6 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Button } from '../../shared';
 
-const IDENTITIES_STORAGE_KEY = 'trex_user_identities';
-
 const claimTopics = [
   { id: 1, name: "KYC (Know Your Customer)" },
   { id: 2, name: "AML (Anti-Money Laundering)" },
@@ -13,8 +11,27 @@ const claimTopics = [
   { id: 6, name: "Blacklist" }
 ];
 
+const ContractSelector = ({ contractType, contracts, selectedAddress, onSelect, title, description }) => (
+  <div style={{ marginBottom: '1rem' }}>
+    <label style={{ fontWeight: 'bold', color: '#333' }}>{title}</label>
+    <div style={{ fontSize: '0.9rem', color: '#666', marginBottom: '0.25rem' }}>{description}</div>
+    <select
+      value={selectedAddress || ''}
+      onChange={e => onSelect(e.target.value)}
+      style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ced4da' }}
+    >
+      <option value=''>-- Select {contractType} --</option>
+      {(contracts[contractType] || []).map((address, idx) => (
+        <option key={address} value={address}>
+          {idx === 0 ? 'Latest' : `#${idx + 1}`}: {address.slice(0, 8)}...{address.slice(-6)}
+        </option>
+      ))}
+    </select>
+  </div>
+);
+
 const UserManagementTab = ({ deployedContracts = {}, selectedContracts = {}, setSelectedContracts = () => {}, addLog = () => {} }) => {
-  // State
+  const [activeSubtab, setActiveSubtab] = useState('create');
   const [userAddress, setUserAddress] = useState('');
   const [userCountry, setUserCountry] = useState('840');
   const [onchainIdAddress, setOnchainIdAddress] = useState('');
@@ -22,51 +39,14 @@ const UserManagementTab = ({ deployedContracts = {}, selectedContracts = {}, set
   const [registeringUser, setRegisteringUser] = useState(false);
   const [addingClaim, setAddingClaim] = useState(false);
   const [message, setMessage] = useState('');
-  const [userIdentities, setUserIdentities] = useState([]);
-  const [selectedIdentity, setSelectedIdentity] = useState(null);
   const [claimTopic, setClaimTopic] = useState('');
   const [claimValue, setClaimValue] = useState('');
   const [availableClaimIssuers, setAvailableClaimIssuers] = useState([]);
   const [selectedClaimIssuer, setSelectedClaimIssuer] = useState('');
-  const [availableIRs, setAvailableIRs] = useState([]);
-  const [selectedIR, setSelectedIR] = useState('');
-  const [loadingIRs, setLoadingIRs] = useState(false);
-  const [loadingClaimIssuers, setLoadingClaimIssuers] = useState(false);
-  const [trustedIssuers, setTrustedIssuers] = useState([]);
-  const [selectedTrustedIssuer, setSelectedTrustedIssuer] = useState('');
-
-  // Load user identities from localStorage
-  useEffect(() => {
-    const savedIdentities = localStorage.getItem(IDENTITIES_STORAGE_KEY);
-    if (savedIdentities) {
-      setUserIdentities(JSON.parse(savedIdentities));
-    }
-  }, []);
-
-  // Load available IRs (from backend)
-  useEffect(() => {
-    const loadAvailableIRs = async () => {
-      setLoadingIRs(true);
-      try {
-        const response = await axios.get('/api/identity-registries');
-        if (response.data.success) {
-          setAvailableIRs(response.data.identityRegistries);
-          if (!selectedIR && response.data.identityRegistries.length > 0) {
-            setSelectedIR(response.data.identityRegistries[0].address);
-          }
-        }
-      } catch (error) {
-        setMessage('Error loading Identity Registries');
-      } finally {
-        setLoadingIRs(false);
-      }
-    };
-    loadAvailableIRs();
-  }, []);
+  const [irError, setIRError] = useState('');
 
   // Load available claim issuers (from localStorage)
   useEffect(() => {
-    setLoadingClaimIssuers(true);
     try {
       const savedClaimIssuers = localStorage.getItem('trex_available_claim_issuers');
       if (savedClaimIssuers) {
@@ -74,38 +54,18 @@ const UserManagementTab = ({ deployedContracts = {}, selectedContracts = {}, set
       }
     } catch (error) {
       setMessage('Error loading claim issuers');
-    } finally {
-      setLoadingClaimIssuers(false);
     }
   }, []);
 
-  // Save user identity to localStorage
-  const saveUserIdentity = (identity) => {
-    setUserIdentities(prev => {
-      const existingIndex = prev.findIndex(id => id.userAddress.toLowerCase() === identity.userAddress.toLowerCase());
-      let updated;
-      if (existingIndex >= 0) {
-        updated = [...prev];
-        updated[existingIndex] = { ...updated[existingIndex], ...identity };
-      } else {
-        updated = [...prev, identity];
-      }
-      localStorage.setItem(IDENTITIES_STORAGE_KEY, JSON.stringify(updated));
-      return updated;
-    });
-  };
-
-  // Create OnchainID
-  const createOnchainId = async () => {
+  // Subtab: Create OnchainID
+  const handleCreateOnchainId = async () => {
     try {
       setCreatingUser(true);
       setMessage('Creating OnchainID...');
       if (!userAddress.trim()) throw new Error('Please enter a wallet address');
-      // Backend API
       const response = await axios.post('/api/identity/create-onchainid', { userAddress });
       if (!response.data.success) throw new Error(response.data.error || 'Unknown error');
       setOnchainIdAddress(response.data.onchainIdAddress);
-      saveUserIdentity({ userAddress, onchainIdAddress: response.data.onchainIdAddress, country: userCountry, status: 'created', claims: [] });
       setMessage(`OnchainID created at ${response.data.onchainIdAddress}`);
     } catch (error) {
       setMessage(`Error creating OnchainID: ${error.message}`);
@@ -114,22 +74,21 @@ const UserManagementTab = ({ deployedContracts = {}, selectedContracts = {}, set
     }
   };
 
-  // Register in Identity Registry
-  const registerIdentity = async () => {
+  // Subtab: Register in IR
+  const handleRegisterIdentity = async () => {
     try {
       setRegisteringUser(true);
       setMessage('Registering identity...');
       if (!onchainIdAddress) throw new Error('Please create an OnchainID first');
-      if (!selectedIR) throw new Error('Please select an Identity Registry');
+      if (!selectedContracts.IdentityRegistry) throw new Error('Please select an Identity Registry');
       const response = await axios.post('/api/identity/register-identity', {
         userAddress,
         onchainIdAddress,
         userCountry,
-        selectedIR
+        selectedIR: selectedContracts.IdentityRegistry
       });
       if (!response.data.success) throw new Error(response.data.error || 'Unknown error');
       setMessage('Identity registered successfully');
-      saveUserIdentity({ userAddress, onchainIdAddress, country: userCountry, status: 'registered', registeredAt: new Date().toISOString() });
     } catch (error) {
       setMessage(`Error registering identity: ${error.message}`);
     } finally {
@@ -137,8 +96,8 @@ const UserManagementTab = ({ deployedContracts = {}, selectedContracts = {}, set
     }
   };
 
-  // Add ClaimIssuer keys to OnchainID
-  const addClaimIssuerKeysToOnchainID = async () => {
+  // Subtab: Add ClaimIssuer Keys
+  const handleAddClaimIssuerKeys = async () => {
     try {
       setAddingClaim(true);
       setMessage('Adding ClaimIssuer keys to OnchainID...');
@@ -157,8 +116,8 @@ const UserManagementTab = ({ deployedContracts = {}, selectedContracts = {}, set
     }
   };
 
-  // Add claim to identity
-  const addClaimToIdentity = async () => {
+  // Subtab: Add Claim
+  const handleAddClaim = async () => {
     try {
       setAddingClaim(true);
       setMessage('Adding claim to identity...');
@@ -174,8 +133,6 @@ const UserManagementTab = ({ deployedContracts = {}, selectedContracts = {}, set
       });
       if (!response.data.success) throw new Error(response.data.error || 'Unknown error');
       setMessage('Claim added to identity');
-      // Update local identity
-      saveUserIdentity({ userAddress, onchainIdAddress, country: userCountry, status: 'claim-added', claims: [{ topic: claimTopic, value: claimValue, issuer: selectedClaimIssuer, addedAt: new Date().toISOString() }] });
     } catch (error) {
       setMessage(`Error adding claim: ${error.message}`);
     } finally {
@@ -183,8 +140,8 @@ const UserManagementTab = ({ deployedContracts = {}, selectedContracts = {}, set
     }
   };
 
-  // Check claims on OnchainID
-  const checkOnchainIDClaims = async () => {
+  // Subtab: View Claims
+  const handleCheckClaims = async () => {
     try {
       if (!onchainIdAddress) throw new Error('Please create an OnchainID first');
       const response = await axios.get(`/api/identity/check-onchainid-claims/${onchainIdAddress}`);
@@ -195,148 +152,128 @@ const UserManagementTab = ({ deployedContracts = {}, selectedContracts = {}, set
     }
   };
 
-  // Clear current identity
-  const clearCurrentIdentity = () => {
-    setUserAddress('');
-    setUserCountry('840');
-    setOnchainIdAddress('');
-    setSelectedIdentity(null);
-    setClaimTopic('');
-    setClaimValue('');
-    setSelectedClaimIssuer('');
-    setMessage('');
+  // Auto-select/refresh contracts
+  const handleAutoSelectContracts = () => {
+    setIRError('');
+    if (!deployedContracts.IdentityRegistry || deployedContracts.IdentityRegistry.length === 0) {
+      setIRError('No Identity Registry found. Please deploy one first.');
+    } else {
+      setSelectedContracts(prev => ({ ...prev, IdentityRegistry: deployedContracts.IdentityRegistry[0] }));
+    }
+    if (!deployedContracts.ClaimIssuer || deployedContracts.ClaimIssuer.length === 0) {
+      setMessage('No ClaimIssuer found. Please deploy one first.');
+    } else {
+      setSelectedClaimIssuer(deployedContracts.ClaimIssuer[0]);
+    }
   };
 
+  // Subtab UI
+  const subtabs = [
+    { key: 'create', label: 'Create OnchainID' },
+    { key: 'register', label: 'Register in IR' },
+    { key: 'add-claim-issuer', label: 'Add ClaimIssuer Keys' },
+    { key: 'add-claim', label: 'Add Claim' },
+    { key: 'view-claims', label: 'View Claims' }
+  ];
+
   return (
-    <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 20px' }}>
+    <div style={{ maxWidth: '900px', margin: '0 auto', padding: '0 20px' }}>
       <h3 style={{ color: '#1a237e', marginBottom: '1rem' }}>User Management</h3>
-      {/* Existing Identities */}
-      {userIdentities.length > 0 && (
-        <div style={{ background: '#fff', borderRadius: 8, border: '1px solid #dee2e6', padding: '1.5rem', marginBottom: '2rem' }}>
-          <h4 style={{ color: '#1a237e', marginBottom: '1rem' }}>Existing Identities</h4>
-          <div style={{ maxHeight: '300px', overflow: 'auto' }}>
-            {userIdentities.map((identity, index) => (
-              <div key={index} style={{ border: selectedIdentity?.userAddress === identity.userAddress ? '2px solid #007bff' : '1px solid #dee2e6', borderRadius: '4px', padding: '1rem', marginBottom: '1rem', background: selectedIdentity?.userAddress === identity.userAddress ? '#e7f3ff' : '#fff', boxShadow: selectedIdentity?.userAddress === identity.userAddress ? '0 2px 8px rgba(0, 123, 255, 0.2)' : 'none' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                  <strong style={{ color: '#333' }}>{identity.userAddress}</strong>
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <Button onClick={() => setSelectedIdentity(identity)} style={{ backgroundColor: selectedIdentity?.userAddress === identity.userAddress ? "#28a745" : "#007bff", color: "white", padding: '0.25rem 0.5rem', fontSize: '0.8rem', fontWeight: selectedIdentity?.userAddress === identity.userAddress ? 'bold' : 'normal' }}>{selectedIdentity?.userAddress === identity.userAddress ? 'Selected' : 'Select'}</Button>
-                    <Button onClick={checkOnchainIDClaims} style={{ backgroundColor: "#17a2b8", color: "white", padding: '0.25rem 0.5rem', fontSize: '0.8rem' }}>Check Claims</Button>
-                  </div>
-                </div>
-                <div style={{ fontSize: '0.9rem', color: '#666' }}>
-                  <div>OnchainID: {identity.onchainIdAddress}</div>
-                  <div>Status: {identity.status}</div>
-                  <div>Country: {identity.country}</div>
-                  <div>Claims: {identity.claims?.length || 0}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-      {/* Step 1: Create OnchainID */}
-      <div style={{ background: '#fff', borderRadius: 8, border: '1px solid #dee2e6', padding: '1.5rem', marginBottom: '2rem' }}>
-        <h4 style={{ color: '#1a237e', marginBottom: '1rem' }}>Step 1: Create OnchainID</h4>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-          <div>
-            <label style={{ display: 'block', marginBottom: '0.5rem', color: '#333', fontWeight: 'bold' }}>User Address:</label>
-            <input type="text" value={userAddress} onChange={e => setUserAddress(e.target.value)} placeholder="0x..." style={{ width: '100%', padding: '0.5rem', border: '1px solid #ced4da', borderRadius: '4px', fontSize: '0.9rem' }} />
-          </div>
-          <div>
-            <label style={{ display: 'block', marginBottom: '0.5rem', color: '#333', fontWeight: 'bold' }}>Country Code:</label>
-            <input type="text" value={userCountry} onChange={e => setUserCountry(e.target.value)} placeholder="840" style={{ width: '100%', padding: '0.5rem', border: '1px solid #ced4da', borderRadius: '4px', fontSize: '0.9rem' }} />
-          </div>
-        </div>
-        <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
-          <Button onClick={createOnchainId} disabled={creatingUser || !userAddress.trim()} style={{ backgroundColor: "#28a745", color: "white" }}>{creatingUser ? "Creating..." : "Create OnchainID"}</Button>
-          <Button onClick={clearCurrentIdentity} style={{ backgroundColor: "#6c757d", color: "white" }}>Clear</Button>
-        </div>
+      {/* Subtab Navigation */}
+      <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem' }}>
+        {subtabs.map(tab => (
+          <Button
+            key={tab.key}
+            onClick={() => setActiveSubtab(tab.key)}
+            style={{
+              backgroundColor: activeSubtab === tab.key ? '#007bff' : '#e9ecef',
+              color: activeSubtab === tab.key ? 'white' : '#222',
+              border: 'none',
+              padding: '10px 20px',
+              borderRadius: '5px',
+              cursor: 'pointer',
+              fontWeight: activeSubtab === tab.key ? 'bold' : 'normal',
+              fontSize: '1rem',
+            }}
+          >
+            {tab.label}
+          </Button>
+        ))}
+        <Button
+          onClick={handleAutoSelectContracts}
+          style={{ backgroundColor: '#2196f3', color: 'white', marginLeft: 'auto' }}
+        >
+          🔄 Auto-Select/Refresh
+        </Button>
       </div>
-      {/* Step 2: Register in Identity Registry */}
-      {onchainIdAddress && (
-        <div style={{ background: '#fff', borderRadius: 8, border: '1px solid #dee2e6', padding: '1.5rem', marginBottom: '2rem' }}>
-          <h4 style={{ color: '#1a237e', marginBottom: '1rem' }}>Step 2: Register in Identity Registry</h4>
-          <div style={{ marginBottom: '1rem' }}>
-            <label style={{ display: 'block', marginBottom: '0.5rem', color: '#333', fontWeight: 'bold' }}>Select Identity Registry:</label>
-            {loadingIRs ? (
-              <div style={{ color: '#666', fontStyle: 'italic' }}>Loading Identity Registries...</div>
-            ) : availableIRs.length > 0 ? (
-              <select value={selectedIR} onChange={e => setSelectedIR(e.target.value)} style={{ width: '100%', padding: '0.5rem', border: '1px solid #ced4da', borderRadius: '4px', fontSize: '0.9rem', backgroundColor: 'white', color: '#333' }}>
-                <option value="">Select an Identity Registry</option>
-                {availableIRs.map(ir => (
-                  <option key={ir.address} value={ir.address}>IR: {ir.tokenName} ({ir.tokenSymbol}) - {ir.timestamp ? new Date(ir.timestamp).toLocaleString() : 'Unknown time'}</option>
-                ))}
-              </select>
-            ) : (
-              <div style={{ color: '#856404', backgroundColor: '#fff3cd', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ffeaa7' }}>No Identity Registries found</div>
-            )}
-          </div>
-          <Button onClick={registerIdentity} disabled={registeringUser || !selectedIR} style={{ backgroundColor: "#17a2b8", color: "white" }}>{registeringUser ? "Registering..." : "Register Identity"}</Button>
+      {irError && <div style={{ color: '#dc3545', marginBottom: '1rem' }}>{irError}</div>}
+      {message && <div style={{ color: message.includes('Error') ? '#721c24' : '#155724', backgroundColor: message.includes('Error') ? '#f8d7da' : '#d4edda', padding: '0.5rem', borderRadius: '4px', marginBottom: '1rem', border: `1px solid ${message.includes('Error') ? '#f5c6cb' : '#c3e6cb'}` }}>{message}</div>}
+      {/* Subtab Content */}
+      {activeSubtab === 'create' && (
+        <div>
+          <label>User Address:</label>
+          <input type="text" value={userAddress} onChange={e => setUserAddress(e.target.value)} placeholder="0x..." style={{ width: '100%', padding: '0.5rem', border: '1px solid #ced4da', borderRadius: '4px', marginBottom: '1rem' }} />
+          <label>Country Code:</label>
+          <input type="text" value={userCountry} onChange={e => setUserCountry(e.target.value)} placeholder="840" style={{ width: '100%', padding: '0.5rem', border: '1px solid #ced4da', borderRadius: '4px', marginBottom: '1rem' }} />
+          <Button onClick={handleCreateOnchainId} disabled={creatingUser || !userAddress.trim()} style={{ backgroundColor: '#28a745', color: 'white' }}>{creatingUser ? 'Creating...' : 'Create OnchainID'}</Button>
         </div>
       )}
-      {/* Step 3: Add Claims */}
-      {onchainIdAddress && (
-        <div style={{ background: '#fff', borderRadius: 8, border: '1px solid #dee2e6', padding: '1.5rem', marginBottom: '2rem' }}>
-          <h4 style={{ color: '#1a237e', marginBottom: '1rem' }}>Step 3: Add Claims</h4>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-            <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: '#333', fontWeight: 'bold' }}>Claim Topic:</label>
-              <select value={claimTopic} onChange={e => setClaimTopic(e.target.value)} style={{ width: '100%', padding: '0.5rem', border: '1px solid #ced4da', borderRadius: '4px', fontSize: '0.9rem', backgroundColor: 'white', color: '#333' }}>
-                <option value="">Select a claim topic</option>
-                {claimTopics.map(topic => (
-                  <option key={topic.id} value={topic.name}>{topic.name}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: '#333', fontWeight: 'bold' }}>Claim Value:</label>
-              <select value={claimValue} onChange={e => setClaimValue(e.target.value)} style={{ width: '100%', padding: '0.5rem', border: '1px solid #ced4da', borderRadius: '4px', fontSize: '0.9rem', backgroundColor: 'white', color: '#333' }}>
-                <option value="">Select a value</option>
-                <option value="YES">YES</option>
-                <option value="NO">NO</option>
-              </select>
-            </div>
-            <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: '#333', fontWeight: 'bold' }}>Trusted Issuer:</label>
-              <select value={selectedClaimIssuer} onChange={e => setSelectedClaimIssuer(e.target.value)} style={{ width: '100%', padding: '0.5rem', border: '1px solid #ced4da', borderRadius: '4px', fontSize: '0.9rem', backgroundColor: 'white', color: '#333' }}>
-                <option value="">Select a Claim Issuer</option>
-                {availableClaimIssuers.map(issuer => (
-                  <option key={issuer.address} value={issuer.address}>{issuer.name || 'Unnamed'} - {issuer.timestamp ? new Date(issuer.timestamp).toLocaleString() : 'Unknown time'}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
-            <Button onClick={addClaimIssuerKeysToOnchainID} disabled={addingClaim || !selectedClaimIssuer} style={{ backgroundColor: "#28a745", color: "white" }}>{addingClaim ? "Adding Keys..." : "Add ClaimIssuer Keys to OnchainID"}</Button>
-            <Button onClick={addClaimToIdentity} disabled={addingClaim || !claimTopic || !claimValue} style={{ backgroundColor: "#ffc107", color: "black" }}>{addingClaim ? "Adding Claim..." : "Add Claim"}</Button>
-          </div>
+      {activeSubtab === 'register' && (
+        <div>
+          <ContractSelector
+            contractType="IdentityRegistry"
+            contracts={deployedContracts}
+            selectedAddress={selectedContracts.IdentityRegistry}
+            onSelect={address => setSelectedContracts(prev => ({ ...prev, IdentityRegistry: address }))}
+            title="Identity Registry"
+            description="Select which Identity Registry to register in"
+          />
+          <Button onClick={handleRegisterIdentity} disabled={registeringUser || !selectedContracts.IdentityRegistry} style={{ backgroundColor: '#17a2b8', color: 'white' }}>{registeringUser ? 'Registering...' : 'Register Identity'}</Button>
         </div>
       )}
-      {/* Actual Claims from Contract */}
-      {selectedIdentity?.claims && selectedIdentity.claims.length > 0 && (
-        <div style={{ background: '#fff', borderRadius: 8, border: '1px solid #dee2e6', padding: '1.5rem', marginBottom: '2rem' }}>
-          <h4 style={{ color: '#1a237e', marginBottom: '1rem' }}>Claims</h4>
-          <div style={{ maxHeight: '400px', overflow: 'auto' }}>
-            {selectedIdentity.claims.map((claim, index) => (
-              <div key={index} style={{ border: '1px solid #dee2e6', borderRadius: '4px', padding: '1rem', marginBottom: '1rem', background: '#f8f9fa' }}>
-                <div style={{ fontSize: '0.9rem', color: '#333' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                    <strong>Claim #{index + 1}</strong>
-                    <span style={{ backgroundColor: '#007bff', color: 'white', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.8rem' }}>Topic {claim.topic}</span>
-                  </div>
-                  <div><strong>Issuer:</strong> {claim.issuer}</div>
-                  <div><strong>Value:</strong> {claim.value}</div>
-                  <div><strong>Added:</strong> {claim.addedAt}</div>
-                </div>
-              </div>
+      {activeSubtab === 'add-claim-issuer' && (
+        <div>
+          <ContractSelector
+            contractType="ClaimIssuer"
+            contracts={deployedContracts}
+            selectedAddress={selectedClaimIssuer}
+            onSelect={setSelectedClaimIssuer}
+            title="ClaimIssuer"
+            description="Select which ClaimIssuer to add as key"
+          />
+          <Button onClick={handleAddClaimIssuerKeys} disabled={addingClaim || !selectedClaimIssuer} style={{ backgroundColor: '#28a745', color: 'white' }}>{addingClaim ? 'Adding...' : 'Add ClaimIssuer Keys'}</Button>
+        </div>
+      )}
+      {activeSubtab === 'add-claim' && (
+        <div>
+          <ContractSelector
+            contractType="ClaimIssuer"
+            contracts={deployedContracts}
+            selectedAddress={selectedClaimIssuer}
+            onSelect={setSelectedClaimIssuer}
+            title="ClaimIssuer"
+            description="Select which ClaimIssuer to use for claim"
+          />
+          <label>Claim Topic:</label>
+          <select value={claimTopic} onChange={e => setClaimTopic(e.target.value)} style={{ width: '100%', padding: '0.5rem', border: '1px solid #ced4da', borderRadius: '4px', marginBottom: '1rem' }}>
+            <option value=''>Select a claim topic</option>
+            {claimTopics.map(topic => (
+              <option key={topic.id} value={topic.name}>{topic.name}</option>
             ))}
-          </div>
+          </select>
+          <label>Claim Value:</label>
+          <select value={claimValue} onChange={e => setClaimValue(e.target.value)} style={{ width: '100%', padding: '0.5rem', border: '1px solid #ced4da', borderRadius: '4px', marginBottom: '1rem' }}>
+            <option value=''>Select a value</option>
+            <option value='YES'>YES</option>
+            <option value='NO'>NO</option>
+          </select>
+          <Button onClick={handleAddClaim} disabled={addingClaim || !claimTopic || !claimValue || !selectedClaimIssuer} style={{ backgroundColor: '#ffc107', color: 'black' }}>{addingClaim ? 'Adding...' : 'Add Claim'}</Button>
         </div>
       )}
-      {/* Message */}
-      {message && (
-        <div style={{ color: message.includes('Error') ? '#721c24' : '#155724', backgroundColor: message.includes('Error') ? '#f8d7da' : '#d4edda', padding: '0.5rem', borderRadius: '4px', marginBottom: '1rem', border: `1px solid ${message.includes('Error') ? '#f5c6cb' : '#c3e6cb'}` }}>{message}</div>
+      {activeSubtab === 'view-claims' && (
+        <div>
+          <Button onClick={handleCheckClaims} style={{ backgroundColor: '#007bff', color: 'white' }}>Check Claims</Button>
+        </div>
       )}
     </div>
   );
