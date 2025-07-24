@@ -304,8 +304,6 @@ router.get('/check-onchainid-claims/:onchainIdAddress', async (req, res) => {
     res.status(500).json({ success: false, error: error.message });
   }
 });
-// ... existing requires and router ...
-
 // Create OnchainID directly (not via factory)
 router.post('/create-onchainid-direct', async (req, res) => {
   try {
