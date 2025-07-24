@@ -45,6 +45,29 @@ const DeploymentPhase = () => {
     return error.toString();
   };
 
+  // Get contract artifacts
+  const getContractArtifacts = (contractName) => {
+    try {
+      // Import contract artifacts dynamically
+      const artifacts = require(`../../contracts/${contractName}.json`);
+      return artifacts;
+    } catch (error) {
+      console.error(`Error loading artifacts for ${contractName}:`, error);
+      throw new Error(`Contract artifacts not found for ${contractName}`);
+    }
+  };
+
+  // Get signer
+  const getSigner = async () => {
+    if (typeof window.ethereum !== 'undefined') {
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+      return signer;
+    } else {
+      throw new Error('MetaMask not found. Please install MetaMask.');
+    }
+  };
+
   // Load deployment state from storage
   const loadDeploymentState = () => {
     try {
@@ -689,7 +712,7 @@ const DeploymentPhase = () => {
     try {
       setDeploying(true);
       setMessage('Deploying token...');
-      addLog('Starting standalone token deployment via backend API', "info");
+      addLog('Starting token deployment via backend API', "info");
 
       // Get the addresses to use (selected if available, otherwise latest deployed)
       const identityRegistryAddress = selectedContracts.IdentityRegistry || (deployedContracts.IdentityRegistry && deployedContracts.IdentityRegistry[0]);
@@ -706,20 +729,15 @@ const DeploymentPhase = () => {
       addLog(`Using Identity Registry: ${identityRegistryAddress}`, "info");
       addLog(`Using ModularCompliance: ${complianceAddress}`, "info");
 
-      // Deploy token using standalone token deployment API
-      const response = await axios.post('/api/token-deployment/deploy', {
+      // Deploy token using backend API with contract addresses
+      const result = await contractInteraction('deploy', {
+        contractName: 'Token',
         tokenDetails: {
           ...tokenDetails,
           identityRegistryAddress,
           complianceAddress
         }
       });
-      
-      if (!response.data.success) {
-        throw new Error(response.data.error || 'Token deployment failed');
-      }
-      
-      const result = response.data;
       
       const tokenInfo = {
         address: result.contractAddress,

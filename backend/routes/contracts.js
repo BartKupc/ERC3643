@@ -90,9 +90,10 @@ async function handleDeploy(contractName, res, tokenDetails = null) {
         TOKEN_CONFIG_PATH: configPath
       };
       
-      // Run the deployment script with custom environment
-      const output = await runDeploymentScript(scriptName, envVars);
-      console.log('✅ Token deployment script completed');
+      // Use the individual token deployment script
+      const individualScriptName = 'deploy_token_individual.js';
+      const output = await runDeploymentScript(individualScriptName, envVars);
+      console.log('✅ Individual token deployment script completed');
       console.log('Output:', output);
       
       // Clean up temporary config file

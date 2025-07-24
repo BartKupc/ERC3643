@@ -40,10 +40,10 @@ async function main() {
   
   console.log("Deployer:", deployerAddress);
 
-  // Load deployments to get the latest factory
+  // Load deployments to get the latest factory or individual contracts
   const deploymentsPath = path.join(__dirname, '../deployments.json');
   if (!fs.existsSync(deploymentsPath)) {
-    console.error("❌ No deployments found. Please deploy factory first: npm run deploy:factory");
+    console.error("❌ No deployments found. Please deploy contracts first.");
     process.exit(1);
   }
 
