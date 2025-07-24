@@ -31,6 +31,9 @@ router.post('/interaction', async (req, res) => {
       case 'initialize':
         return await handleInitialize(contractName, contractAddress, wallet, res);
       
+      case 'diagnostics':
+        return await handleComprehensiveDiagnostics(contractAddress, options.userAddress, wallet, res);
+      
       case 'rpc':
         return await handleRpcCall(method, params, res);
       
@@ -427,6 +430,204 @@ async function handleInitialize(contractName, contractAddress, wallet, res) {
     });
   } catch (error) {
     throw error;
+  }
+}
+
+// Handle comprehensive diagnostics
+async function handleComprehensiveDiagnostics(contractAddress, userAddress, wallet, res) {
+  try {
+    console.log(`🔍 Running comprehensive diagnostics for token ${contractAddress} and user ${userAddress}`);
+    
+    // Load contract artifacts
+    const tokenArtifactsPath = path.join(__dirname, '../../trex-scaffold/packages/react-app/src/contracts/Token.json');
+    if (!fs.existsSync(tokenArtifactsPath)) {
+      throw new Error('Token artifacts not found');
+    }
+    
+    const tokenArtifacts = JSON.parse(fs.readFileSync(tokenArtifactsPath, 'utf8'));
+    const token = new ethers.Contract(contractAddress, tokenArtifacts.abi, wallet);
+    
+    let diagnosticResults = `🔍 COMPREHENSIVE VERIFICATION DIAGNOSTICS\n`;
+    diagnosticResults += `==========================================\n\n`;
+    diagnosticResults += `User Address: ${userAddress}\n`;
+    diagnosticResults += `Token: ${contractAddress}\n\n`;
+
+    // 1. Check Token's Identity Registry
+    console.log('1. Checking Token\'s Identity Registry...');
+    const tokenIdentityRegistry = await token.identityRegistry();
+    diagnosticResults += `1. TOKEN'S IDENTITY REGISTRY:\n`;
+    diagnosticResults += `   Address: ${tokenIdentityRegistry}\n`;
+
+    // 2. Check Identity Registry's TrustedIssuersRegistry
+    console.log('2. Checking Identity Registry\'s TrustedIssuersRegistry...');
+    const irArtifactsPath = path.join(__dirname, '../../trex-scaffold/packages/react-app/src/contracts/IdentityRegistry.json');
+    const irArtifacts = JSON.parse(fs.readFileSync(irArtifactsPath, 'utf8'));
+    const ir = new ethers.Contract(tokenIdentityRegistry, irArtifacts.abi, wallet);
+    
+    let irTrustedIssuersRegistry;
+    try {
+      irTrustedIssuersRegistry = await ir.issuersRegistry();
+      diagnosticResults += `2. IDENTITY REGISTRY'S TRUSTED ISSUERS REGISTRY:\n`;
+      diagnosticResults += `   Address: ${irTrustedIssuersRegistry}\n`;
+    } catch (e) {
+      diagnosticResults += `2. IDENTITY REGISTRY'S TRUSTED ISSUERS REGISTRY:\n`;
+      diagnosticResults += `   ❌ ERROR: ${e.message}\n`;
+    }
+
+    // 3. Check Identity Registry's ClaimTopicsRegistry
+    console.log('3. Checking Identity Registry\'s ClaimTopicsRegistry...');
+    let irClaimTopicsRegistry;
+    try {
+      irClaimTopicsRegistry = await ir.topicsRegistry();
+      diagnosticResults += `3. IDENTITY REGISTRY'S CLAIM TOPICS REGISTRY:\n`;
+      diagnosticResults += `   Address: ${irClaimTopicsRegistry}\n`;
+    } catch (e) {
+      diagnosticResults += `3. IDENTITY REGISTRY'S CLAIM TOPICS REGISTRY:\n`;
+      diagnosticResults += `   ❌ ERROR: ${e.message}\n`;
+    }
+
+    // 4. Check if user has OnchainID
+    console.log('4. Checking user\'s OnchainID...');
+    const onchainIdAddress = await ir.identity(userAddress);
+    diagnosticResults += `4. USER'S ONCHAINID:\n`;
+    diagnosticResults += `   Address: ${onchainIdAddress}\n`;
+    diagnosticResults += `   Has OnchainID: ${onchainIdAddress !== '0x0000000000000000000000000000000000000000' ? '✅ YES' : '❌ NO'}\n`;
+
+    if (onchainIdAddress === '0x0000000000000000000000000000000000000000') {
+      diagnosticResults += `   ❌ USER HAS NO ONCHAINID - THIS IS THE PROBLEM!\n`;
+      res.json({
+        success: true,
+        diagnosticResults: diagnosticResults
+      });
+      return;
+    }
+
+    // 5. Check ClaimTopicsRegistry configuration
+    console.log('5. Checking ClaimTopicsRegistry configuration...');
+    if (irClaimTopicsRegistry) {
+      const ctrArtifactsPath = path.join(__dirname, '../../trex-scaffold/packages/react-app/src/contracts/ClaimTopicsRegistry.json');
+      const ctrArtifacts = JSON.parse(fs.readFileSync(ctrArtifactsPath, 'utf8'));
+      const ctr = new ethers.Contract(irClaimTopicsRegistry, ctrArtifacts.abi, wallet);
+      
+      try {
+        const requiredTopics = await ctr.getClaimTopics();
+        diagnosticResults += `5. CLAIM TOPICS REGISTRY:\n`;
+        diagnosticResults += `   Address: ${irClaimTopicsRegistry}\n`;
+        diagnosticResults += `   Required topics: ${requiredTopics.map(t => t.toNumber()).join(', ')}\n`;
+      } catch (e) {
+        diagnosticResults += `5. CLAIM TOPICS REGISTRY:\n`;
+        diagnosticResults += `   Address: ${irClaimTopicsRegistry}\n`;
+        diagnosticResults += `   ❌ ERROR getting topics: ${e.message}\n`;
+      }
+    }
+
+    // 6. Check OnchainID claims in detail
+    console.log('6. Checking OnchainID claims in detail...');
+    const onchainIdArtifactsPath = path.join(__dirname, '../../trex-scaffold/packages/react-app/src/contracts/Identity.json');
+    const onchainIdArtifacts = JSON.parse(fs.readFileSync(onchainIdArtifactsPath, 'utf8'));
+    const onchainId = new ethers.Contract(onchainIdAddress, onchainIdArtifacts.abi, wallet);
+    
+    if (irClaimTopicsRegistry && irTrustedIssuersRegistry) {
+      const ctrArtifactsPath = path.join(__dirname, '../../trex-scaffold/packages/react-app/src/contracts/ClaimTopicsRegistry.json');
+      const ctrArtifacts = JSON.parse(fs.readFileSync(ctrArtifactsPath, 'utf8'));
+      const ctr = new ethers.Contract(irClaimTopicsRegistry, ctrArtifacts.abi, wallet);
+      const tirArtifactsPath = path.join(__dirname, '../../trex-scaffold/packages/react-app/src/contracts/TrustedIssuersRegistry.json');
+      const tirArtifacts = JSON.parse(fs.readFileSync(tirArtifactsPath, 'utf8'));
+      const tir = new ethers.Contract(irTrustedIssuersRegistry, tirArtifacts.abi, wallet);
+      
+      const requiredTopics = await ctr.getClaimTopics();
+      diagnosticResults += `6. ONCHAINID CLAIMS ANALYSIS:\n`;
+      
+      for (const topicId of requiredTopics) {
+        const topicNum = topicId.toNumber();
+        console.log(`   Checking topic ${topicNum}...`);
+        
+        try {
+          const claims = await onchainId.getClaimIdsByTopic(topicNum);
+          const trustedIssuers = await tir.getTrustedIssuersForClaimTopic(topicNum);
+          const trustedIssuerAddresses = trustedIssuers.map(issuer => issuer.toString());
+          
+          diagnosticResults += `   Topic ${topicNum}: ${claims.length} claims, ${trustedIssuerAddresses.length} trusted issuers\n`;
+          
+          if (claims.length === 0) {
+            diagnosticResults += `   ❌ NO CLAIMS FOR TOPIC ${topicNum}\n`;
+          } else {
+            let hasValidClaim = false;
+            for (const claimId of claims) {
+              try {
+                const claim = await onchainId.getClaim(claimId);
+                const isFromTrustedIssuer = trustedIssuerAddresses.some(
+                  trustedIssuerAddress => trustedIssuerAddress.toLowerCase() === claim.issuer.toLowerCase()
+                );
+                
+                if (isFromTrustedIssuer) {
+                  hasValidClaim = true;
+                  diagnosticResults += `   ✅ Valid claim ${claimId} from ${claim.issuer}\n`;
+                } else {
+                  diagnosticResults += `   ⚠️ Untrusted claim ${claimId} from ${claim.issuer}\n`;
+                }
+              } catch (claimError) {
+                diagnosticResults += `   ❌ Invalid claim ${claimId}: ${claimError.message}\n`;
+              }
+            }
+            
+            if (!hasValidClaim) {
+              diagnosticResults += `   ❌ NO VALID CLAIMS FOR TOPIC ${topicNum}\n`;
+            }
+          }
+        } catch (topicError) {
+          diagnosticResults += `   ❌ ERROR checking topic ${topicNum}: ${topicError.message}\n`;
+        }
+      }
+    }
+
+    // 7. Check final verification status
+    console.log('7. Checking final verification status...');
+    const isVerified = await ir.isVerified(userAddress);
+    diagnosticResults += `7. FINAL VERIFICATION STATUS:\n`;
+    diagnosticResults += `   Result: ${isVerified ? '✅ VERIFIED' : '❌ NOT VERIFIED'}\n`;
+
+    // 8. Check if there's a mismatch between expected and actual registries
+    diagnosticResults += `8. REGISTRY CONFIGURATION CHECK:\n`;
+    
+    // Check if the token's IR matches the IR where claims were added
+    const expectedIR = tokenIdentityRegistry;
+    diagnosticResults += `   Token's IR: ${expectedIR}\n`;
+    
+    // Check if the IR's TIR matches the TIR where trusted issuers were added
+    if (irTrustedIssuersRegistry) {
+      diagnosticResults += `   IR's TIR: ${irTrustedIssuersRegistry}\n`;
+      
+      // Check if the IR's CTR matches the CTR where topics were added
+      if (irClaimTopicsRegistry) {
+        diagnosticResults += `   IR's CTR: ${irClaimTopicsRegistry}\n`;
+      }
+    }
+
+    // 9. Recommendations
+    diagnosticResults += `\n9. RECOMMENDATIONS:\n`;
+    if (!isVerified) {
+      diagnosticResults += `   ❌ User is not verified. Check the issues above.\n`;
+      diagnosticResults += `   🔧 FIX: Ensure all required topics have valid claims from trusted issuers\n`;
+      diagnosticResults += `   🔧 FIX: Check claim data format and signatures\n`;
+      diagnosticResults += `   🔧 FIX: Verify registry addresses are correctly configured\n`;
+    } else {
+      diagnosticResults += `   ✅ User is verified - no issues found!\n`;
+    }
+
+    console.log('✅ Comprehensive diagnostics completed');
+    
+    res.json({
+      success: true,
+      diagnosticResults: diagnosticResults
+    });
+    
+  } catch (error) {
+    console.error('❌ Comprehensive diagnostics failed:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
   }
 }
 

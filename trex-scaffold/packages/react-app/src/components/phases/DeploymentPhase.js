@@ -950,48 +950,30 @@ const DeploymentPhase = () => {
 
   const runComprehensiveDiagnostics = async (userAddress) => {
     try {
+      if (!selectedContracts.Token) {
+        setMessage('Please select a token first');
+        return;
+      }
+
+      // Use account 0 if no address is provided
+      const addressToCheck = userAddress.trim() || '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266';
+
       setCheckingVerification(true);
       setMessage('Running comprehensive diagnostics...');
-      addLog('Starting comprehensive diagnostics', "info");
+      addLog(`Running comprehensive diagnostics for user: ${addressToCheck}`, "info");
 
-      if (!selectedContracts.Token) {
-        throw new Error('Please select a token first');
-      }
-
-      if (!userAddress) {
-        throw new Error('Please provide a user address to check');
-      }
-
-      addLog(`Checking verification for user: ${userAddress}`, "info");
-
-      // Check if user is verified
-      const verificationResult = await contractInteraction('call', {
+      // Call backend API for comprehensive diagnostics
+      const result = await contractInteraction('diagnostics', {
         contractName: 'Token',
         contractAddress: selectedContracts.Token,
-        method: 'isVerified',
-        params: [userAddress]
+        userAddress: addressToCheck
       });
       
-      const isVerified = verificationResult.result;
+      setMessage(result.diagnosticResults);
+      addLog('Comprehensive diagnostics completed', "success");
       
-      let diagnosticMessage = `Comprehensive Diagnostics for ${userAddress}:\n\n`;
-      diagnosticMessage += `Token: ${selectedContracts.Token}\n`;
-      diagnosticMessage += `Verification Status: ${isVerified ? '✅ VERIFIED' : '❌ NOT VERIFIED'}\n\n`;
-      
-      if (isVerified) {
-        diagnosticMessage += '✅ User is verified and can perform token operations\n';
-      } else {
-        diagnosticMessage += '❌ User is not verified. Possible reasons:\n';
-        diagnosticMessage += '   - Missing required claim topics\n';
-        diagnosticMessage += '   - Claims not issued by trusted issuers\n';
-        diagnosticMessage += '   - Identity not properly registered\n';
-        diagnosticMessage += '   - Compliance rules not satisfied\n';
-      }
-      
-      setMessage(diagnosticMessage);
-      addLog(`Diagnostics completed. User verified: ${isVerified}`, "info");
     } catch (error) {
-      console.error('Error running diagnostics:', error);
+      console.error('Error running comprehensive diagnostics:', error);
       const cleanError = extractCleanError(error);
       setMessage(`Error running diagnostics: ${cleanError}`);
       addLog(`Error running diagnostics: ${cleanError}`, "error");

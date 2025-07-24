@@ -6,9 +6,6 @@ const RoleManagementSubTab = ({
   setSelectedContracts = () => {},
   addTokenAgent = () => {},
   deploying = false,
-  tokenStatus = 'Not checked',
-  setTokenStatus = () => {},
-  checkTokenStatus = () => {},
   addLog = () => {}
 }) => {
   const [tokenAgentInput, setTokenAgentInput] = useState('');
@@ -69,10 +66,6 @@ const RoleManagementSubTab = ({
               const tokenAddress = e.target.value;
               if (tokenAddress) {
                 setSelectedContracts(prev => ({ ...prev, Token: tokenAddress }));
-                setTokenStatus('Checking...');
-                setTimeout(() => checkTokenStatus(), 100);
-              } else {
-                setTokenStatus('No token selected');
               }
             }}
           >
@@ -106,40 +99,7 @@ const RoleManagementSubTab = ({
         </Button>
       </div>
 
-      {/* Token Status Display */}
-      {selectedContracts.Token && (
-        <div style={{ marginBottom: '1rem', padding: '1rem', backgroundColor: '#e8f5e8', borderRadius: '4px', border: '1px solid #28a745' }}>
-          <h4>Token Status:</h4>
-          <div style={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            alignItems: 'center',
-            padding: '0.5rem',
-            backgroundColor: 'white',
-            borderRadius: '4px'
-          }}>
-            <div>
-              <strong>Status:</strong> 
-              <span style={{ 
-                marginLeft: '0.5rem',
-                color: tokenStatus.includes('PAUSED') ? '#dc3545' : 
-                       tokenStatus.includes('ACTIVE') ? '#28a745' : 
-                       tokenStatus.includes('❌') ? '#dc3545' : 
-                       tokenStatus.includes('⚠️') ? '#ffc107' : '#6c757d'
-              }}>
-                {tokenStatus}
-              </span>
-            </div>
-            <Button
-              onClick={checkTokenStatus}
-              disabled={deploying || !selectedContracts.Token}
-              style={{ backgroundColor: '#6c757d', color: 'white', padding: '0.25rem 0.5rem', fontSize: '0.8rem' }}
-            >
-              Refresh Status
-            </Button>
-          </div>
-        </div>
-      )}
+
     </div>
   );
 };
