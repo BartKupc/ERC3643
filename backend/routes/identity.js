@@ -319,7 +319,8 @@ router.post('/create-onchainid-direct', async (req, res) => {
     }
     const identityArtifacts = JSON.parse(fs.readFileSync(identityArtifactsPath, 'utf8'));
     const identityFactory = new ethers.ContractFactory(identityArtifacts.abi, identityArtifacts.bytecode, wallet);
-    const identity = await identityFactory.deploy(wallet.address); // Deployer is initial owner
+    // FIX: Pass both required constructor arguments: initialManagementKey and _isLibrary
+    const identity = await identityFactory.deploy(wallet.address, false); // Deployer is initial owner, not a library
     await identity.deployed();
     const onchainIdAddress = identity.address;
     // Add user as management key (purpose=1, keyType=1)
