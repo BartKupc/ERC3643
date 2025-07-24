@@ -304,5 +304,40 @@ router.get('/check-onchainid-claims/:onchainIdAddress', async (req, res) => {
     res.status(500).json({ success: false, error: error.message });
   }
 });
+// ... existing requires and router ...
 
+// Create OnchainID directly (not via factory)
+router.post('/create-onchainid-direct', async (req, res) => {
+  try {
+    const { userAddress, country } = req.body;
+    if (!userAddress) {
+      return res.status(400).json({ success: false, error: 'userAddress is required' });
+    }
+    const provider = createProvider();
+    const wallet = new ethers.Wallet(process.env.PRIVATE_KEY || '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80', provider);
+    const identityArtifactsPath = path.join(__dirname, '../../trex-scaffold/packages/react-app/src/contracts/Identity.json');
+    if (!fs.existsSync(identityArtifactsPath)) {
+      throw new Error('Identity contract artifacts not found');
+    }
+    const identityArtifacts = JSON.parse(fs.readFileSync(identityArtifactsPath, 'utf8'));
+    const identityFactory = new ethers.ContractFactory(identityArtifacts.abi, identityArtifacts.bytecode, wallet);
+    const identity = await identityFactory.deploy(wallet.address); // Deployer is initial owner
+    await identity.deployed();
+    const onchainIdAddress = identity.address;
+    // Add user as management key (purpose=1, keyType=1)
+    const userKeyHash = ethers.utils.keccak256(ethers.utils.defaultAbiCoder.encode(['address'], [userAddress]));
+    try {
+      await identity.addKey(userKeyHash, 1, 1); // management key
+      await identity.addKey(userKeyHash, 2, 1); // action key
+    } catch (e) {
+      // Ignore if already added
+    }
+    res.json({ success: true, onchainIdAddress });
+  } catch (error) {
+    console.error('❌ Error creating OnchainID (direct):', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ... rest of the file ...
 module.exports = router; 

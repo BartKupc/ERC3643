@@ -57,13 +57,15 @@ const UserManagementTab = ({ deployedContracts = {}, selectedContracts = {}, set
     }
   }, []);
 
-  // Subtab: Create OnchainID
-  const handleCreateOnchainId = async () => {
+  const createOnchainId = async () => {
     try {
       setCreatingUser(true);
       setMessage('Creating OnchainID...');
       if (!userAddress.trim()) throw new Error('Please enter a wallet address');
-      const response = await axios.post('/api/identity/create-onchainid', { userAddress });
+      const response = await axios.post('/api/identity/create-onchainid-direct', {
+        userAddress,
+        country: userCountry
+      });
       if (!response.data.success) throw new Error(response.data.error || 'Unknown error');
       setOnchainIdAddress(response.data.onchainIdAddress);
       setMessage(`OnchainID created at ${response.data.onchainIdAddress}`);
