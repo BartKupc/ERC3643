@@ -34,6 +34,9 @@ router.post('/interaction', async (req, res) => {
       case 'diagnostics':
         return await handleComprehensiveDiagnostics(contractAddress, options.userAddress, wallet, res);
       
+      case 'deployClaimIssuer':
+        return await handleDeployClaimIssuer(options.claimTopics, options.trustedIssuersRegistry, wallet, res);
+      
       case 'rpc':
         return await handleRpcCall(method, params, res);
       
@@ -430,6 +433,97 @@ async function handleInitialize(contractName, contractAddress, wallet, res) {
     });
   } catch (error) {
     throw error;
+  }
+}
+
+// Handle ClaimIssuer deployment and trusted issuer setup
+async function handleDeployClaimIssuer(claimTopics, trustedIssuersRegistry, wallet, res) {
+  try {
+    console.log(`🔧 Deploying ClaimIssuer with topics: ${claimTopics.join(', ')}`);
+    
+    // Load ClaimIssuer artifacts
+    const claimIssuerArtifactsPath = path.join(__dirname, '../../trex-scaffold/packages/react-app/src/contracts/ClaimIssuer.json');
+    if (!fs.existsSync(claimIssuerArtifactsPath)) {
+      throw new Error('ClaimIssuer artifacts not found');
+    }
+    
+    const claimIssuerArtifacts = JSON.parse(fs.readFileSync(claimIssuerArtifactsPath, 'utf8'));
+    const signerAddress = await wallet.getAddress();
+    
+    // Step 1: Deploy ClaimIssuer contract
+    console.log('Step 1: Deploying ClaimIssuer contract...');
+    const claimIssuerFactory = new ethers.ContractFactory(claimIssuerArtifacts.abi, claimIssuerArtifacts.bytecode, wallet);
+    const claimIssuer = await claimIssuerFactory.deploy(signerAddress); // Pass the management key
+    await claimIssuer.waitForDeployment();
+    const claimIssuerAddress = await claimIssuer.getAddress();
+    
+    console.log(`ClaimIssuer deployed at: ${claimIssuerAddress}`);
+    
+    // Step 2: Add signing key to ClaimIssuer
+    console.log('Step 2: Adding signing key to ClaimIssuer...');
+    const signingKeyHash = ethers.keccak256(ethers.AbiCoder.defaultAbiCoder.encode(['address'], [signerAddress]));
+    const addKeyTx = await claimIssuer.addKey(signingKeyHash, 3, 1); // purpose=3 (signing), keyType=1 (ECDSA)
+    await addKeyTx.wait();
+    console.log('Signing key added to ClaimIssuer');
+    
+    // Step 3: Add ClaimIssuer as trusted issuer
+    console.log('Step 3: Adding ClaimIssuer as trusted issuer...');
+    if (!trustedIssuersRegistry) {
+      throw new Error('No TrustedIssuersRegistry provided');
+    }
+    
+    const tirArtifactsPath = path.join(__dirname, '../../trex-scaffold/packages/react-app/src/contracts/TrustedIssuersRegistry.json');
+    const tirArtifacts = JSON.parse(fs.readFileSync(tirArtifactsPath, 'utf8'));
+    const tir = new ethers.Contract(trustedIssuersRegistry, tirArtifacts.abi, wallet);
+    
+    // Check if issuer already exists
+    try {
+      const exists = await tir.isTrustedIssuer ? await tir.isTrustedIssuer(claimIssuerAddress) : false;
+      if (exists) {
+        console.log('ClaimIssuer already exists as trusted issuer');
+      } else {
+        const addTrustedTx = await tir.addTrustedIssuer(claimIssuerAddress, claimTopics);
+        await addTrustedTx.wait();
+        console.log('ClaimIssuer added as trusted issuer');
+      }
+    } catch (e) {
+      console.error(`Error checking/adding trusted issuer: ${e.message}`);
+      throw e;
+    }
+    
+    // Save to deployments.json
+    const deploymentsPath = path.join(__dirname, '../../deployments.json');
+    let deploymentsObj = { easydeploy: [], advanced: [] };
+    if (fs.existsSync(deploymentsPath)) {
+      const raw = fs.readFileSync(deploymentsPath, 'utf8');
+      if (raw.trim().startsWith('{')) {
+        deploymentsObj = JSON.parse(raw);
+      }
+    }
+    
+    deploymentsObj.advanced.push({
+      component: "ClaimIssuer",
+      address: claimIssuerAddress,
+      timestamp: new Date().toISOString(),
+      claimTopics: claimTopics,
+      trustedIssuersRegistry: trustedIssuersRegistry
+    });
+    
+    fs.writeFileSync(deploymentsPath, JSON.stringify(deploymentsObj, null, 2));
+    console.log('ClaimIssuer deployment saved to deployments.json');
+    
+    res.json({
+      success: true,
+      claimIssuerAddress: claimIssuerAddress,
+      message: `ClaimIssuer deployed at ${claimIssuerAddress} and added as trusted issuer`
+    });
+    
+  } catch (error) {
+    console.error('❌ Error deploying ClaimIssuer:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
   }
 }
 

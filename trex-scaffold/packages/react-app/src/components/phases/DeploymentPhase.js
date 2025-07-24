@@ -4,8 +4,9 @@ import DeployCoreContractsTab from './advanced/steps/DeployCoreContractsTab';
 import InitializeContractsTab from './advanced/steps/InitializeContractsTab';
 import ConfigureIdentityRegistryTab from './advanced/steps/ConfigureIdentityRegistryTab';
 import AddClaimTopicsTab from './advanced/steps/AddClaimTopicsTab';
-import TokenManagementTab from './advanced/steps/TokenManagementTab';
+import AddTrustedIssuerTab from './advanced/steps/AddTrustedIssuerTab';
 import UserManagementTab from './advanced/steps/UserManagementTab';
+import TokenManagementTab from './advanced/steps/TokenManagementTab';
 
 const STORAGE_KEY = 'trex_deployment_state';
 
@@ -948,6 +949,34 @@ const DeploymentPhase = () => {
     }
   };
 
+  const deployClaimIssuerAndAddAsTrusted = async (claimTopics) => {
+    try {
+      setDeploying(true);
+      setMessage('Deploying ClaimIssuer and adding as trusted issuer...');
+      addLog('Starting ClaimIssuer deployment and trusted issuer setup', "info");
+
+      // Call backend API to deploy ClaimIssuer and add as trusted
+      const result = await contractInteraction('deployClaimIssuer', {
+        claimTopics: claimTopics,
+        trustedIssuersRegistry: selectedContracts.TrustedIssuersRegistry
+      });
+      
+      setMessage(`ClaimIssuer deployed at ${result.claimIssuerAddress} and added as trusted issuer`);
+      addLog('ClaimIssuer deployment and trusted issuer setup completed', "success");
+      
+      // Reload deployment state to include the new ClaimIssuer
+      await reloadDeploymentState();
+      
+    } catch (error) {
+      console.error('Error deploying ClaimIssuer and adding as trusted issuer:', error);
+      const cleanError = extractCleanError(error);
+      setMessage(`Error: ${cleanError}`);
+      addLog(`Error: ${cleanError}`, "error");
+    } finally {
+      setDeploying(false);
+    }
+  };
+
   const runComprehensiveDiagnostics = async (userAddress) => {
     try {
       if (!selectedContracts.Token) {
@@ -1046,6 +1075,30 @@ const DeploymentPhase = () => {
       )
     },
     {
+      title: 'Add Trusted Issuer',
+      component: (
+        <AddTrustedIssuerTab
+          deployedContracts={deployedContracts}
+          selectedContracts={selectedContracts}
+          setSelectedContracts={setSelectedContracts}
+          deployClaimIssuerAndAddAsTrusted={deployClaimIssuerAndAddAsTrusted}
+          reloadDeploymentState={reloadDeploymentState}
+          addLog={addLog}
+          deploying={deploying}
+        />
+      )
+    },
+    {
+      title: 'User Management',
+      component: (
+        <UserManagementTab
+          deployedContracts={deployedContracts}
+          selectedContracts={selectedContracts}
+          // ...other user management handlers...
+        />
+      )
+    },
+    {
       title: 'Token Management',
       component: (
         <TokenManagementTab
@@ -1067,16 +1120,6 @@ const DeploymentPhase = () => {
           deploying={deploying}
           reloadDeploymentState={reloadDeploymentState}
           addLog={addLog}
-        />
-      )
-    },
-    {
-      title: 'User Management',
-      component: (
-        <UserManagementTab
-          deployedContracts={deployedContracts}
-          selectedContracts={selectedContracts}
-          // ...other user management handlers...
         />
       )
     }
