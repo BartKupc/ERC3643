@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import axios from 'axios';
 
 const AgentManagementTab = ({ deployedContracts = {}, selectedContracts = {}, setSelectedContracts = () => {}, addLog = () => {} }) => {
+  const [agentAddress, setAgentAddress] = useState('');
   const [adminAddress, setAdminAddress] = useState('');
   const [irAgentStatus, setIrAgentStatus] = useState(null);
   const [irsAgentStatus, setIrsAgentStatus] = useState(null);
@@ -13,6 +14,7 @@ const AgentManagementTab = ({ deployedContracts = {}, selectedContracts = {}, se
     try {
       const res = await axios.get('/api/diagnostics/health');
       setAdminAddress(res.data.backendWallet);
+      setAgentAddress(res.data.backendWallet); // Default to backend wallet, but allow editing
     } catch (e) {
       setMessage('Could not fetch backend wallet address');
     }
@@ -38,7 +40,7 @@ const AgentManagementTab = ({ deployedContracts = {}, selectedContracts = {}, se
         contractName: 'IdentityRegistry',
         contractAddress: selectedContracts.IdentityRegistry,
         method: 'isAgent',
-        params: [adminAddress]
+        params: [agentAddress]
       });
       setIrAgentStatus(irRes.data.result);
       // Check IRS
@@ -47,7 +49,7 @@ const AgentManagementTab = ({ deployedContracts = {}, selectedContracts = {}, se
         contractName: 'IdentityRegistryStorage',
         contractAddress: selectedContracts.IdentityRegistryStorage,
         method: 'isAgent',
-        params: [adminAddress]
+        params: [agentAddress]
       });
       setIrsAgentStatus(irsRes.data.result);
       setMessage('Checked agent status.');
@@ -74,7 +76,7 @@ const AgentManagementTab = ({ deployedContracts = {}, selectedContracts = {}, se
           contractName: 'IdentityRegistry',
           contractAddress: selectedContracts.IdentityRegistry,
           method: 'addAgent',
-          params: [adminAddress]
+          params: [agentAddress]
         });
         addLog('Agent added to Identity Registry', 'success');
       }
@@ -85,7 +87,7 @@ const AgentManagementTab = ({ deployedContracts = {}, selectedContracts = {}, se
           contractName: 'IdentityRegistryStorage',
           contractAddress: selectedContracts.IdentityRegistryStorage,
           method: 'addAgent',
-          params: [adminAddress]
+          params: [agentAddress]
         });
         addLog('Agent added to Identity Registry Storage', 'success');
       }
@@ -121,9 +123,19 @@ const AgentManagementTab = ({ deployedContracts = {}, selectedContracts = {}, se
   return (
     <div style={{ maxWidth: '700px', margin: '0 auto', padding: '0 20px' }}>
       <h3 style={{ color: '#1a237e', marginBottom: '1rem' }}>Agent Management</h3>
-      <p>Add your admin address as an agent to both Identity Registry and Identity Registry Storage.</p>
+      <p>Add any address as an agent to both Identity Registry and Identity Registry Storage.</p>
       <div style={{ marginBottom: '1rem', background: '#e3f2fd', borderRadius: '4px', border: '1px solid #2196f3', padding: '1rem' }}>
-        <strong>Admin Address (backend wallet):</strong> <span style={{ fontFamily: 'monospace' }}>{adminAddress}</span>
+        <strong>Backend Wallet (default):</strong> <span style={{ fontFamily: 'monospace' }}>{adminAddress}</span>
+        <div style={{ marginTop: '0.5rem' }}>
+          <label>Agent Address to Add/Check:</label>
+          <input
+            type="text"
+            value={agentAddress}
+            onChange={e => setAgentAddress(e.target.value)}
+            placeholder="0x..."
+            style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ced4da', marginTop: '0.25rem' }}
+          />
+        </div>
       </div>
       <ContractSelector
         contractType="IdentityRegistry"
