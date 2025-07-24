@@ -72,9 +72,6 @@ function App() {
 
   // Listen for account changes
   useEffect(() => {
-    // Temporarily disabled to test input focus issue
-    console.log('App useEffect disabled for testing');
-    /*
     checkIfWalletIsConnected();
 
     if (window.ethereum) {
@@ -86,7 +83,6 @@ function App() {
         }
       });
     }
-    */
   }, []);
 
   return (
