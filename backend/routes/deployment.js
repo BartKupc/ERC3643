@@ -166,10 +166,10 @@ router.post('/claim-issuer', async (req, res) => {
       wallet
     );
     const claimIssuer = await claimIssuerFactory.deploy(deployerAddress);
-    await claimIssuer.waitForDeployment();
-    console.log('✅ ClaimIssuer deployed at:', await claimIssuer.getAddress());
-    const signingKeyHash = ethers.keccak256(
-      ethers.AbiCoder.defaultAbiCoder().encode(['address'], [deployerAddress])
+    await claimIssuer.deployed();
+    console.log('✅ ClaimIssuer deployed at:', claimIssuer.address);
+    const signingKeyHash = ethers.utils.keccak256(
+      ethers.utils.defaultAbiCoder.encode(['address'], [deployerAddress])
     );
     const addKeyTx = await claimIssuer.addKey(signingKeyHash, 3, 1); // purpose=3 (signing), keyType=1 (ECDSA)
     await addKeyTx.wait();
@@ -182,7 +182,7 @@ router.post('/claim-issuer', async (req, res) => {
         if (fs.existsSync(tirArtifactsPath)) {
           const tirArtifacts = JSON.parse(fs.readFileSync(tirArtifactsPath, 'utf8'));
           const tir = new ethers.Contract(tirAddress, tirArtifacts.abi, wallet);
-          const claimIssuerAddress = await claimIssuer.getAddress();
+          const claimIssuerAddress = claimIssuer.address;
           const exists = await tir.isTrustedIssuer(claimIssuerAddress);
           if (!exists) {
             const defaultClaimTopics = [1, 2, 3];
@@ -200,7 +200,7 @@ router.post('/claim-issuer', async (req, res) => {
     res.json({
       success: true,
       message: 'ClaimIssuer deployed successfully',
-      claimIssuerAddress: await claimIssuer.getAddress(),
+      claimIssuerAddress: claimIssuer.address,
       deployerAddress: deployerAddress
     });
   } catch (error) {

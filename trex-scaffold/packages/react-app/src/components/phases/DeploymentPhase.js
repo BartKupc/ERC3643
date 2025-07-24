@@ -955,17 +955,41 @@ const DeploymentPhase = () => {
       setMessage('Deploying ClaimIssuer and adding as trusted issuer...');
       addLog('Starting ClaimIssuer deployment and trusted issuer setup', "info");
 
-      // Call backend API to deploy ClaimIssuer and add as trusted
-      const result = await contractInteraction('deployClaimIssuer', {
-        claimTopics: claimTopics,
-        trustedIssuersRegistry: selectedContracts.TrustedIssuersRegistry
+      // Use the existing /api/deploy/claim-issuer endpoint (same as Easy Deploy)
+      const response = await axios.post('/api/deploy/claim-issuer', {}, {
+        timeout: 3 * 60 * 1000 // 3 minute timeout for ClaimIssuer deployment
       });
       
-      setMessage(`ClaimIssuer deployed at ${result.claimIssuerAddress} and added as trusted issuer`);
-      addLog('ClaimIssuer deployment and trusted issuer setup completed', "success");
-      
-      // Reload deployment state to include the new ClaimIssuer
-      await reloadDeploymentState();
+      if (response.data.success) {
+        const { claimIssuerAddress, deployerAddress } = response.data;
+        
+        addLog(`ClaimIssuer deployed at: ${claimIssuerAddress}`, "success");
+        addLog(`Deployer address: ${deployerAddress}`, "info");
+        
+        // Note: The backend automatically adds ClaimIssuer to TrustedIssuersRegistry with default topics [1, 2, 3]
+        // For custom topics, we need to add them separately
+        if (claimTopics.length > 0 && selectedContracts.TrustedIssuersRegistry) {
+          addLog('Adding custom claim topics to TrustedIssuersRegistry...', "info");
+          
+          // Add custom claim topics to the TrustedIssuersRegistry
+          const result = await contractInteraction('call', {
+            contractName: 'TrustedIssuersRegistry',
+            contractAddress: selectedContracts.TrustedIssuersRegistry,
+            method: 'addTrustedIssuer',
+            params: [claimIssuerAddress, claimTopics]
+          });
+          
+          addLog(`Custom claim topics [${claimTopics.join(', ')}] added to ClaimIssuer`, "success");
+        }
+        
+        setMessage(`ClaimIssuer deployed at ${claimIssuerAddress} and added as trusted issuer`);
+        addLog('ClaimIssuer deployment and trusted issuer setup completed', "success");
+        
+        // Reload deployment state to include the new ClaimIssuer
+        await reloadDeploymentState();
+      } else {
+        throw new Error(response.data.error || 'Unknown error');
+      }
       
     } catch (error) {
       console.error('Error deploying ClaimIssuer and adding as trusted issuer:', error);
