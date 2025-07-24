@@ -369,6 +369,7 @@ const DeploymentPhase = () => {
     try {
       setLoadingClaimTopics(true);
       addLog("Loading claim topics via backend API", "info");
+      console.log("🔍 Starting loadClaimTopics with address:", registryAddress);
 
       const result = await contractInteraction('call', {
         contractName: 'ClaimTopicsRegistry',
@@ -378,8 +379,14 @@ const DeploymentPhase = () => {
       });
       
       console.log("🔍 Raw result from getClaimTopics:", result);
+      console.log("🔍 Result type:", typeof result);
+      console.log("🔍 Result keys:", Object.keys(result));
+      
       const topicIds = result.result;
       console.log("🔍 Topic IDs from result:", topicIds);
+      console.log("🔍 Topic IDs type:", typeof topicIds);
+      console.log("🔍 Topic IDs is array:", Array.isArray(topicIds));
+      console.log("🔍 Topic IDs length:", topicIds ? topicIds.length : 'undefined');
       
       // Map topic IDs to standard names (like the old copy)
       const standardTopics = {
@@ -395,19 +402,36 @@ const DeploymentPhase = () => {
         10: "Accreditation"
       };
       
+      console.log("🔍 About to process topicIds:", topicIds);
+      console.log("🔍 topicIds is array:", Array.isArray(topicIds));
+      
+      if (!Array.isArray(topicIds)) {
+        console.log("🔍 ERROR: topicIds is not an array!");
+        setAvailableClaimTopics([]);
+        addLog("Error: Expected array of topic IDs but got: " + typeof topicIds, "error");
+        return;
+      }
+      
       const topics = topicIds
         .filter(id => {
+          console.log("🔍 Processing topic ID:", id);
+          console.log("🔍 Topic ID type:", typeof id);
+          console.log("🔍 Topic ID properties:", id ? Object.keys(id) : 'null/undefined');
+          
           // Handle BigNumber objects and other formats
           let num;
           if (id && typeof id === 'object' && id._hex) {
             // BigNumber object with _hex property
             num = parseInt(id._hex, 16);
+            console.log("🔍 Parsed from _hex:", num);
           } else if (id && typeof id === 'object' && id.toNumber) {
             // BigNumber object with toNumber method
             num = id.toNumber();
+            console.log("🔍 Parsed from toNumber():", num);
           } else {
             // Regular number or string
             num = Number(id);
+            console.log("🔍 Parsed as regular number:", num);
           }
           
           const isValid = !isNaN(num) && num > 0;
@@ -415,6 +439,8 @@ const DeploymentPhase = () => {
           return isValid;
         })
         .map(id => {
+          console.log("🔍 Mapping topic ID:", id);
+          
           // Handle BigNumber objects and other formats
           let num;
           if (id && typeof id === 'object' && id._hex) {
@@ -429,11 +455,13 @@ const DeploymentPhase = () => {
           }
           
           console.log(`🔍 Converting topic ID ${id} to number: ${num}`);
-          return {
+          const topic = {
             id: num,
             name: standardTopics[num] || `Custom Topic ${num}`,
             description: standardTopics[num] ? `Standard claim topic for ${standardTopics[num].split(' ')[0]}` : `Custom claim topic with ID ${num}`
           };
+          console.log("🔍 Created topic object:", topic);
+          return topic;
         });
       
       console.log("🔍 Final processed topics:", topics);
