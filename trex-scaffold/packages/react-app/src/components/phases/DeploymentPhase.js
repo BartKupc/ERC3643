@@ -7,6 +7,7 @@ import AddClaimTopicsTab from './advanced/steps/AddClaimTopicsTab';
 import AddTrustedIssuerTab from './advanced/steps/AddTrustedIssuerTab';
 import UserManagementTab from './advanced/steps/UserManagementTab';
 import TokenManagementTab from './advanced/steps/TokenManagementTab';
+import AgentManagementTab from './advanced/steps/AgentManagementTab';
 
 const STORAGE_KEY = 'trex_deployment_state';
 
@@ -1109,6 +1110,17 @@ const DeploymentPhase = () => {
           reloadDeploymentState={reloadDeploymentState}
           addLog={addLog}
           deploying={deploying}
+        />
+      )
+    },
+    {
+      title: 'Agent Management',
+      component: (
+        <AgentManagementTab
+          deployedContracts={deployedContracts}
+          selectedContracts={selectedContracts}
+          setSelectedContracts={setSelectedContracts}
+          addLog={addLog}
         />
       )
     },
