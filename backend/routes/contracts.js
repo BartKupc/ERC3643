@@ -312,6 +312,24 @@ async function handleInitialize(contractName, contractAddress, wallet, res) {
       throw new Error(`${contractName} does not have an init method`);
     }
     
+    // Check if contract is already initialized by checking owner
+    try {
+      const owner = await contract.owner();
+      const isInitialized = owner !== '0x0000000000000000000000000000000000000000';
+      if (isInitialized) {
+        console.log(`ℹ️ ${contractName} is already initialized, skipping`);
+        res.json({
+          success: true,
+          message: `${contractName} is already initialized`,
+          alreadyInitialized: true
+        });
+        return;
+      }
+    } catch (error) {
+      console.log(`⚠️ Could not check initialization status for ${contractName}:`, error.message);
+      // Continue with initialization attempt
+    }
+    
     // Call init with parameters based on the contract
     let tx;
     if (contractName === 'IdentityRegistry') {

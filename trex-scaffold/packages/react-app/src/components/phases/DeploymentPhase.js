@@ -415,8 +415,12 @@ const DeploymentPhase = () => {
         contractAddress: address
       });
       
-      addLog(`${contractName} initialized successfully`, "success");
-      addLog(`Transaction hash: ${result.transactionHash}`, "info");
+      if (result.alreadyInitialized) {
+        addLog(`${contractName} is already initialized, skipping`, "info");
+      } else {
+        addLog(`${contractName} initialized successfully`, "success");
+        addLog(`Transaction hash: ${result.transactionHash}`, "info");
+      }
       
       await reloadDeploymentState();
       
@@ -426,6 +430,14 @@ const DeploymentPhase = () => {
         ...prev,
         [contractName]: { address, isInitialized: newStatus }
       }));
+      
+      // Also update the status display immediately
+      if (result.alreadyInitialized || newStatus) {
+        setContractInitStatus(prev => ({
+          ...prev,
+          [contractName]: { address, isInitialized: true }
+        }));
+      }
     } catch (error) {
       console.error(`Error initializing ${contractName}:`, error);
       addLog(`Error initializing ${contractName}: ${error.message}`, "error");
