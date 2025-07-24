@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import DeployCoreContractsTab from './advanced/steps/DeployCoreContractsTab';
 import InitializeContractsTab from './advanced/steps/InitializeContractsTab';
@@ -45,28 +45,7 @@ const DeploymentPhase = () => {
     return error.toString();
   };
 
-  // Get contract artifacts
-  const getContractArtifacts = (contractName) => {
-    try {
-      // Import contract artifacts dynamically
-      const artifacts = require(`../../contracts/${contractName}.json`);
-      return artifacts;
-    } catch (error) {
-      console.error(`Error loading artifacts for ${contractName}:`, error);
-      throw new Error(`Contract artifacts not found for ${contractName}`);
-    }
-  };
 
-  // Get signer
-  const getSigner = async () => {
-    if (typeof window.ethereum !== 'undefined') {
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      const signer = await provider.getSigner();
-      return signer;
-    } else {
-      throw new Error('MetaMask not found. Please install MetaMask.');
-    }
-  };
 
   // Load deployment state from storage
   const loadDeploymentState = () => {
