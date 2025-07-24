@@ -341,9 +341,9 @@ const DeploymentPhase = () => {
           const address = addresses[0];
           try {
             const isInitialized = await isContractInitialized(contractType, address);
-            status[contractType] = isInitialized ? 'Initialized' : 'Not initialized';
+            status[contractType] = { address, isInitialized };
           } catch (error) {
-            status[contractType] = 'Error checking';
+            status[contractType] = { address, isInitialized: false };
             addLog(`Error checking ${contractType} initialization: ${error.message}`, "error");
           }
         }
@@ -434,6 +434,8 @@ const DeploymentPhase = () => {
       } else {
         // Contract was just initialized, verify the status
         addLog(`Verifying initialization status for ${contractName}...`, "info");
+        // Add small delay to ensure blockchain state is updated
+        await new Promise(resolve => setTimeout(resolve, 2000));
         const newStatus = await isContractInitialized(contractName, address);
         addLog(`${contractName} verification result: ${newStatus}`, "info");
         setContractInitStatus(prev => ({
