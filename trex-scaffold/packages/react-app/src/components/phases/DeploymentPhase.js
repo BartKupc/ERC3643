@@ -1078,6 +1078,7 @@ const DeploymentPhase = () => {
           checkTokenStatus={checkTokenStatus}
           runComprehensiveDiagnostics={runComprehensiveDiagnostics}
           tokenStatus={tokenStatus}
+          setTokenStatus={setTokenStatus}
           checkingVerification={checkingVerification}
           deploying={deploying}
           reloadDeploymentState={reloadDeploymentState}

@@ -11,6 +11,7 @@ const FunctionManagementSubTab = ({
   checkTokenStatus = () => {},
   deploying = false,
   tokenStatus = 'Not checked',
+  setTokenStatus = () => {},
   addLog = () => {}
 }) => {
   const [mintRecipient, setMintRecipient] = useState('');

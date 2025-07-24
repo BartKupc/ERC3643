@@ -74,9 +74,9 @@ const TokenManagementTab = (props) => {
         </button>
       </div>
       {activeSubTab === 'deploy' && <DeployTokenSubTab {...props} />}
-      {activeSubTab === 'roles' && <RoleManagementSubTab {...props} />}
+      {activeSubTab === 'roles' && <RoleManagementSubTab {...props} setTokenStatus={props.setTokenStatus} />}
       {activeSubTab === 'claims' && <ClaimTokenManagementSubTab {...props} />}
-      {activeSubTab === 'functions' && <FunctionManagementSubTab {...props} />}
+      {activeSubTab === 'functions' && <FunctionManagementSubTab {...props} setTokenStatus={props.setTokenStatus} />}
     </div>
   );
 };

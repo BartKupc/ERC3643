@@ -7,6 +7,7 @@ const RoleManagementSubTab = ({
   addTokenAgent = () => {},
   deploying = false,
   tokenStatus = 'Not checked',
+  setTokenStatus = () => {},
   checkTokenStatus = () => {},
   addLog = () => {}
 }) => {
