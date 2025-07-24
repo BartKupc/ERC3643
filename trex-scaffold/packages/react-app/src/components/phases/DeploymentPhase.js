@@ -495,31 +495,72 @@ const DeploymentPhase = () => {
     }
   };
 
-  // Configure Identity Registry using new API
-  const configureIdentityRegistry = async (registryAddress, config) => {
+  // Configure Identity Registry (like the old copy)
+  const configureIdentityRegistry = async () => {
     try {
       setDeploying(true);
-      setMessage(`Configuring Identity Registry at ${registryAddress}...`);
-      addLog(`Starting Identity Registry configuration via backend API`, "info");
+      setMessage('Configuring Identity Registry...');
+      addLog('Starting Identity Registry configuration', "info");
 
-      const result = await contractInteraction('configure', {
+      // Get addresses to use (selected if available, otherwise latest deployed)
+      const identityRegistryAddress = selectedContracts.IdentityRegistry || (deployedContracts.IdentityRegistry && deployedContracts.IdentityRegistry[0]);
+      const claimTopicsAddress = selectedContracts.ClaimTopicsRegistry || (deployedContracts.ClaimTopicsRegistry && deployedContracts.ClaimTopicsRegistry[0]);
+      const trustedIssuersAddress = selectedContracts.TrustedIssuersRegistry || (deployedContracts.TrustedIssuersRegistry && deployedContracts.TrustedIssuersRegistry[0]);
+      const storageAddress = selectedContracts.IdentityRegistryStorage || (deployedContracts.IdentityRegistryStorage && deployedContracts.IdentityRegistryStorage[0]);
+
+      if (!identityRegistryAddress || !claimTopicsAddress || !trustedIssuersAddress || !storageAddress) {
+        throw new Error('Missing required contracts. Please deploy all required contracts first.');
+      }
+
+      addLog(`Configuring Identity Registry at ${identityRegistryAddress}`, "info");
+      
+      // Backend API for setTrustedIssuersRegistry
+      const tx1 = await contractInteraction('send', {
         contractName: 'IdentityRegistry',
-        contractAddress: registryAddress,
-        method: 'setConfig',
-        params: [config]
+        contractAddress: identityRegistryAddress,
+        method: 'setTrustedIssuersRegistry',
+        params: [trustedIssuersAddress]
       });
+      addLog(`TrustedIssuersRegistry at ${trustedIssuersAddress} connected to IdentityRegistry`, "success");
+      addLog(`Transaction hash: ${tx1.transactionHash}`, "info");
 
-      setMessage(`Identity Registry configured successfully at ${registryAddress}`);
-      addLog(`Identity Registry configured successfully at ${registryAddress}`, "success");
-      addLog(`Transaction hash: ${result.transactionHash}`, "info");
+      // Backend API for setClaimTopicsRegistry
+      const tx2 = await contractInteraction('send', {
+        contractName: 'IdentityRegistry',
+        contractAddress: identityRegistryAddress,
+        method: 'setClaimTopicsRegistry',
+        params: [claimTopicsAddress]
+      });
+      addLog(`ClaimTopicsRegistry at ${claimTopicsAddress} connected to IdentityRegistry`, "success");
+      addLog(`Transaction hash: ${tx2.transactionHash}`, "info");
 
-      // Reload state to reflect new configuration
-      await reloadDeploymentState();
+      // Backend API for setIdentityRegistryStorage
+      const tx3 = await contractInteraction('send', {
+        contractName: 'IdentityRegistry',
+        contractAddress: identityRegistryAddress,
+        method: 'setIdentityRegistryStorage',
+        params: [storageAddress]
+      });
+      addLog(`IdentityRegistryStorage at ${storageAddress} connected to IdentityRegistry`, "success");
+      addLog(`Transaction hash: ${tx3.transactionHash}`, "info");
+
+      // BILATERAL BINDING: Bind IRS back to IR
+      addLog(`Establishing bilateral binding between IR and IRS`, "info");
+      const tx4 = await contractInteraction('send', {
+        contractName: 'IdentityRegistryStorage',
+        contractAddress: storageAddress,
+        method: 'bindIdentityRegistry',
+        params: [identityRegistryAddress]
+      });
+      addLog(`IdentityRegistryStorage at ${storageAddress} bound to IdentityRegistry`, "success");
+      addLog(`Transaction hash: ${tx4.transactionHash}`, "info");
+
+      setMessage('Identity Registry configured successfully with bilateral binding');
+      addLog('Identity Registry configuration completed with bilateral binding', "success");
     } catch (error) {
-      console.error(`Error configuring Identity Registry at ${registryAddress}:`, error);
-      const cleanError = extractCleanError(error);
-      setMessage(`Error configuring Identity Registry at ${registryAddress}: ${cleanError}`);
-      addLog(`Error configuring Identity Registry at ${registryAddress}: ${cleanError}`, "error");
+      console.error('Error configuring Identity Registry:', error);
+      setMessage(`Error configuring Identity Registry: ${error.message}`);
+      addLog(`Error configuring Identity Registry: ${error.message}`, "error");
     } finally {
       setDeploying(false);
     }
@@ -545,6 +586,8 @@ const DeploymentPhase = () => {
   const clearLogs = () => {
     setLogs([]);
   };
+
+
 
   // Stepper logic
   const steps = [
@@ -581,8 +624,12 @@ const DeploymentPhase = () => {
       component: (
         <ConfigureIdentityRegistryTab
           deployedContracts={deployedContracts}
-          configuring={deploying} // or a separate configuring state if needed
+          selectedContracts={selectedContracts}
+          setSelectedContracts={setSelectedContracts}
+          configuring={deploying}
           configureIdentityRegistry={configureIdentityRegistry}
+          reloadDeploymentState={reloadDeploymentState}
+          addLog={addLog}
         />
       )
     },
