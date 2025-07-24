@@ -19,7 +19,7 @@ router.post('/interaction', async (req, res) => {
     
     switch (action) {
       case 'deploy':
-        return await handleDeploy(contractName, res);
+        return await handleDeploy(contractName, res, options.tokenDetails);
       
       case 'send':
         return await handleContractCall(contractName, contractAddress, method, params, wallet, res);
@@ -50,7 +50,7 @@ router.post('/interaction', async (req, res) => {
 });
 
 // Handle contract deployment
-async function handleDeploy(contractName, res) {
+async function handleDeploy(contractName, res, tokenDetails = null) {
   try {
     console.log(`🚀 Deploying ${contractName}...`);
     
@@ -76,10 +76,37 @@ async function handleDeploy(contractName, res) {
       throw new Error(`No deployment script found for contract: ${contractName}`);
     }
     
-    // Run the deployment script
-    const output = await runDeploymentScript(scriptName);
-    console.log('✅ Deployment script completed');
-    console.log('Output:', output);
+    // Special handling for Token deployment with custom details
+    if (contractName === 'Token' && tokenDetails) {
+      console.log('🎯 Token deployment with custom details:', tokenDetails);
+      
+      // Create temporary config file for token details
+      const configPath = path.join(__dirname, '../../temp_token_config.json');
+      fs.writeFileSync(configPath, JSON.stringify(tokenDetails, null, 2));
+      
+      // Set environment variables for the deployment script
+      const envVars = {
+        ...process.env,
+        TOKEN_CONFIG_PATH: configPath
+      };
+      
+      // Run the deployment script with custom environment
+      const output = await runDeploymentScript(scriptName, envVars);
+      console.log('✅ Token deployment script completed');
+      console.log('Output:', output);
+      
+      // Clean up temporary config file
+      try {
+        fs.unlinkSync(configPath);
+      } catch (e) {
+        console.log('Could not remove temp config file:', e.message);
+      }
+    } else {
+      // Run the deployment script normally
+      const output = await runDeploymentScript(scriptName);
+      console.log('✅ Deployment script completed');
+      console.log('Output:', output);
+    }
     
     // Add delay to ensure deployments.json is written
     await new Promise(resolve => setTimeout(resolve, 1000));
