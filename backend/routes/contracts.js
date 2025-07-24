@@ -306,8 +306,9 @@ async function handleInitialize(contractName, contractAddress, wallet, res) {
     const artifacts = JSON.parse(fs.readFileSync(artifactsPath, 'utf8'));
     const contract = new ethers.Contract(contractAddress, artifacts.abi, wallet);
     
-    // Check if contract has initialize method
-    if (!contract.initialize) {
+    // Check if contract has initialize method in ABI
+    const hasInitialize = artifacts.abi.some(method => method.name === 'initialize');
+    if (!hasInitialize) {
       throw new Error(`${contractName} does not have an initialize method`);
     }
     

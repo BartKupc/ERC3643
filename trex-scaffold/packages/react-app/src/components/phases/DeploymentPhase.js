@@ -22,6 +22,7 @@ const DeploymentPhase = () => {
   const [loadingClaimTopics, setLoadingClaimTopics] = useState(false);
   const [contractInitStatus, setContractInitStatus] = useState({});
   const [checkingInitStatus, setCheckingInitStatus] = useState(false);
+  const [initializingContract, setInitializingContract] = useState({});
 
   // Logging function
   const addLog = (message, type = "info") => {
@@ -362,21 +363,21 @@ const DeploymentPhase = () => {
   };
 
   // Initialize contract using new API
-  const initializeContract = async (contractName) => {
+  const initializeContract = async (contractName, address) => {
     try {
-      setInitializing(true);
+      setInitializingContract(prev => ({ ...prev, [contractName]: true }));
       setMessage(`Initializing ${contractName}...`);
       addLog(`Starting initialization of ${contractName} via backend API`, "info");
 
-      const address = selectedContracts[contractName] || (deployedContracts[contractName] && deployedContracts[contractName][0]);
+      const contractAddress = address || selectedContracts[contractName] || (deployedContracts[contractName] && deployedContracts[contractName][0]);
       
-      if (!address) {
+      if (!contractAddress) {
         throw new Error(`No ${contractName} found. Please deploy one first.`);
       }
       
       const result = await contractInteraction('initialize', {
         contractName,
-        contractAddress: address
+        contractAddress: contractAddress
       });
       
       setMessage(`${contractName} initialized successfully`);
@@ -389,6 +390,32 @@ const DeploymentPhase = () => {
       const cleanError = extractCleanError(error);
       setMessage(`Error initializing ${contractName}: ${cleanError}`);
       addLog(`Error initializing ${contractName}: ${cleanError}`, "error");
+    } finally {
+      setInitializingContract(prev => ({ ...prev, [contractName]: false }));
+    }
+  };
+
+  // Initialize all contracts
+  const initializeAllContracts = async () => {
+    try {
+      setInitializing(true);
+      addLog("Starting initialization of all contracts...", "info");
+      
+      const contractsToInitialize = ['ClaimTopicsRegistry', 'TrustedIssuersRegistry', 'IdentityRegistryStorage', 'IdentityRegistry', 'ModularCompliance'];
+      
+      for (const contractName of contractsToInitialize) {
+        if (deployedContracts[contractName] && deployedContracts[contractName].length > 0) {
+          try {
+            await initializeContract(contractName, deployedContracts[contractName][0]);
+          } catch (error) {
+            addLog(`Failed to initialize ${contractName}: ${extractCleanError(error)}`, "error");
+          }
+        }
+      }
+      
+      addLog("All contracts initialization completed", "success");
+    } catch (error) {
+      addLog(`Error during bulk initialization: ${extractCleanError(error)}`, "error");
     } finally {
       setInitializing(false);
     }
@@ -461,8 +488,16 @@ const DeploymentPhase = () => {
       component: (
         <InitializeContractsTab
           deployedContracts={deployedContracts}
+          selectedContracts={selectedContracts}
+          setSelectedContracts={setSelectedContracts}
           initializing={initializing}
+          initializingContract={initializingContract}
           initializeContract={initializeContract}
+          initializeAllContracts={initializeAllContracts}
+          contractInitStatus={contractInitStatus}
+          checkContractInitStatus={checkContractInitStatus}
+          checkingInitStatus={checkingInitStatus}
+          addLog={addLog}
         />
       )
     },
