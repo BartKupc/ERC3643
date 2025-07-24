@@ -217,7 +217,7 @@ const UserManagementTab = ({ deployedContracts = {}, selectedContracts = {}, set
           <input type="text" value={userAddress} onChange={e => setUserAddress(e.target.value)} placeholder="0x..." style={{ width: '100%', padding: '0.5rem', border: '1px solid #ced4da', borderRadius: '4px', marginBottom: '1rem' }} />
           <label>Country Code:</label>
           <input type="text" value={userCountry} onChange={e => setUserCountry(e.target.value)} placeholder="840" style={{ width: '100%', padding: '0.5rem', border: '1px solid #ced4da', borderRadius: '4px', marginBottom: '1rem' }} />
-          <Button onClick={handleCreateOnchainId} disabled={creatingUser || !userAddress.trim()} style={{ backgroundColor: '#28a745', color: 'white' }}>{creatingUser ? 'Creating...' : 'Create OnchainID'}</Button>
+          <Button onClick={createOnchainId} disabled={creatingUser || !userAddress.trim()} style={{ backgroundColor: '#28a745', color: 'white' }}>{creatingUser ? 'Creating...' : 'Create OnchainID'}</Button>
         </div>
       )}
       {activeSubtab === 'register' && (
