@@ -424,18 +424,21 @@ const DeploymentPhase = () => {
       
       await reloadDeploymentState();
       
-      // After initializing, check only this contract's status
-      const newStatus = await isContractInitialized(contractName, address);
-      setContractInitStatus(prev => ({
-        ...prev,
-        [contractName]: { address, isInitialized: newStatus }
-      }));
-      
-      // Also update the status display immediately
-      if (result.alreadyInitialized || newStatus) {
+      // Update status based on the result
+      if (result.alreadyInitialized) {
+        // Contract was already initialized
         setContractInitStatus(prev => ({
           ...prev,
           [contractName]: { address, isInitialized: true }
+        }));
+      } else {
+        // Contract was just initialized, verify the status
+        addLog(`Verifying initialization status for ${contractName}...`, "info");
+        const newStatus = await isContractInitialized(contractName, address);
+        addLog(`${contractName} verification result: ${newStatus}`, "info");
+        setContractInitStatus(prev => ({
+          ...prev,
+          [contractName]: { address, isInitialized: newStatus }
         }));
       }
     } catch (error) {
