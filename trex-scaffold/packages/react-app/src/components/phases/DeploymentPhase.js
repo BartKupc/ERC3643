@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import DeployCoreContractsTab from './advanced/steps/DeployCoreContractsTab';
 import InitializeContractsTab from './advanced/steps/InitializeContractsTab';
@@ -311,13 +311,45 @@ const DeploymentPhase = () => {
         if (addresses && addresses.length > 0) {
           const address = addresses[0];
           try {
-            const result = await contractInteraction('call', {
-              contractName: contractType,
-              contractAddress: address,
-              method: 'isInitialized',
-              params: []
-            });
-            status[contractType] = result.result;
+            // Try different methods to check if contract is initialized
+            let isInitialized = false;
+            
+            // Method 1: Try to get owner
+            try {
+              const ownerResult = await contractInteraction('view', {
+                contractName: contractType,
+                contractAddress: address,
+                method: 'owner',
+                params: []
+              });
+              isInitialized = ownerResult.result && ownerResult.result !== '0x0000000000000000000000000000000000000000';
+            } catch (ownerError) {
+              // Method 2: Try to get implementation
+              try {
+                const implResult = await contractInteraction('view', {
+                  contractName: contractType,
+                  contractAddress: address,
+                  method: 'implementation',
+                  params: []
+                });
+                isInitialized = implResult.result && implResult.result !== '0x0000000000000000000000000000000000000000';
+              } catch (implError) {
+                // Method 3: Try to get a simple getter
+                try {
+                  const getterResult = await contractInteraction('view', {
+                    contractName: contractType,
+                    contractAddress: address,
+                    method: 'getClaimTopics',
+                    params: []
+                  });
+                  isInitialized = true; // If we can call a method, it's probably initialized
+                } catch (getterError) {
+                  isInitialized = false;
+                }
+              }
+            }
+            
+            status[contractType] = isInitialized ? 'Initialized' : 'Not initialized';
           } catch (error) {
             status[contractType] = 'Error checking';
             addLog(`Error checking ${contractType} initialization: ${error.message}`, "error");
@@ -399,21 +431,29 @@ const DeploymentPhase = () => {
   const initializeAllContracts = async () => {
     try {
       setInitializing(true);
-      addLog("Starting initialization of all contracts...", "info");
+      addLog("Starting initialization of selected contracts...", "info");
       
-      const contractsToInitialize = ['ClaimTopicsRegistry', 'TrustedIssuersRegistry', 'IdentityRegistryStorage', 'IdentityRegistry', 'ModularCompliance'];
+      // Only initialize contracts that have been selected
+      const contractsToInitialize = Object.keys(selectedContracts).filter(
+        contractName => selectedContracts[contractName] && deployedContracts[contractName]
+      );
+      
+      if (contractsToInitialize.length === 0) {
+        addLog("No contracts selected for initialization", "warning");
+        return;
+      }
+      
+      addLog(`Initializing ${contractsToInitialize.length} selected contracts: ${contractsToInitialize.join(', ')}`, "info");
       
       for (const contractName of contractsToInitialize) {
-        if (deployedContracts[contractName] && deployedContracts[contractName].length > 0) {
-          try {
-            await initializeContract(contractName, deployedContracts[contractName][0]);
-          } catch (error) {
-            addLog(`Failed to initialize ${contractName}: ${extractCleanError(error)}`, "error");
-          }
+        try {
+          await initializeContract(contractName, selectedContracts[contractName]);
+        } catch (error) {
+          addLog(`Failed to initialize ${contractName}: ${extractCleanError(error)}`, "error");
         }
       }
       
-      addLog("All contracts initialization completed", "success");
+      addLog("Selected contracts initialization completed", "success");
     } catch (error) {
       addLog(`Error during bulk initialization: ${extractCleanError(error)}`, "error");
     } finally {
@@ -456,6 +496,7 @@ const DeploymentPhase = () => {
     loadDeploymentState();
     addLog("Loaded deployment state from storage", "info");
     reloadDeploymentState();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Add useEffect to auto-select contracts when deployedContracts changes

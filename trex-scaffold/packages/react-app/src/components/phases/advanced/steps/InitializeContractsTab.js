@@ -55,7 +55,7 @@ const InitializeContractsTab = ({
               opacity: initializing ? 0.6 : 1
             }}
           >
-            {initializing ? 'Initializing All...' : 'Initialize All Contracts'}
+            {initializing ? 'Initializing Selected...' : 'Initialize Selected Contracts'}
           </button>
           
           <button
