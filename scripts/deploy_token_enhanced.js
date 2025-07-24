@@ -47,9 +47,15 @@ async function main() {
     process.exit(1);
   }
 
-  const deployments = JSON.parse(fs.readFileSync(deploymentsPath, 'utf8'));
+  let deploymentsObj = { easydeploy: [], advanced: [] };
+  const raw = fs.readFileSync(deploymentsPath, 'utf8');
+  if (raw.trim().startsWith('{')) {
+    deploymentsObj = JSON.parse(raw);
+    if (!deploymentsObj.easydeploy) deploymentsObj.easydeploy = [];
+    if (!deploymentsObj.advanced) deploymentsObj.advanced = [];
+  }
   // Filter for factory deployments and get the latest one
-  const factoryDeployments = deployments.filter(d => d.factory && d.factory.address);
+  const factoryDeployments = deploymentsObj.easydeploy.filter(d => d.factory && d.factory.address);
   const latestFactory = factoryDeployments[factoryDeployments.length - 1];
   
   if (!latestFactory || !latestFactory.factory) {
@@ -211,7 +217,7 @@ async function main() {
 
     // Update deployments.json with the new token
     latestFactory.tokens.push(tokenDeploymentData);
-    fs.writeFileSync(deploymentsPath, JSON.stringify(deployments, null, 2));
+    fs.writeFileSync(deploymentsPath, JSON.stringify(deploymentsObj, null, 2));
 
     // Update addresses.js with the new token
     const addressesPath = path.join(__dirname, '../trex-scaffold/packages/contracts/src/addresses.js');

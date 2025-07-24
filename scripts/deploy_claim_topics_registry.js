@@ -29,14 +29,17 @@ async function main() {
     const fs = require('fs');
     const path = require('path');
     const deploymentsPath = path.join(__dirname, '../deployments.json');
-    
-    let deployments = [];
+    let deploymentsObj = { easydeploy: [], advanced: [] };
     if (fs.existsSync(deploymentsPath)) {
-      deployments = JSON.parse(fs.readFileSync(deploymentsPath, 'utf8'));
+      const raw = fs.readFileSync(deploymentsPath, 'utf8');
+      if (raw.trim().startsWith('{')) {
+        deploymentsObj = JSON.parse(raw);
+        if (!deploymentsObj.easydeploy) deploymentsObj.easydeploy = [];
+        if (!deploymentsObj.advanced) deploymentsObj.advanced = [];
+      }
     }
-    
     const deploymentId = `claim_topics_registry_${Date.now()}`;
-    deployments.push({
+    deploymentsObj.advanced.push({
       deploymentId,
       component: 'ClaimTopicsRegistry',
       address: address,
@@ -44,8 +47,7 @@ async function main() {
       timestamp: new Date().toISOString(),
       network: 'localhost'
     });
-    
-    fs.writeFileSync(deploymentsPath, JSON.stringify(deployments, null, 2));
+    fs.writeFileSync(deploymentsPath, JSON.stringify(deploymentsObj, null, 2));
     console.log("📝 Deployment saved to deployments.json");
     
   } catch (error) {

@@ -259,14 +259,17 @@ async function main() {
 
     // Save deployment data
     const deploymentsPath = path.join(__dirname, '../deployments.json');
-    let deployments = [];
-    
+    let deploymentsObj = { easydeploy: [], advanced: [] };
     if (fs.existsSync(deploymentsPath)) {
-      deployments = JSON.parse(fs.readFileSync(deploymentsPath, 'utf8'));
+      const raw = fs.readFileSync(deploymentsPath, 'utf8');
+      if (raw.trim().startsWith('{')) {
+        deploymentsObj = JSON.parse(raw);
+        if (!deploymentsObj.easydeploy) deploymentsObj.easydeploy = [];
+        if (!deploymentsObj.advanced) deploymentsObj.advanced = [];
+      }
     }
-    
-    deployments.push(deploymentData);
-    fs.writeFileSync(deploymentsPath, JSON.stringify(deployments, null, 2));
+    deploymentsObj.easydeploy.push(deploymentData);
+    fs.writeFileSync(deploymentsPath, JSON.stringify(deploymentsObj, null, 2));
 
     console.log("\n🎉 TREXFactory and TREXGateway deployed successfully!");
     console.log("\n📋 Deployment saved to deployments.json");
