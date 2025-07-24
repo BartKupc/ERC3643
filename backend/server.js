@@ -29,6 +29,9 @@ app.use('/api/identity', identityRoutes);
 const tokenRoutes = require('./routes/token');
 app.use('/api/token', tokenRoutes);
 
+const tokenDeploymentRoutes = require('./routes/token-deployment');
+app.use('/api/token-deployment', tokenDeploymentRoutes);
+
 const claimsRoutes = require('./routes/claims');
 app.use('/api/claims', claimsRoutes);
 

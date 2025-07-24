@@ -689,7 +689,7 @@ const DeploymentPhase = () => {
     try {
       setDeploying(true);
       setMessage('Deploying token...');
-      addLog('Starting token deployment via backend API', "info");
+      addLog('Starting standalone token deployment via backend API', "info");
 
       // Get the addresses to use (selected if available, otherwise latest deployed)
       const identityRegistryAddress = selectedContracts.IdentityRegistry || (deployedContracts.IdentityRegistry && deployedContracts.IdentityRegistry[0]);
@@ -706,15 +706,20 @@ const DeploymentPhase = () => {
       addLog(`Using Identity Registry: ${identityRegistryAddress}`, "info");
       addLog(`Using ModularCompliance: ${complianceAddress}`, "info");
 
-      // Deploy token using backend API
-      const result = await contractInteraction('deploy', {
-        contractName: 'Token',
+      // Deploy token using standalone token deployment API
+      const response = await axios.post('/api/token-deployment/deploy', {
         tokenDetails: {
           ...tokenDetails,
           identityRegistryAddress,
           complianceAddress
         }
       });
+      
+      if (!response.data.success) {
+        throw new Error(response.data.error || 'Token deployment failed');
+      }
+      
+      const result = response.data;
       
       const tokenInfo = {
         address: result.contractAddress,
