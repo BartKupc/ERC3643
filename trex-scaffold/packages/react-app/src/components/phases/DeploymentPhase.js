@@ -377,7 +377,9 @@ const DeploymentPhase = () => {
         params: []
       });
       
+      console.log("🔍 Raw result from getClaimTopics:", result);
       const topicIds = result.result;
+      console.log("🔍 Topic IDs from result:", topicIds);
       
       // Map topic IDs to standard names (like the old copy)
       const standardTopics = {
@@ -394,9 +396,39 @@ const DeploymentPhase = () => {
       };
       
       const topics = topicIds
-        .filter(id => id !== undefined && id !== null && id !== '' && !Number.isNaN((typeof id === 'object' && id.toNumber) ? id.toNumber() : Number(id)))
+        .filter(id => {
+          // Handle BigNumber objects and other formats
+          let num;
+          if (id && typeof id === 'object' && id._hex) {
+            // BigNumber object with _hex property
+            num = parseInt(id._hex, 16);
+          } else if (id && typeof id === 'object' && id.toNumber) {
+            // BigNumber object with toNumber method
+            num = id.toNumber();
+          } else {
+            // Regular number or string
+            num = Number(id);
+          }
+          
+          const isValid = !isNaN(num) && num > 0;
+          console.log(`🔍 Filtering topic ID ${id} (type: ${typeof id}, converted: ${num}): ${isValid}`);
+          return isValid;
+        })
         .map(id => {
-          const num = (typeof id === 'object' && id.toNumber) ? id.toNumber() : Number(id);
+          // Handle BigNumber objects and other formats
+          let num;
+          if (id && typeof id === 'object' && id._hex) {
+            // BigNumber object with _hex property
+            num = parseInt(id._hex, 16);
+          } else if (id && typeof id === 'object' && id.toNumber) {
+            // BigNumber object with toNumber method
+            num = id.toNumber();
+          } else {
+            // Regular number or string
+            num = Number(id);
+          }
+          
+          console.log(`🔍 Converting topic ID ${id} to number: ${num}`);
           return {
             id: num,
             name: standardTopics[num] || `Custom Topic ${num}`,
@@ -404,6 +436,7 @@ const DeploymentPhase = () => {
           };
         });
       
+      console.log("🔍 Final processed topics:", topics);
       setAvailableClaimTopics(topics);
       addLog(`Loaded ${topics.length} claim topics from registry`, "info");
     } catch (error) {
