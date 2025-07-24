@@ -16,12 +16,6 @@ async function main() {
     await trustedIssuersRegistry.waitForDeployment();
     const address = await trustedIssuersRegistry.getAddress();
     
-    // Initialize the contract to set the owner
-    console.log("🔧 Initializing TrustedIssuersRegistry...");
-    const initTx = await trustedIssuersRegistry.init();
-    await initTx.wait();
-    console.log("✅ TrustedIssuersRegistry initialized");
-    
     console.log("✅ TrustedIssuersRegistry deployed successfully at:", address);
     console.log("DEPLOYED_ADDRESS:" + address);
     
