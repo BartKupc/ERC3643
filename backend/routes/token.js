@@ -625,105 +625,30 @@ router.post('/transfer', async (req, res) => {
   }
 });
 
-// TransferFrom tokens (using agent privileges with forcedTransfer)
+// TransferFrom (admin/agent flow): forcedTransfer from source to agent, then transfer to destination
 router.post('/transfer-from', async (req, res) => {
   try {
-    const { tokenAddress, amount, fromAddress, toAddress } = req.body;
-    console.log(`🎯 Transferring ${amount} tokens from ${fromAddress} to ${toAddress} on token: ${tokenAddress}`);
-    
-    if (!tokenAddress || !amount || !fromAddress || !toAddress) {
-      throw new Error('Token address, amount, from address, and to address are required');
+    const { tokenAddress, fromAddress, toAddress, amount } = req.body;
+    if (!tokenAddress || !fromAddress || !toAddress || !amount) {
+      return res.status(400).json({ success: false, error: 'tokenAddress, fromAddress, toAddress, and amount are required' });
     }
-    
     const provider = createProvider();
     const wallet = new ethers.Wallet(process.env.PRIVATE_KEY || '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80', provider);
-    const deployerAddress = await wallet.getAddress();
-    
-    console.log(`🔍 Using deployer address: ${deployerAddress}`);
-    
-    // Get the Token contract
     const tokenArtifactsPath = path.join(__dirname, '../../trex-scaffold/packages/react-app/src/contracts/Token.json');
-    console.log(`🔍 Looking for Token artifacts at: ${tokenArtifactsPath}`);
-    if (!fs.existsSync(tokenArtifactsPath)) {
-      console.log(`❌ Token artifacts not found at: ${tokenArtifactsPath}`);
-      throw new Error('Token artifacts not found. Please compile contracts first.');
-    }
-    console.log(`✅ Token artifacts found at: ${tokenArtifactsPath}`);
+    if (!fs.existsSync(tokenArtifactsPath)) throw new Error('Token artifacts not found. Please compile contracts first.');
     const tokenArtifacts = JSON.parse(fs.readFileSync(tokenArtifactsPath, 'utf8'));
     const token = new ethers.Contract(tokenAddress, tokenArtifacts.abi, wallet);
-    console.log(`✅ Token contract instance created for ${tokenAddress}`);
-    
-    // Check if deployer is an agent
-    const isAgent = await token.isAgent(deployerAddress);
-    console.log(`🔍 Is deployer agent on token: ${isAgent}`);
-    
-    if (!isAgent) {
-      throw new Error('Deployer is not an agent on this token');
-    }
-    
-    // Convert amount to wei based on token decimals
-    const decimals = await token.decimals();
-    const decimalsNumber = typeof decimals === 'object' && decimals.toNumber ? decimals.toNumber() : Number(decimals);
-    const amountInWei = ethers.utils.parseUnits(amount, decimalsNumber);
-    
-    console.log(`🔍 Transferring ${amount} tokens (${amountInWei} wei) from ${fromAddress} to ${toAddress}`);
-    
-    // Check if from address has sufficient balance
-    const fromBalance = await token.balanceOf(fromAddress);
-    console.log(`🔍 From address balance: ${ethers.utils.formatUnits(fromBalance, decimalsNumber)} tokens`);
-    
-    if (fromBalance.lt(amountInWei)) {
-      throw new Error(`Insufficient balance. Need ${amount} tokens, but ${fromAddress} only has ${ethers.utils.formatUnits(fromBalance, decimalsNumber)}`);
-    }
-    
-    // Use two-step process like in frontend:
-    // Step 1: Transfer tokens from source to agent (using forcedTransfer)
-    console.log(`🔍 Step 1: Transferring ${amount} tokens from ${fromAddress} to agent (${deployerAddress}) using forcedTransfer`);
-    const tx1 = await token.forcedTransfer(fromAddress, deployerAddress, amountInWei);
-    console.log(`✅ Step 1 transaction sent: ${tx1.hash}`);
+    const decimals = 18; // You may want to fetch this from the contract
+    const amountBN = ethers.utils.parseUnits(amount.toString(), decimals);
+    // Step 1: forcedTransfer from source to agent
+    const tx1 = await token.forcedTransfer(fromAddress, wallet.address, amountBN);
     await tx1.wait();
-    console.log(`✅ Step 1 complete: Tokens moved to agent`);
-    
-    // Check agent's new balance
-    const agentBalance = await token.balanceOf(deployerAddress);
-    console.log(`🔍 Agent balance after step 1: ${ethers.utils.formatUnits(agentBalance, decimalsNumber)} tokens`);
-    
-    // Step 2: Transfer tokens from agent to destination (using regular transfer with compliance)
-    console.log(`🔍 Step 2: Transferring ${amount} tokens from agent to ${toAddress} (with compliance check)`);
-    const tx2 = await token.transfer(toAddress, amountInWei);
-    console.log(`✅ Step 2 transaction sent: ${tx2.hash}`);
+    // Step 2: transfer from agent to destination
+    const tx2 = await token.transfer(toAddress, amountBN);
     await tx2.wait();
-    console.log(`✅ Step 2 complete: Tokens transferred to destination with compliance`);
-    
-    // Check final balances
-    const finalFromBalance = await token.balanceOf(fromAddress);
-    const finalToBalance = await token.balanceOf(toAddress);
-    const finalAgentBalance = await token.balanceOf(deployerAddress);
-    
-    console.log(`🔍 Final balances:`);
-    console.log(`  ${fromAddress}: ${ethers.utils.formatUnits(finalFromBalance, decimalsNumber)} tokens`);
-    console.log(`  ${toAddress}: ${ethers.utils.formatUnits(finalToBalance, decimalsNumber)} tokens`);
-    console.log(`  Agent: ${ethers.utils.formatUnits(finalAgentBalance, decimalsNumber)} tokens`);
-    
-    console.log(`✅ TransferFrom operation completed successfully with compliance validation`);
-    
-    res.json({
-      success: true,
-      message: `Successfully transferred ${amount} tokens from ${fromAddress} to ${toAddress} with compliance checks`,
-      tokenAddress: tokenAddress,
-      amount: amount,
-      fromAddress: fromAddress,
-      toAddress: toAddress,
-      transactionHash1: tx1.hash,
-      transactionHash2: tx2.hash
-    });
-    
+    res.json({ success: true, transactionHash1: tx1.hash, transactionHash2: tx2.hash });
   } catch (error) {
-    console.error('❌ Error executing transferFrom:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
