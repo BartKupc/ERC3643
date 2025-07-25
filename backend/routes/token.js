@@ -597,8 +597,8 @@ router.post('/transfer', async (req, res) => {
     const token = new ethers.Contract(tokenAddress, tokenArtifacts.abi, wallet);
     console.log(`✅ Token contract instance created for ${tokenAddress}`);
     
-    // Convert amount to wei based on token decimals
-    const amountInWei = amount;
+    // Convert amount to wei based on token decimals (using parseEther as per mint/burn)
+    const amountInWei = ethers.utils.parseEther(amount);
     
     console.log(`🔍 Transferring ${ethers.utils.formatEther(amountInWei)} tokens (${amountInWei} wei) from ${deployerAddress} to ${toAddress}`);
     
