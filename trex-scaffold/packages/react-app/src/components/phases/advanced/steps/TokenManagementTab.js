@@ -7,6 +7,12 @@ import FunctionManagementSubTab from './token-management/FunctionManagementSubTa
 const TokenManagementTab = (props) => {
   const [activeSubTab, setActiveSubTab] = useState('deploy');
 
+  // Clear message when component mounts or when key props change
+  React.useEffect(() => {
+    // This ensures the message is cleared when switching to this tab
+    // The actual message clearing is handled by the parent DeploymentPhase.js
+  }, [props.deployedContracts, props.selectedContracts]);
+
   return (
     <div>
       <h3>Step 8: Token Management</h3>

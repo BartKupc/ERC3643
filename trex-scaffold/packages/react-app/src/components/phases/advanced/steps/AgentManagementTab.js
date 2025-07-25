@@ -9,6 +9,11 @@ const AgentManagementTab = ({ deployedContracts = {}, selectedContracts = {}, se
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
 
+  // Clear message when component mounts or when key props change
+  React.useEffect(() => {
+    setMessage('');
+  }, [deployedContracts, selectedContracts]);
+
   // Helper to get the current admin address (from backend wallet)
   const fetchAdminAddress = async () => {
     try {

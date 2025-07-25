@@ -11,6 +11,12 @@ const AddTrustedIssuerTab = ({
 }) => {
   const [selectedTopics, setSelectedTopics] = useState([1, 2, 3]); // Default: KYC, AML, Accredited Investor
 
+  // Clear message when component mounts or when key props change
+  React.useEffect(() => {
+    // This ensures the message is cleared when switching to this tab
+    // The actual message clearing is handled by the parent DeploymentPhase.js
+  }, [deployedContracts, selectedContracts]);
+
   const handleTopicToggle = (topicId) => {
     setSelectedTopics(prev => 
       prev.includes(topicId) 

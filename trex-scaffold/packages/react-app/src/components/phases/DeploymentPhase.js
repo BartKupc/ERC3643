@@ -689,6 +689,11 @@ const DeploymentPhase = () => {
     // eslint-disable-next-line
   }, [deployedContracts]);
 
+  // Clear message when step changes
+  useEffect(() => {
+    setMessage('');
+  }, [currentStep]);
+
   // Clear logs
   const clearLogs = () => {
     setLogs([]);

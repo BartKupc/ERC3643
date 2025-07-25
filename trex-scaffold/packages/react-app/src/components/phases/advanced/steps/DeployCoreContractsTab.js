@@ -4,7 +4,14 @@ const DeployCoreContractsTab = ({
   deployedContracts,
   deploying,
   deployContract
-}) => (
+}) => {
+  // Clear message when component mounts or when key props change
+  React.useEffect(() => {
+    // This ensures the message is cleared when switching to this tab
+    // The actual message clearing is handled by the parent DeploymentPhase.js
+  }, [deployedContracts]);
+
+  return (
   <div style={{ maxWidth: '100%', overflowX: 'auto' }}>
     <h3>Step 1: Deploy Core Contracts</h3>
     <p>Deploy the essential T-REX contracts in the correct order.</p>

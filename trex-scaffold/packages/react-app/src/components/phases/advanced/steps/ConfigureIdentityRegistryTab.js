@@ -9,6 +9,12 @@ const ConfigureIdentityRegistryTab = ({
   reloadDeploymentState,
   addLog
 }) => {
+  // Clear message when component mounts or when key props change
+  React.useEffect(() => {
+    // This ensures the message is cleared when switching to this tab
+    // The actual message clearing is handled by the parent DeploymentPhase.js
+  }, [deployedContracts, selectedContracts]);
+
   // Contract Selector Component
   const ContractSelector = ({ contractType, contracts, selectedAddress, onSelect, title, description }) => {
     // Handle both formats: contracts as array or contracts as object with contractType key

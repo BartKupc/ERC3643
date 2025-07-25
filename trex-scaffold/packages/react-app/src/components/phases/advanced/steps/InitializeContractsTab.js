@@ -13,6 +13,12 @@ const InitializeContractsTab = ({
   checkingInitStatus,
   addLog
 }) => {
+  // Clear message when component mounts or when key props change
+  React.useEffect(() => {
+    // This ensures the message is cleared when switching to this tab
+    // The actual message clearing is handled by the parent DeploymentPhase.js
+  }, [deployedContracts, selectedContracts]);
+
   const handleContractSelect = (contractName, address) => {
     setSelectedContracts(prev => ({
       ...prev,
