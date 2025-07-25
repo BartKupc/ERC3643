@@ -7,9 +7,16 @@ const ClaimTokenManagementSubTab = ({
   runComprehensiveDiagnostics = () => {},
   checkingVerification = false,
   addLog = () => {},
-  setVerificationMessage
+  setVerificationMessage,
+  verificationMessage = ''
 }) => {
   const [userAddressToCheck, setUserAddressToCheck] = useState('');
+
+  // Helper to get current time in [hh:mm:ss] format
+  const getCurrentTimestamp = () => {
+    const now = new Date();
+    return `[${now.toLocaleTimeString('en-GB', { hour12: false })}]`;
+  };
 
   // Button Component
   const Button = ({ children, onClick, disabled, style }) => (
@@ -101,6 +108,31 @@ const ClaimTokenManagementSubTab = ({
             {checkingVerification ? 'Checking...' : 'Run Comprehensive Check'}
           </Button>
         </div>
+        
+        {/* Results Display Box */}
+        {verificationMessage && (
+          <div style={{
+            backgroundColor: '#e8f5e8',
+            color: '#155724',
+            border: '2px solid #28a745',
+            borderRadius: '6px',
+            padding: '1rem',
+            marginTop: '1rem',
+            fontFamily: 'monospace',
+            fontSize: '14px',
+            fontWeight: '500',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+            wordBreak: 'break-word',
+            lineHeight: '1.4'
+          }}>
+            <div style={{ fontWeight: 'bold', marginBottom: '0.5rem', color: '#0f5132' }}>
+              {getCurrentTimestamp()} Verification Results:
+            </div>
+            <div style={{ whiteSpace: 'pre-wrap' }}>
+              {verificationMessage}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
