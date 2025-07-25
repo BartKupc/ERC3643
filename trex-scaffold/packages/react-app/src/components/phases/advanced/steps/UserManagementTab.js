@@ -77,6 +77,38 @@ const UserManagementTab = ({ deployedContracts = {}, selectedContracts = {}, set
     }
   }, []);
 
+  // Automatically load trusted issuers when selected IR changes or when entering relevant subtabs
+  useEffect(() => {
+    const autoLoadTrustedIssuers = async () => {
+      if (!selectedContracts.IdentityRegistry) return;
+      setLoadingTrustedIssuers(true);
+      setMessage('Loading trusted issuers from backend...');
+      try {
+        const res = await axios.get(`/api/claim-issuers/trusted-issuers/${selectedContracts.IdentityRegistry}`);
+        if (res.data.success) {
+          setTrustedIssuers(res.data.trustedIssuers);
+          setAvailableClaimIssuers(res.data.trustedIssuers.map(i => ({ address: i.address, topics: i.topics })));
+          setMessage(`Loaded ${res.data.trustedIssuers.length} trusted issuers from backend.`);
+        } else {
+          setMessage('Failed to load trusted issuers from backend.');
+        }
+      } catch (err) {
+        setMessage('Error loading trusted issuers from backend. Falling back to localStorage.');
+        // fallback: use localStorage
+        try {
+          const savedClaimIssuers = localStorage.getItem('trex_available_claim_issuers');
+          if (savedClaimIssuers) {
+            setAvailableClaimIssuers(JSON.parse(savedClaimIssuers));
+          }
+        } catch {}
+      } finally {
+        setLoadingTrustedIssuers(false);
+      }
+    };
+    autoLoadTrustedIssuers();
+    // eslint-disable-next-line
+  }, [selectedContracts.IdentityRegistry, activeSubtab]);
+
   // Save user identity to localStorage and update state
   const saveUserIdentity = (identity) => {
     setUserIdentities(prev => {
@@ -342,31 +374,12 @@ const UserManagementTab = ({ deployedContracts = {}, selectedContracts = {}, set
         <div>
           <ContractSelector
             contractType="ClaimIssuer"
-            contracts={deployedContracts}
+            contracts={{ ClaimIssuer: trustedIssuers.map(i => i.address) }}
             selectedAddress={selectedClaimIssuer}
             onSelect={setSelectedClaimIssuer}
             title="ClaimIssuer"
             description="Select which ClaimIssuer to add as key"
           />
-          <Button onClick={loadTrustedIssuers} disabled={loadingTrustedIssuers || !selectedContracts.IdentityRegistry} style={{ backgroundColor: '#17a2b8', color: 'white', marginBottom: '1rem' }}>{loadingTrustedIssuers ? 'Loading...' : 'Load Trusted Issuers'}</Button>
-          {/* Trusted Issuers Dropdown from backend */}
-          {trustedIssuers.length > 0 && (
-            <div style={{ marginBottom: '1rem' }}>
-              <label style={{ fontWeight: 'bold', color: '#333' }}>Trusted Issuers (from backend):</label>
-              <select
-                value={selectedClaimIssuer}
-                onChange={e => setSelectedClaimIssuer(e.target.value)}
-                style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ced4da' }}
-              >
-                <option value=''>-- Select Trusted Issuer --</option>
-                {trustedIssuers.map((issuer, idx) => (
-                  <option key={issuer.address} value={issuer.address}>
-                    {issuer.address.slice(0, 8)}...{issuer.address.slice(-6)} (Topics: {issuer.topics.join(', ')})
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
           <Button onClick={handleAddClaimIssuerKeys} disabled={addingClaim || !selectedClaimIssuer} style={{ backgroundColor: '#28a745', color: 'white' }}>{addingClaim ? 'Adding...' : 'Add ClaimIssuer Keys'}</Button>
         </div>
       )}
@@ -374,7 +387,7 @@ const UserManagementTab = ({ deployedContracts = {}, selectedContracts = {}, set
         <div>
           <ContractSelector
             contractType="ClaimIssuer"
-            contracts={deployedContracts}
+            contracts={{ ClaimIssuer: trustedIssuers.map(i => i.address) }}
             selectedAddress={selectedClaimIssuer}
             onSelect={setSelectedClaimIssuer}
             title="ClaimIssuer"
