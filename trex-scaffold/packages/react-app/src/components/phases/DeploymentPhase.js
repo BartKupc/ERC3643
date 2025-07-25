@@ -28,6 +28,7 @@ const DeploymentPhase = () => {
   const [initializingContract, setInitializingContract] = useState({});
   const [tokenStatus, setTokenStatus] = useState('Not checked');
   const [checkingVerification, setCheckingVerification] = useState(false);
+  const [verificationMessage, setVerificationMessage] = useState('');
 
   // Logging function
   const addLog = (message, type = "info") => {
@@ -98,6 +99,9 @@ const DeploymentPhase = () => {
       setDeployedTokens([]);
       setSelectedContracts({});
       localStorage.removeItem(STORAGE_KEY);
+      // Also clear user management and claim issuer history
+      localStorage.removeItem('trex_user_identities');
+      localStorage.removeItem('trex_available_claim_issuers');
       addLog("Cleared deployment state from both frontend and backend", "info");
     } catch (error) {
       console.error('Error clearing deployment state:', error);
@@ -1224,23 +1228,23 @@ const DeploymentPhase = () => {
           </button>
         ))}
       </div>
+      {/* Message Display (reverted to top) */}
+      {message && (
+        <div style={{
+          padding: '10px',
+          marginBottom: '20px',
+          backgroundColor: message.includes('Error') ? '#f8d7da' : '#d4edda',
+          border: `1px solid ${message.includes('Error') ? '#f5c6cb' : '#c3e6cb'}`,
+          borderRadius: '5px',
+          color: message.includes('Error') ? '#721c24' : '#222',
+          fontWeight: 'bold',
+        }}>
+          {message}
+        </div>
+      )}
       {/* Render current step */}
       <div style={{ marginBottom: '30px', color: '#222' }}>
         {steps[currentStep - 1].component}
-        {/* Message Display (moved below heading) */}
-        {message && (
-          <div style={{
-            padding: '10px',
-            marginTop: '20px',
-            backgroundColor: message.includes('Error') ? '#f8d7da' : '#d4edda',
-            border: `1px solid ${message.includes('Error') ? '#f5c6cb' : '#c3e6cb'}`,
-            borderRadius: '5px',
-            color: message.includes('Error') ? '#721c24' : '#222',
-            fontWeight: 'bold',
-          }}>
-            {message}
-          </div>
-        )}
       </div>
       {/* Logs */}
       <div style={{ marginTop: '30px' }}>
@@ -1272,6 +1276,20 @@ const DeploymentPhase = () => {
           ))}
         </div>
       </div>
+      {/* User Verification Message Box (bottom of page) */}
+      {verificationMessage && (
+        <div style={{
+          padding: '10px',
+          marginTop: '30px',
+          backgroundColor: verificationMessage.includes('Error') ? '#f8d7da' : '#e3fcef',
+          border: `1px solid ${verificationMessage.includes('Error') ? '#f5c6cb' : '#b7eb8f'}`,
+          borderRadius: '5px',
+          color: verificationMessage.includes('Error') ? '#721c24' : '#135200',
+          fontWeight: 'bold',
+        }}>
+          {verificationMessage}
+        </div>
+      )}
     </div>
   );
 };
