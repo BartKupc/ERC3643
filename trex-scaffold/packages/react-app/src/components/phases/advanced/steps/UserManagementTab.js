@@ -109,6 +109,11 @@ const UserManagementTab = ({ deployedContracts = {}, selectedContracts = {}, set
     // eslint-disable-next-line
   }, [selectedContracts.IdentityRegistry, activeSubtab]);
 
+  // Clear message on subtab change
+  useEffect(() => {
+    setMessage('');
+  }, [activeSubtab]);
+
   // Save user identity to localStorage and update state
   const saveUserIdentity = (identity) => {
     setUserIdentities(prev => {
@@ -349,6 +354,7 @@ const UserManagementTab = ({ deployedContracts = {}, selectedContracts = {}, set
         ))}
       </div>
       {irError && <div style={{ color: '#dc3545', marginBottom: '1rem' }}>{irError}</div>}
+      {/* Green message box always above log */}
       {message && <div style={{ color: message.includes('Error') ? '#721c24' : '#155724', backgroundColor: message.includes('Error') ? '#f8d7da' : '#d4edda', padding: '0.5rem', borderRadius: '4px', marginBottom: '1rem', border: `1px solid ${message.includes('Error') ? '#f5c6cb' : '#c3e6cb'}` }}>{message}</div>}
       {/* Subtab Content */}
       {activeSubtab === 'create' && (
