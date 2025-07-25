@@ -473,7 +473,8 @@ router.post('/mint', async (req, res) => {
     console.log(`✅ Mint transaction confirmed`);
     // Balance check after mint
     const recipientBalance = await token.balanceOf(recipient);
-    console.log(`🔍 Balance of ${recipient} after mint: ${ethers.utils.formatEther(recipientBalance)} tokens`);
+    const recipientBalanceFormatted = ethers.utils.formatEther(recipientBalance);
+    console.log(`🔍 Balance of ${recipient} after mint: ${recipientBalanceFormatted} tokens`);
     
     console.log(`✅ Successfully minted ${amount} tokens to ${recipient}`);
     
@@ -483,7 +484,8 @@ router.post('/mint', async (req, res) => {
       tokenAddress: tokenAddress,
       amount: amount,
       recipient: recipient,
-      transactionHash: tx.hash
+      transactionHash: tx.hash,
+      recipientBalance: recipientBalanceFormatted
     });
     
   } catch (error) {
@@ -543,7 +545,8 @@ router.post('/burn', async (req, res) => {
     console.log(`✅ Burn transaction confirmed`);
     // Balance check after burn
     const burnBalance = await token.balanceOf(fromAddress);
-    console.log(`🔍 Balance of ${fromAddress} after burn: ${ethers.utils.formatEther(burnBalance)} tokens`);
+    const burnBalanceFormatted = ethers.utils.formatEther(burnBalance);
+    console.log(`🔍 Balance of ${fromAddress} after burn: ${burnBalanceFormatted} tokens`);
     
     console.log(`✅ Successfully burned ${amount} tokens from ${fromAddress}`);
     
@@ -553,7 +556,8 @@ router.post('/burn', async (req, res) => {
       tokenAddress: tokenAddress,
       amount: amount,
       fromAddress: fromAddress,
-      transactionHash: tx.hash
+      transactionHash: tx.hash,
+      fromAddressBalance: burnBalanceFormatted
     });
     
   } catch (error) {
@@ -605,7 +609,8 @@ router.post('/transfer', async (req, res) => {
     console.log(`✅ Transfer transaction confirmed`);
     // Balance check after transfer
     const toBalance = await token.balanceOf(toAddress);
-    console.log(`🔍 Balance of ${toAddress} after transfer: ${ethers.utils.formatEther(toBalance)} tokens`);
+    const toBalanceFormatted = ethers.utils.formatEther(toBalance);
+    console.log(`🔍 Balance of ${toAddress} after transfer: ${toBalanceFormatted} tokens`);
     
     console.log(`✅ Successfully transferred ${amount} tokens to ${toAddress}`);
     
@@ -616,7 +621,8 @@ router.post('/transfer', async (req, res) => {
       amount: amount,
       fromAddress: deployerAddress,
       toAddress: toAddress,
-      transactionHash: tx.hash
+      transactionHash: tx.hash,
+      toAddressBalance: toBalanceFormatted
     });
     
   } catch (error) {
@@ -682,29 +688,36 @@ router.post('/transfer-from', async (req, res) => {
     await tx1.wait();
     console.log(`✅ Step 1 transaction confirmed`);
     
-    // Check balances after step 1
+    // After Step 1
     const fromBalanceAfterStep1 = await token.balanceOf(fromAddress);
     const agentBalanceAfterStep1 = await token.balanceOf(agentAddress);
+    const fromBalanceAfterStep1Formatted = ethers.utils.formatEther(fromBalanceAfterStep1);
+    const agentBalanceAfterStep1Formatted = ethers.utils.formatEther(agentBalanceAfterStep1);
     console.log(`🔍 Balance after Step 1:`);
-    console.log(`  From address: ${ethers.utils.formatEther(fromBalanceAfterStep1)} tokens`);
-    console.log(`  Agent: ${ethers.utils.formatEther(agentBalanceAfterStep1)} tokens`);
+    console.log(`  From address: ${fromBalanceAfterStep1Formatted} tokens`);
+    console.log(`  Agent: ${agentBalanceAfterStep1Formatted} tokens`);
 
-    console.log(`🔍 Step 2: transfer from agent ${agentAddress} to ${toAddress}`);
-    // Step 2: transfer from agent to destination
+    // Step 2
     const tx2 = await token.transfer(toAddress, amountBN);
     console.log(`✅ Step 2 transaction sent: ${tx2.hash}`);
     await tx2.wait();
     console.log(`✅ Step 2 transaction confirmed`);
     // Balance check after transfer-from
     const toBalanceAfter = await token.balanceOf(toAddress);
-    console.log(`🔍 Balance of ${toAddress} after transfer-from: ${ethers.utils.formatEther(toBalanceAfter)} tokens`);
+    const toBalanceAfterFormatted = ethers.utils.formatEther(toBalanceAfter);
+    console.log(`🔍 Balance of ${toAddress} after transfer-from: ${toBalanceAfterFormatted} tokens`);
 
     console.log(`✅ TransferFrom completed successfully`);
     res.json({ 
       success: true, 
       transactionHash1: tx1.hash, 
       transactionHash2: tx2.hash,
-      message: `Successfully transferred ${ethers.utils.formatEther(amountBN)} tokens from ${fromAddress} to ${toAddress} via agent`
+      message: `Successfully transferred ${ethers.utils.formatEther(amountBN)} tokens from ${fromAddress} to ${toAddress} via agent`,
+      balances: {
+        fromAddressAfterStep1: fromBalanceAfterStep1Formatted,
+        agentAfterStep1: agentBalanceAfterStep1Formatted,
+        toAddressAfterStep2: toBalanceAfterFormatted
+      }
     });
   } catch (error) {
     console.error('❌ Error in transfer-from:', error);
