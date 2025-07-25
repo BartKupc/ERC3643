@@ -533,8 +533,8 @@ router.post('/burn', async (req, res) => {
       throw new Error('Deployer is not an agent on this token');
     }
     
-    // Convert amount to wei based on token decimals
-    const amountInWei = amount;
+    // Convert amount to wei based on token decimals (using parseEther as per mint)
+    const amountInWei = ethers.utils.parseEther(amount);
     
     console.log(`🔍 Burning ${ethers.utils.formatEther(amountInWei)} tokens (${amountInWei} wei) from ${fromAddress}`);
     
