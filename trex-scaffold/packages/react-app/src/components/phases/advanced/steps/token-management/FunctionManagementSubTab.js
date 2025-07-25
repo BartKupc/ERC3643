@@ -131,6 +131,9 @@ const FunctionManagementSubTab = ({
       if (!data.success) throw new Error(data.error || 'Unknown error');
       setTransferFromResult(`Success! Tx1: ${data.transactionHash1}\nTx2: ${data.transactionHash2}`);
       addLog(`TransferFrom success: ${data.transactionHash1}, ${data.transactionHash2}`, 'success');
+      addLog(`Step 1 - From address balance: ${data.balances.fromAddressAfterStep1} tokens`, 'info');
+      addLog(`Step 1 - Agent balance: ${data.balances.agentAfterStep1} tokens`, 'info');
+      addLog(`Step 2 - To address balance: ${data.balances.toAddressAfterStep2} tokens`, 'info');
       setTransferFrom('');
       setTransferToAdvanced('');
       setTransferAmountAdvanced('');

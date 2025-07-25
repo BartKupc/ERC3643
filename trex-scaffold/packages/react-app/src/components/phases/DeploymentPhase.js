@@ -831,16 +831,23 @@ const DeploymentPhase = () => {
 
       addLog(`Minting ${amount} tokens to ${recipient}`, "info");
 
-      const result = await contractInteraction('send', {
-        contractName: 'Token',
-        contractAddress: selectedContracts.Token,
-        method: 'mint',
-        params: [recipient, ethers.utils.parseEther(amount)]
+      const response = await fetch('/api/token/mint', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tokenAddress: selectedContracts.Token,
+          recipient: recipient,
+          amount: amount
+        })
       });
+      
+      const result = await response.json();
+      if (!result.success) throw new Error(result.error || 'Unknown error');
       
       setMessage(`Successfully minted ${amount} tokens to ${recipient}`);
       addLog(`Successfully minted ${amount} tokens to ${recipient}`, "success");
       addLog(`Transaction hash: ${result.transactionHash}`, "info");
+      addLog(`Recipient balance after mint: ${result.recipientBalance} tokens`, "info");
     } catch (error) {
       console.error('Error minting tokens:', error);
       const cleanError = extractCleanError(error);
@@ -867,16 +874,23 @@ const DeploymentPhase = () => {
 
       addLog(`Burning ${amount} tokens from ${fromAddress}`, "info");
 
-      const result = await contractInteraction('send', {
-        contractName: 'Token',
-        contractAddress: selectedContracts.Token,
-        method: 'burn',
-        params: [fromAddress, ethers.utils.parseEther(amount)]
+      const response = await fetch('/api/token/burn', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tokenAddress: selectedContracts.Token,
+          fromAddress: fromAddress,
+          amount: amount
+        })
       });
+      
+      const result = await response.json();
+      if (!result.success) throw new Error(result.error || 'Unknown error');
       
       setMessage(`Successfully burned ${amount} tokens from ${fromAddress}`);
       addLog(`Successfully burned ${amount} tokens from ${fromAddress}`, "success");
       addLog(`Transaction hash: ${result.transactionHash}`, "info");
+      addLog(`Address balance after burn: ${result.fromAddressBalance} tokens`, "info");
     } catch (error) {
       console.error('Error burning tokens:', error);
       const cleanError = extractCleanError(error);
@@ -903,16 +917,23 @@ const DeploymentPhase = () => {
 
       addLog(`Transferring ${amount} tokens to ${toAddress}`, "info");
 
-      const result = await contractInteraction('send', {
-        contractName: 'Token',
-        contractAddress: selectedContracts.Token,
-        method: 'transfer',
-        params: [toAddress, ethers.utils.parseEther(amount)]
+      const response = await fetch('/api/token/transfer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tokenAddress: selectedContracts.Token,
+          toAddress: toAddress,
+          amount: amount
+        })
       });
+      
+      const result = await response.json();
+      if (!result.success) throw new Error(result.error || 'Unknown error');
       
       setMessage(`Successfully transferred ${amount} tokens to ${toAddress}`);
       addLog(`Successfully transferred ${amount} tokens to ${toAddress}`, "success");
       addLog(`Transaction hash: ${result.transactionHash}`, "info");
+      addLog(`Recipient balance after transfer: ${result.toAddressBalance} tokens`, "info");
     } catch (error) {
       console.error('Error transferring tokens:', error);
       const cleanError = extractCleanError(error);
