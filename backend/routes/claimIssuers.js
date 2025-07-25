@@ -19,7 +19,17 @@ router.get('/identity-registries', async (req, res) => {
     if (!fs.existsSync(deploymentsPath)) {
       throw new Error('No deployments found. Please deploy factory first.');
     }
-    const deployments = JSON.parse(fs.readFileSync(deploymentsPath, 'utf8'));
+    const deploymentsData = JSON.parse(fs.readFileSync(deploymentsPath, 'utf8'));
+    
+    // Handle new structure with easydeploy and advanced sections
+    let deployments = [];
+    if (deploymentsData.easydeploy) {
+      deployments = deployments.concat(deploymentsData.easydeploy);
+    }
+    if (deploymentsData.advanced) {
+      deployments = deployments.concat(deploymentsData.advanced);
+    }
+    
     const factoryDeployments = deployments.filter(d => d.factory && d.factory.address);
     const irs = [];
     for (const factoryDeployment of factoryDeployments) {

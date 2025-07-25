@@ -98,8 +98,18 @@ function getLatestDeployment() {
   if (!fs.existsSync(deploymentsPath)) {
     return null;
   }
-  const deployments = JSON.parse(fs.readFileSync(deploymentsPath, 'utf8'));
-  return deployments[deployments.length - 1];
+  const deploymentsData = JSON.parse(fs.readFileSync(deploymentsPath, 'utf8'));
+  
+  // Handle new structure with easydeploy and advanced sections
+  let deployments = [];
+  if (deploymentsData.easydeploy) {
+    deployments = deployments.concat(deploymentsData.easydeploy);
+  }
+  if (deploymentsData.advanced) {
+    deployments = deployments.concat(deploymentsData.advanced);
+  }
+  
+  return deployments.length > 0 ? deployments[deployments.length - 1] : null;
 }
 
 module.exports = {

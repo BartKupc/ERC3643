@@ -715,7 +715,17 @@ router.get('/state', async (req, res) => {
     if (!fs.existsSync(deploymentsPath)) {
       return res.json({ success: true, deployment: {} });
     }
-    const deployments = JSON.parse(fs.readFileSync(deploymentsPath, 'utf8'));
+    const deploymentsData = JSON.parse(fs.readFileSync(deploymentsPath, 'utf8'));
+    
+    // Handle new structure with easydeploy and advanced sections
+    let deployments = [];
+    if (deploymentsData.easydeploy) {
+      deployments = deployments.concat(deploymentsData.easydeploy);
+    }
+    if (deploymentsData.advanced) {
+      deployments = deployments.concat(deploymentsData.advanced);
+    }
+    
     const result = aggregateDeployments(deployments);
     console.log('Aggregated contracts:', result); // DEBUG LOG
     res.json({
@@ -736,7 +746,17 @@ router.get('/deployments', async (req, res) => {
   try {
     const deploymentsPath = path.join(__dirname, '../../deployments.json');
     if (fs.existsSync(deploymentsPath)) {
-      const deployments = JSON.parse(fs.readFileSync(deploymentsPath, 'utf8'));
+      const deploymentsData = JSON.parse(fs.readFileSync(deploymentsPath, 'utf8'));
+      
+      // Handle new structure with easydeploy and advanced sections
+      let deployments = [];
+      if (deploymentsData.easydeploy) {
+        deployments = deployments.concat(deploymentsData.easydeploy);
+      }
+      if (deploymentsData.advanced) {
+        deployments = deployments.concat(deploymentsData.advanced);
+      }
+      
       res.json(deployments);
     } else {
       res.json([]);

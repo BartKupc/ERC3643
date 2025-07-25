@@ -61,7 +61,17 @@ app.get('/api/identity-registries', async (req, res) => {
       throw new Error('No deployments found. Please deploy factory first.');
     }
     
-    const deployments = JSON.parse(fs.readFileSync(deploymentsPath, 'utf8'));
+    const deploymentsData = JSON.parse(fs.readFileSync(deploymentsPath, 'utf8'));
+    
+    // Handle new structure with easydeploy and advanced sections
+    let deployments = [];
+    if (deploymentsData.easydeploy) {
+      deployments = deployments.concat(deploymentsData.easydeploy);
+    }
+    if (deploymentsData.advanced) {
+      deployments = deployments.concat(deploymentsData.advanced);
+    }
+    
     const factoryDeployments = deployments.filter(d => d.factory && d.factory.address);
     
     const irs = [];
@@ -202,7 +212,17 @@ app.get('/api/deployments/:deploymentId', (req, res) => {
       console.log('❌ Deployments file not found');
       return res.status(404).json({ error: 'No deployments found' });
     }
-    const deployments = JSON.parse(fs.readFileSync(deploymentsPath, 'utf8'));
+    const deploymentsData = JSON.parse(fs.readFileSync(deploymentsPath, 'utf8'));
+    
+    // Handle new structure with easydeploy and advanced sections
+    let deployments = [];
+    if (deploymentsData.easydeploy) {
+      deployments = deployments.concat(deploymentsData.easydeploy);
+    }
+    if (deploymentsData.advanced) {
+      deployments = deployments.concat(deploymentsData.advanced);
+    }
+    
     console.log('📋 Found', deployments.length, 'deployments');
     const deployment = deployments.find(d => d.deploymentId === deploymentId);
     if (!deployment) {
