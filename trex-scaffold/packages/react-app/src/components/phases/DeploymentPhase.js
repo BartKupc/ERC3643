@@ -685,9 +685,27 @@ const DeploymentPhase = () => {
   }, []);
 
   // Add useEffect to auto-select contracts when deployedContracts changes
+  // BUT only for contracts that haven't been manually selected yet
   useEffect(() => {
     if (Object.keys(deployedContracts).length > 0) {
-      autoSelectLatestContracts();
+      // Only auto-select contracts that haven't been manually selected
+      const newSelectedContracts = { ...selectedContracts };
+      let hasChanges = false;
+      
+      Object.keys(deployedContracts).forEach(contractType => {
+        if (deployedContracts[contractType] && deployedContracts[contractType].length > 0) {
+          // Only auto-select if this contract type hasn't been manually selected yet
+          if (!selectedContracts[contractType]) {
+            newSelectedContracts[contractType] = deployedContracts[contractType][0];
+            hasChanges = true;
+          }
+        }
+      });
+      
+      if (hasChanges) {
+        setSelectedContracts(newSelectedContracts);
+        addLog("Auto-selected latest deployed contracts for unselected contract types", "info");
+      }
     }
     // eslint-disable-next-line
   }, [deployedContracts]);
