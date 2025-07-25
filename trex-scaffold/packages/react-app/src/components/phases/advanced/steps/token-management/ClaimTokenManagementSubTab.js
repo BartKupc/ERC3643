@@ -107,32 +107,34 @@ const ClaimTokenManagementSubTab = ({
           >
             {checkingVerification ? 'Checking...' : 'Run Comprehensive Check'}
           </Button>
+          {/* Verification Results Box - visually distinct, new area */}
+          {verificationMessage && (
+            <div style={{
+              background: 'linear-gradient(90deg, #e3fcef 0%, #b7eb8f 100%)',
+              color: '#135200',
+              border: '2px solid #52c41a',
+              borderRadius: '8px',
+              padding: '1.25rem',
+              marginTop: '1rem',
+              marginBottom: '0.5rem',
+              fontFamily: 'monospace',
+              fontSize: '15px',
+              fontWeight: '600',
+              boxShadow: '0 2px 8px rgba(82,196,26,0.08)',
+              wordBreak: 'break-word',
+              lineHeight: '1.5',
+              letterSpacing: '0.01em',
+              display: 'block',
+            }}>
+              <div style={{ fontWeight: 'bold', marginBottom: '0.5rem', color: '#237804', fontSize: '16px' }}>
+                Verification Results
+              </div>
+              <div style={{ whiteSpace: 'pre-wrap' }}>
+                {verificationMessage}
+              </div>
+            </div>
+          )}
         </div>
-        
-        {/* Results Display Box */}
-        {verificationMessage && (
-          <div style={{
-            backgroundColor: '#e8f5e8',
-            color: '#155724',
-            border: '2px solid #28a745',
-            borderRadius: '6px',
-            padding: '1rem',
-            marginTop: '1rem',
-            fontFamily: 'monospace',
-            fontSize: '14px',
-            fontWeight: '500',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-            wordBreak: 'break-word',
-            lineHeight: '1.4'
-          }}>
-            <div style={{ fontWeight: 'bold', marginBottom: '0.5rem', color: '#0f5132' }}>
-              {getCurrentTimestamp()} Verification Results:
-            </div>
-            <div style={{ whiteSpace: 'pre-wrap' }}>
-              {verificationMessage}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

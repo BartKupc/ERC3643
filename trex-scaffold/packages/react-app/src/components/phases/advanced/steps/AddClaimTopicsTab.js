@@ -11,7 +11,8 @@ const AddClaimTopicsTab = ({
   loadClaimTopics,
   reloadDeploymentState,
   addLog,
-  deploying
+  deploying,
+  message
 }) => {
   // Contract Selector Component
   const ContractSelector = ({ contractType, contracts, selectedAddress, onSelect, title, description }) => {
@@ -127,6 +128,10 @@ const AddClaimTopicsTab = ({
 
   return (
     <div style={{ maxWidth: '100%', overflowX: 'auto' }}>
+      {/* Green message box at the top */}
+      {typeof message !== 'undefined' && message && (
+        <div style={{ color: message.includes('Error') ? '#721c24' : '#155724', backgroundColor: message.includes('Error') ? '#f8d7da' : '#d4edda', padding: '0.5rem', borderRadius: '4px', marginBottom: '1rem', border: `1px solid ${message.includes('Error') ? '#f5c6cb' : '#c3e6cb'}` }}>{message}</div>
+      )}
       <h3>Step 4: Add Claim Topics</h3>
       <p>Add essential claim topics for KYC/AML compliance.</p>
       
