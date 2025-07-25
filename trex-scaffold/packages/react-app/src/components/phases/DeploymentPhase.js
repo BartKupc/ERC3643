@@ -1186,6 +1186,22 @@ const DeploymentPhase = () => {
   return (
     <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto', color: '#222', background: 'white' }}>
       <h1 style={{ color: '#222' }}>Deployment Phase</h1>
+      {/* Clear State Button (moved to top) */}
+      <div style={{ marginBottom: '20px' }}>
+        <button
+          onClick={clearDeploymentState}
+          style={{
+            backgroundColor: '#dc3545',
+            color: 'white',
+            border: 'none',
+            padding: '10px 20px',
+            borderRadius: '5px',
+            cursor: 'pointer'
+          }}
+        >
+          Clear All Deployment State
+        </button>
+      </div>
       {/* Stepper/Progress Bar */}
       <div style={{ marginBottom: '20px', display: 'flex', gap: '10px' }}>
         {steps.map((step, idx) => (
@@ -1255,22 +1271,6 @@ const DeploymentPhase = () => {
             </div>
           ))}
         </div>
-      </div>
-      {/* Clear State Button */}
-      <div style={{ marginTop: '20px' }}>
-        <button
-          onClick={clearDeploymentState}
-          style={{
-            backgroundColor: '#dc3545',
-            color: 'white',
-            border: 'none',
-            padding: '10px 20px',
-            borderRadius: '5px',
-            cursor: 'pointer'
-          }}
-        >
-          Clear All Deployment State
-        </button>
       </div>
     </div>
   );

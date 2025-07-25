@@ -100,18 +100,6 @@ const ClaimTokenManagementSubTab = ({
           </Button>
         </div>
       </div>
-
-      {/* Information Panel */}
-      <div style={{ marginTop: '1rem', padding: '1rem', backgroundColor: '#fff3cd', borderRadius: '4px', border: '1px solid #ffeaa7', color: '#856404' }}>
-        <h4>What this check does:</h4>
-        <ul style={{ margin: '0.5rem 0', paddingLeft: '1.5rem' }}>
-          <li>Verifies if the user has all required claim topics</li>
-          <li>Checks if claims are issued by trusted issuers</li>
-          <li>Validates identity registration status</li>
-          <li>Ensures compliance rules are satisfied</li>
-          <li>Provides detailed diagnostic information</li>
-        </ul>
-      </div>
     </div>
   );
 };
