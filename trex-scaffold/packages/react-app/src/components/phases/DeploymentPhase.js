@@ -1184,6 +1184,7 @@ const DeploymentPhase = () => {
           reloadDeploymentState={reloadDeploymentState}
           addLog={addLog}
           setVerificationMessage={setVerificationMessage}
+          verificationMessage={verificationMessage}
         />
       )
     }
