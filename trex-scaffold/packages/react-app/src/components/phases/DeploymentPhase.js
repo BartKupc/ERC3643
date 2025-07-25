@@ -1278,20 +1278,6 @@ const DeploymentPhase = () => {
           ))}
         </div>
       </div>
-      {/* User Verification Message Box (bottom of page) */}
-      {verificationMessage && (
-        <div style={{
-          padding: '10px',
-          marginTop: '30px',
-          backgroundColor: verificationMessage.includes('Error') ? '#f8d7da' : '#e3fcef',
-          border: `1px solid ${verificationMessage.includes('Error') ? '#f5c6cb' : '#b7eb8f'}`,
-          borderRadius: '5px',
-          color: verificationMessage.includes('Error') ? '#721c24' : '#135200',
-          fontWeight: 'bold',
-        }}>
-          {verificationMessage}
-        </div>
-      )}
     </div>
   );
 };

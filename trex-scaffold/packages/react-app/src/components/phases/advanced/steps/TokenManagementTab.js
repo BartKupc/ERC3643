@@ -75,7 +75,13 @@ const TokenManagementTab = (props) => {
       </div>
       {activeSubTab === 'deploy' && <DeployTokenSubTab {...props} />}
       {activeSubTab === 'roles' && <RoleManagementSubTab {...props} />}
-      {activeSubTab === 'claims' && <ClaimTokenManagementSubTab {...props} />}
+      {activeSubTab === 'claims' && (
+        <ClaimTokenManagementSubTab
+          {...props}
+          verificationMessage={props.verificationMessage}
+          setVerificationMessage={props.setVerificationMessage}
+        />
+      )}
       {activeSubTab === 'functions' && <FunctionManagementSubTab {...props} setTokenStatus={props.setTokenStatus} />}
     </div>
   );
