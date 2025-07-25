@@ -91,16 +91,14 @@ const ClaimTokenManagementSubTab = ({
             placeholder="0x... (leave empty to use account 0)"
             style={{ width: '100%', padding: '0.5rem', marginTop: '0.5rem', borderRadius: '4px', border: '1px solid #ced4da' }}
           />
+          <Button
+            onClick={handleRunDiagnostics}
+            disabled={checkingVerification || !selectedContracts.Token}
+            style={{ backgroundColor: '#007bff', color: 'white', marginTop: '0.5rem', marginBottom: '1rem', marginRight: '0.5rem' }}
+          >
+            {checkingVerification ? 'Checking...' : 'Run Comprehensive Check'}
+          </Button>
         </div>
-        
-        {/* Comprehensive check button */}
-        <Button
-          onClick={handleRunDiagnostics}
-          disabled={checkingVerification || !selectedContracts.Token}
-          style={{ backgroundColor: '#007bff', color: 'white', marginBottom: '1rem', marginRight: '0.5rem' }}
-        >
-          {checkingVerification ? 'Checking...' : 'Run Comprehensive Check'}
-        </Button>
       </div>
 
       {/* Information Panel */}
