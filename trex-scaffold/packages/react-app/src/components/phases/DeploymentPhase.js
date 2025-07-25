@@ -8,6 +8,7 @@ import AddTrustedIssuerTab from './advanced/steps/AddTrustedIssuerTab';
 import UserManagementTab from './advanced/steps/UserManagementTab';
 import TokenManagementTab from './advanced/steps/TokenManagementTab';
 import AgentManagementTab from './advanced/steps/AgentManagementTab';
+import { ethers } from 'ethers';
 
 const STORAGE_KEY = 'trex_deployment_state';
 
