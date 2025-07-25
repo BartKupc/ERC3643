@@ -629,25 +629,50 @@ router.post('/transfer', async (req, res) => {
 router.post('/transfer-from', async (req, res) => {
   try {
     const { tokenAddress, fromAddress, toAddress, amount } = req.body;
+    console.log(`🎯 TransferFrom request: ${amount} tokens from ${fromAddress} to ${toAddress} on token: ${tokenAddress}`);
+    
     if (!tokenAddress || !fromAddress || !toAddress || !amount) {
       return res.status(400).json({ success: false, error: 'tokenAddress, fromAddress, toAddress, and amount are required' });
     }
+    
     const provider = createProvider();
     const wallet = new ethers.Wallet(process.env.PRIVATE_KEY || '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80', provider);
+    const agentAddress = await wallet.getAddress();
+    console.log(`🔍 Agent address: ${agentAddress}`);
+    
     const tokenArtifactsPath = path.join(__dirname, '../../trex-scaffold/packages/react-app/src/contracts/Token.json');
     if (!fs.existsSync(tokenArtifactsPath)) throw new Error('Token artifacts not found. Please compile contracts first.');
     const tokenArtifacts = JSON.parse(fs.readFileSync(tokenArtifactsPath, 'utf8'));
     const token = new ethers.Contract(tokenAddress, tokenArtifacts.abi, wallet);
-    const decimals = 18; // You may want to fetch this from the contract
-    const amountBN = ethers.utils.parseUnits(amount.toString(), decimals);
+    
+    // Get token decimals
+    const decimals = await token.decimals();
+    const decimalsNumber = typeof decimals === 'object' && decimals.toNumber ? decimals.toNumber() : Number(decimals);
+    const amountBN = ethers.utils.parseUnits(amount.toString(), decimalsNumber);
+    
+    console.log(`🔍 Step 1: forcedTransfer from ${fromAddress} to agent ${agentAddress}`);
     // Step 1: forcedTransfer from source to agent
-    const tx1 = await token.forcedTransfer(fromAddress, wallet.address, amountBN);
+    const tx1 = await token.forcedTransfer(fromAddress, agentAddress, amountBN);
+    console.log(`✅ Step 1 transaction sent: ${tx1.hash}`);
     await tx1.wait();
+    console.log(`✅ Step 1 transaction confirmed`);
+    
+    console.log(`🔍 Step 2: transfer from agent ${agentAddress} to ${toAddress}`);
     // Step 2: transfer from agent to destination
     const tx2 = await token.transfer(toAddress, amountBN);
+    console.log(`✅ Step 2 transaction sent: ${tx2.hash}`);
     await tx2.wait();
-    res.json({ success: true, transactionHash1: tx1.hash, transactionHash2: tx2.hash });
+    console.log(`✅ Step 2 transaction confirmed`);
+    
+    console.log(`✅ TransferFrom completed successfully`);
+    res.json({ 
+      success: true, 
+      transactionHash1: tx1.hash, 
+      transactionHash2: tx2.hash,
+      message: `Successfully transferred ${amount} tokens from ${fromAddress} to ${toAddress} via agent`
+    });
   } catch (error) {
+    console.error('❌ Error in transfer-from:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
