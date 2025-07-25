@@ -20,6 +20,10 @@ const FunctionManagementSubTab = ({
   const [burnAmount, setBurnAmount] = useState('');
   const [transferTo, setTransferTo] = useState('');
   const [transferAmount, setTransferAmount] = useState('');
+  const [transferFrom, setTransferFrom] = useState('');
+  const [transferToAdvanced, setTransferToAdvanced] = useState('');
+  const [transferAmountAdvanced, setTransferAmountAdvanced] = useState('');
+  const [transferFromResult, setTransferFromResult] = useState('');
 
   // Button Component
   const Button = ({ children, onClick, disabled, style }) => (
@@ -98,6 +102,40 @@ const FunctionManagementSubTab = ({
       setTransferAmount('');
     } catch (error) {
       console.error('Error transferring tokens:', error);
+    }
+  };
+
+  const handleTransferFrom = async () => {
+    if (!selectedContracts.Token) {
+      addLog('Please select a token first', 'error');
+      return;
+    }
+    if (!transferFrom || !transferToAdvanced || !transferAmountAdvanced) {
+      addLog('Please provide from address, to address, and amount', 'error');
+      return;
+    }
+    setTransferFromResult('');
+    try {
+      const res = await fetch('/api/token/transfer-from', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tokenAddress: selectedContracts.Token,
+          fromAddress: transferFrom,
+          toAddress: transferToAdvanced,
+          amount: transferAmountAdvanced
+        })
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error || 'Unknown error');
+      setTransferFromResult(`Success! Tx1: ${data.transactionHash1}\nTx2: ${data.transactionHash2}`);
+      addLog(`TransferFrom success: ${data.transactionHash1}, ${data.transactionHash2}`, 'success');
+      setTransferFrom('');
+      setTransferToAdvanced('');
+      setTransferAmountAdvanced('');
+    } catch (error) {
+      setTransferFromResult(`Error: ${error.message}`);
+      addLog(`TransferFrom error: ${error.message}`, 'error');
     }
   };
 
@@ -269,6 +307,49 @@ const FunctionManagementSubTab = ({
             >
               {deploying ? 'Transferring...' : 'Transfer Tokens'}
             </Button>
+          </div>
+
+          {/* Transfer Between Accounts (forcedTransfer + transfer) */}
+          <div style={{ marginTop: '2rem', padding: '1rem', backgroundColor: '#f8f9fa', borderRadius: '4px', border: '2px solid #dee2e6' }}>
+            <h5>Transfer Between Accounts (Option 2 - Advanced):</h5>
+            <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '1rem' }}>
+              <strong>Optional:</strong> Test transfers between different accounts using agent privileges. This simulates real-world scenarios.<br/>
+              <strong>Step 1:</strong> Agent uses <code>forcedTransfer()</code> to move tokens from Account A to Agent<br/>
+              <strong>Step 2:</strong> Agent uses <code>transfer()</code> to move tokens from Agent to Account B (with compliance)
+            </p>
+            <input
+              type="text"
+              placeholder="From Address (e.g., Account 2)"
+              value={transferFrom}
+              onChange={e => setTransferFrom(e.target.value)}
+              style={{ width: '100%', padding: '0.5rem', marginBottom: '0.5rem' }}
+            />
+            <input
+              type="text"
+              placeholder="To Address (e.g., Account 3)"
+              value={transferToAdvanced}
+              onChange={e => setTransferToAdvanced(e.target.value)}
+              style={{ width: '100%', padding: '0.5rem', marginBottom: '0.5rem' }}
+            />
+            <input
+              type="number"
+              placeholder="Amount to Transfer"
+              value={transferAmountAdvanced}
+              onChange={e => setTransferAmountAdvanced(e.target.value)}
+              style={{ width: '100%', padding: '0.5rem', marginBottom: '0.5rem' }}
+            />
+            <Button
+              onClick={handleTransferFrom}
+              disabled={deploying}
+              style={{ backgroundColor: '#17a2b8', color: 'white' }}
+            >
+              {deploying ? 'Transferring...' : 'Transfer Between Accounts'}
+            </Button>
+            {transferFromResult && (
+              <div style={{ marginTop: '1rem', color: transferFromResult.startsWith('Error') ? '#dc3545' : '#155724', background: transferFromResult.startsWith('Error') ? '#f8d7da' : '#d4edda', padding: '0.5rem', borderRadius: '4px', border: `1px solid ${transferFromResult.startsWith('Error') ? '#f5c6cb' : '#c3e6cb'}` }}>
+                <pre style={{ margin: 0 }}>{transferFromResult}</pre>
+              </div>
+            )}
           </div>
         </div>
       )}
