@@ -49,7 +49,7 @@ const config: HardhatUserConfig = {
   },
   networks: {
     localhost: {
-      url: "http://47.130.3.177:8545",
+      url: "http://54.255.237.252:8545",
       chainId: 31337,
     },
   },
