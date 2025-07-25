@@ -252,7 +252,7 @@ const UserManagementTab = ({ deployedContracts = {}, selectedContracts = {}, set
     setLoadingTrustedIssuers(true);
     setMessage('Loading trusted issuers from backend...');
     try {
-      const res = await axios.get(`/api/claimIssuers/trusted-issuers/${selectedContracts.IdentityRegistry}`);
+      const res = await axios.get(`/api/claim-issuers/trusted-issuers/${selectedContracts.IdentityRegistry}`);
       if (res.data.success) {
         setTrustedIssuers(res.data.trustedIssuers);
         setAvailableClaimIssuers(res.data.trustedIssuers.map(i => ({ address: i.address, topics: i.topics })));
