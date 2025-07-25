@@ -100,7 +100,15 @@ function getLatestDeployment() {
   }
   const deploymentsData = JSON.parse(fs.readFileSync(deploymentsPath, 'utf8'));
   
-  // Handle new structure with easydeploy and advanced sections
+  // First, try to find the latest factory deployment from easydeploy section
+  if (deploymentsData.easydeploy && deploymentsData.easydeploy.length > 0) {
+    const factoryDeployments = deploymentsData.easydeploy.filter(d => d.factory && d.factory.address);
+    if (factoryDeployments.length > 0) {
+      return factoryDeployments[factoryDeployments.length - 1];
+    }
+  }
+  
+  // If no factory deployment found, return the latest deployment from either section
   let deployments = [];
   if (deploymentsData.easydeploy) {
     deployments = deployments.concat(deploymentsData.easydeploy);
@@ -112,9 +120,29 @@ function getLatestDeployment() {
   return deployments.length > 0 ? deployments[deployments.length - 1] : null;
 }
 
+// Helper to get latest factory deployment specifically
+function getLatestFactoryDeployment() {
+  const deploymentsPath = path.join(__dirname, '../../deployments.json');
+  if (!fs.existsSync(deploymentsPath)) {
+    return null;
+  }
+  const deploymentsData = JSON.parse(fs.readFileSync(deploymentsPath, 'utf8'));
+  
+  // Look for factory deployments in easydeploy section
+  if (deploymentsData.easydeploy && deploymentsData.easydeploy.length > 0) {
+    const factoryDeployments = deploymentsData.easydeploy.filter(d => d.factory && d.factory.address);
+    if (factoryDeployments.length > 0) {
+      return factoryDeployments[factoryDeployments.length - 1];
+    }
+  }
+  
+  return null;
+}
+
 module.exports = {
   createProvider,
   getContractArtifacts,
   runDeploymentScript,
-  getLatestDeployment
+  getLatestDeployment,
+  getLatestFactoryDeployment
 }; 

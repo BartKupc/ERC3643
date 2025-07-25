@@ -5,7 +5,7 @@ const fs = require('fs');
 const { ethers } = require('ethers');
 
 // Import helpers from server.js (you may need to refactor these into a shared module)
-const { createProvider, runDeploymentScript, getLatestDeployment } = require('../utils/helpers');
+const { createProvider, runDeploymentScript, getLatestDeployment, getLatestFactoryDeployment } = require('../utils/helpers');
 
 // Deploy Factory
 router.post('/factory', async (req, res) => {
@@ -19,8 +19,8 @@ router.post('/factory', async (req, res) => {
     // Add a small delay to ensure deployments.json is written
     await new Promise(resolve => setTimeout(resolve, 1000));
     
-    // Get the latest deployment
-    const latestDeployment = getLatestDeployment();
+    // Get the latest factory deployment
+    const latestDeployment = getLatestFactoryDeployment();
     if (!latestDeployment || !latestDeployment.factory) {
       throw new Error('Factory deployment failed - no deployment data found');
     }
