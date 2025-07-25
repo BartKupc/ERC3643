@@ -248,15 +248,24 @@ const UserManagementTab = ({ deployedContracts = {}, selectedContracts = {}, set
     }
   };
 
-  // Subtab: View Claims
+  // View Claims: fetch and display all claims for the selected OnchainID
+  const [claims, setClaims] = useState([]);
+  const [loadingClaims, setLoadingClaims] = useState(false);
+
   const handleCheckClaims = async () => {
     try {
+      setLoadingClaims(true);
+      setMessage('Loading claims from OnchainID...');
       if (!onchainIdAddress) throw new Error('Please create an OnchainID first');
       const response = await axios.get(`/api/identity/check-onchainid-claims/${onchainIdAddress}`);
       if (!response.data.success) throw new Error(response.data.error || 'Unknown error');
-      setMessage(`Found ${response.data.totalClaims} claims on OnchainID contract`);
+      setClaims(response.data.claims || []);
+      setMessage(`Found ${response.data.claims?.length || 0} claims on OnchainID contract`);
     } catch (error) {
       setMessage(`Error checking claims: ${error.message}`);
+      setClaims([]);
+    } finally {
+      setLoadingClaims(false);
     }
   };
 
@@ -338,12 +347,6 @@ const UserManagementTab = ({ deployedContracts = {}, selectedContracts = {}, set
             {tab.label}
           </Button>
         ))}
-        <Button
-          onClick={handleAutoSelectContracts}
-          style={{ backgroundColor: '#2196f3', color: 'white', marginLeft: 'auto' }}
-        >
-          🔄 Auto-Select/Refresh
-        </Button>
       </div>
       {irError && <div style={{ color: '#dc3545', marginBottom: '1rem' }}>{irError}</div>}
       {message && <div style={{ color: message.includes('Error') ? '#721c24' : '#155724', backgroundColor: message.includes('Error') ? '#f8d7da' : '#d4edda', padding: '0.5rem', borderRadius: '4px', marginBottom: '1rem', border: `1px solid ${message.includes('Error') ? '#f5c6cb' : '#c3e6cb'}` }}>{message}</div>}
@@ -411,7 +414,31 @@ const UserManagementTab = ({ deployedContracts = {}, selectedContracts = {}, set
       )}
       {activeSubtab === 'view-claims' && (
         <div>
-          <Button onClick={handleCheckClaims} style={{ backgroundColor: '#007bff', color: 'white' }}>Check Claims</Button>
+          <Button onClick={handleCheckClaims} style={{ backgroundColor: '#007bff', color: 'white', marginBottom: '1rem' }} disabled={loadingClaims}>{loadingClaims ? 'Loading...' : 'Check Claims'}</Button>
+          {claims.length > 0 ? (
+            <table style={{ width: '100%', borderCollapse: 'collapse', background: '#f8f9fa', borderRadius: 8 }}>
+              <thead>
+                <tr style={{ background: '#e3f2fd' }}>
+                  <th style={{ padding: '8px', border: '1px solid #dee2e6' }}>Claim Topic</th>
+                  <th style={{ padding: '8px', border: '1px solid #dee2e6' }}>Issuer</th>
+                  <th style={{ padding: '8px', border: '1px solid #dee2e6' }}>Value</th>
+                  <th style={{ padding: '8px', border: '1px solid #dee2e6' }}>Issued At</th>
+                </tr>
+              </thead>
+              <tbody>
+                {claims.map((claim, idx) => (
+                  <tr key={idx}>
+                    <td style={{ padding: '8px', border: '1px solid #dee2e6' }}>{claim.topic}</td>
+                    <td style={{ padding: '8px', border: '1px solid #dee2e6' }}>{claim.issuer}</td>
+                    <td style={{ padding: '8px', border: '1px solid #dee2e6' }}>{claim.value}</td>
+                    <td style={{ padding: '8px', border: '1px solid #dee2e6' }}>{claim.issuedAt ? new Date(claim.issuedAt).toLocaleString() : '-'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <div style={{ color: '#6c757d', fontStyle: 'italic' }}>No claims found for this OnchainID.</div>
+          )}
         </div>
       )}
       {/* Add a section to display and select identities */}
