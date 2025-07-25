@@ -462,7 +462,7 @@ router.post('/mint', async (req, res) => {
     }
     
     // Convert amount to wei based on token decimals
-    const amountInWei = amount;
+    const amountInWei = ethers.utils.parseEther(amount);
     
     console.log(`🔍 Minting ${ethers.utils.formatEther(amountInWei)} tokens (${amountInWei} wei) to ${recipient}`);
     
