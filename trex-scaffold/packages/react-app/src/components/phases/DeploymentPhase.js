@@ -1190,21 +1190,24 @@ const DeploymentPhase = () => {
   ];
 
   return (
-    <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '30px 0' }}>
-      {/* Message Display (always at the very top, no verification results) */}
-      {message && (
-        <div style={{
-          padding: '10px',
-          marginBottom: '20px',
-          backgroundColor: message.includes('Error') ? '#f8d7da' : '#d4edda',
-          border: `1px solid ${message.includes('Error') ? '#f5c6cb' : '#c3e6cb'}`,
-          borderRadius: '5px',
-          color: message.includes('Error') ? '#721c24' : '#222',
-          fontWeight: 'bold',
-        }}>
-          {message}
-        </div>
-      )}
+    <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto', color: '#222', background: 'white' }}>
+      <h1 style={{ color: '#222' }}>Deployment Phase</h1>
+      {/* Clear State Button (moved to top) */}
+      <div style={{ marginBottom: '20px' }}>
+        <button
+          onClick={clearDeploymentState}
+          style={{
+            backgroundColor: '#dc3545',
+            color: 'white',
+            border: 'none',
+            padding: '10px 20px',
+            borderRadius: '5px',
+            cursor: 'pointer'
+          }}
+        >
+          Clear All Deployment State
+        </button>
+      </div>
       {/* Stepper/Progress Bar */}
       <div style={{ marginBottom: '20px', display: 'flex', gap: '10px' }}>
         {steps.map((step, idx) => (
@@ -1226,6 +1229,24 @@ const DeploymentPhase = () => {
             Step {idx + 1}: {step.title}
           </button>
         ))}
+      </div>
+      {/* Message Display (reverted to top) */}
+      {message && (
+        <div style={{
+          padding: '10px',
+          marginBottom: '20px',
+          backgroundColor: message.includes('Error') ? '#f8d7da' : '#d4edda',
+          border: `1px solid ${message.includes('Error') ? '#f5c6cb' : '#c3e6cb'}`,
+          borderRadius: '5px',
+          color: message.includes('Error') ? '#721c24' : '#222',
+          fontWeight: 'bold',
+        }}>
+          {message}
+        </div>
+      )}
+      {/* Render current step */}
+      <div style={{ marginBottom: '30px', color: '#222' }}>
+        {steps[currentStep - 1].component}
       </div>
       {/* Logs */}
       <div style={{ marginTop: '30px' }}>
@@ -1257,7 +1278,20 @@ const DeploymentPhase = () => {
           ))}
         </div>
       </div>
-      {/* REMOVE verificationMessage box from here, only show in dedicated subtab area */}
+      {/* User Verification Message Box (bottom of page) */}
+      {verificationMessage && (
+        <div style={{
+          padding: '10px',
+          marginTop: '30px',
+          backgroundColor: verificationMessage.includes('Error') ? '#f8d7da' : '#e3fcef',
+          border: `1px solid ${verificationMessage.includes('Error') ? '#f5c6cb' : '#b7eb8f'}`,
+          borderRadius: '5px',
+          color: verificationMessage.includes('Error') ? '#721c24' : '#135200',
+          fontWeight: 'bold',
+        }}>
+          {verificationMessage}
+        </div>
+      )}
     </div>
   );
 };
