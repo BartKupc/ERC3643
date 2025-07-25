@@ -6,7 +6,8 @@ const ClaimTokenManagementSubTab = ({
   setSelectedContracts = () => {},
   runComprehensiveDiagnostics = () => {},
   checkingVerification = false,
-  addLog = () => {}
+  addLog = () => {},
+  setVerificationMessage
 }) => {
   const [userAddressToCheck, setUserAddressToCheck] = useState('');
 
@@ -33,19 +34,20 @@ const ClaimTokenManagementSubTab = ({
   const handleRunDiagnostics = async () => {
     if (!selectedContracts.Token) {
       addLog('Please select a token first', 'error');
+      if (setVerificationMessage) setVerificationMessage('Please select a token first');
       return;
     }
-    
     const userAddress = userAddressToCheck.trim();
     if (!userAddress) {
       addLog('Please provide a user address to check', 'error');
+      if (setVerificationMessage) setVerificationMessage('Please provide a user address to check');
       return;
     }
-    
     try {
       await runComprehensiveDiagnostics(userAddress);
     } catch (error) {
       console.error('Error running diagnostics:', error);
+      if (setVerificationMessage) setVerificationMessage('Error running diagnostics.');
     }
   };
 

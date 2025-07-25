@@ -103,6 +103,7 @@ const DeploymentPhase = () => {
       localStorage.removeItem('trex_user_identities');
       localStorage.removeItem('trex_available_claim_issuers');
       addLog("Cleared deployment state from both frontend and backend", "info");
+      setMessage("Cleared deployment state from both frontend and backend");
     } catch (error) {
       console.error('Error clearing deployment state:', error);
       addLog("Error clearing deployment state: " + error.message, "error");
@@ -1031,7 +1032,7 @@ const DeploymentPhase = () => {
   const runComprehensiveDiagnostics = async (userAddress) => {
     try {
       if (!selectedContracts.Token) {
-        setMessage('Please select a token first');
+        setVerificationMessage('Please select a token first');
         return;
       }
 
@@ -1039,7 +1040,7 @@ const DeploymentPhase = () => {
       const addressToCheck = userAddress.trim() || '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266';
 
       setCheckingVerification(true);
-      setMessage('Running comprehensive diagnostics...');
+      setVerificationMessage('Running comprehensive diagnostics...');
       addLog(`Running comprehensive diagnostics for user: ${addressToCheck}`, "info");
 
       // Call backend API for comprehensive diagnostics
@@ -1049,13 +1050,13 @@ const DeploymentPhase = () => {
         userAddress: addressToCheck
       });
       
-      setMessage(result.diagnosticResults);
+      setVerificationMessage(result.diagnosticResults);
       addLog('Comprehensive diagnostics completed', "success");
       
     } catch (error) {
       console.error('Error running comprehensive diagnostics:', error);
       const cleanError = extractCleanError(error);
-      setMessage(`Error running diagnostics: ${cleanError}`);
+      setVerificationMessage(`Error running diagnostics: ${cleanError}`);
       addLog(`Error running diagnostics: ${cleanError}`, "error");
     } finally {
       setCheckingVerification(false);
@@ -1182,6 +1183,7 @@ const DeploymentPhase = () => {
           deploying={deploying}
           reloadDeploymentState={reloadDeploymentState}
           addLog={addLog}
+          setVerificationMessage={setVerificationMessage}
         />
       )
     }
