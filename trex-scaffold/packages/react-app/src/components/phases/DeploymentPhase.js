@@ -834,7 +834,7 @@ const DeploymentPhase = () => {
         contractName: 'Token',
         contractAddress: selectedContracts.Token,
         method: 'mint',
-        params: [recipient, amount]
+        params: [recipient, ethers.utils.parseEther(amount)]
       });
       
       setMessage(`Successfully minted ${amount} tokens to ${recipient}`);
@@ -870,7 +870,7 @@ const DeploymentPhase = () => {
         contractName: 'Token',
         contractAddress: selectedContracts.Token,
         method: 'burn',
-        params: [fromAddress, amount]
+        params: [fromAddress, ethers.utils.parseEther(amount)]
       });
       
       setMessage(`Successfully burned ${amount} tokens from ${fromAddress}`);
@@ -906,7 +906,7 @@ const DeploymentPhase = () => {
         contractName: 'Token',
         contractAddress: selectedContracts.Token,
         method: 'transfer',
-        params: [toAddress, amount]
+        params: [toAddress, ethers.utils.parseEther(amount)]
       });
       
       setMessage(`Successfully transferred ${amount} tokens to ${toAddress}`);

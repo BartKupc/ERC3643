@@ -462,15 +462,18 @@ router.post('/mint', async (req, res) => {
     }
     
     // Convert amount to wei based on token decimals
-    const amountInWei = ethers.utils.parseEther(amount);
+    const amountInWei = amount;
     
-    console.log(`🔍 Minting ${amount} tokens (${amountInWei} wei) to ${recipient}`);
+    console.log(`🔍 Minting ${ethers.utils.formatEther(amountInWei)} tokens (${amountInWei} wei) to ${recipient}`);
     
     // Mint tokens
     const tx = await token.mint(recipient, amountInWei);
     console.log(`✅ Mint transaction sent: ${tx.hash}`);
     await tx.wait();
     console.log(`✅ Mint transaction confirmed`);
+    // Balance check after mint
+    const recipientBalance = await token.balanceOf(recipient);
+    console.log(`🔍 Balance of ${recipient} after mint: ${ethers.utils.formatEther(recipientBalance)} tokens`);
     
     console.log(`✅ Successfully minted ${amount} tokens to ${recipient}`);
     
@@ -529,15 +532,18 @@ router.post('/burn', async (req, res) => {
     }
     
     // Convert amount to wei based on token decimals
-    const amountInWei = ethers.utils.parseEther(amount);
+    const amountInWei = amount;
     
-    console.log(`🔍 Burning ${amount} tokens (${amountInWei} wei) from ${fromAddress}`);
+    console.log(`🔍 Burning ${ethers.utils.formatEther(amountInWei)} tokens (${amountInWei} wei) from ${fromAddress}`);
     
     // Burn tokens
     const tx = await token.burn(fromAddress, amountInWei);
     console.log(`✅ Burn transaction sent: ${tx.hash}`);
     await tx.wait();
     console.log(`✅ Burn transaction confirmed`);
+    // Balance check after burn
+    const burnBalance = await token.balanceOf(fromAddress);
+    console.log(`🔍 Balance of ${fromAddress} after burn: ${ethers.utils.formatEther(burnBalance)} tokens`);
     
     console.log(`✅ Successfully burned ${amount} tokens from ${fromAddress}`);
     
@@ -588,15 +594,18 @@ router.post('/transfer', async (req, res) => {
     console.log(`✅ Token contract instance created for ${tokenAddress}`);
     
     // Convert amount to wei based on token decimals
-    const amountInWei = ethers.utils.parseEther(amount);
+    const amountInWei = amount;
     
-    console.log(`🔍 Transferring ${amount} tokens (${amountInWei} wei) from ${deployerAddress} to ${toAddress}`);
+    console.log(`🔍 Transferring ${ethers.utils.formatEther(amountInWei)} tokens (${amountInWei} wei) from ${deployerAddress} to ${toAddress}`);
     
     // Transfer tokens (from signer to recipient)
     const tx = await token.transfer(toAddress, amountInWei);
     console.log(`✅ Transfer transaction sent: ${tx.hash}`);
     await tx.wait();
     console.log(`✅ Transfer transaction confirmed`);
+    // Balance check after transfer
+    const toBalance = await token.balanceOf(toAddress);
+    console.log(`🔍 Balance of ${toAddress} after transfer: ${ethers.utils.formatEther(toBalance)} tokens`);
     
     console.log(`✅ Successfully transferred ${amount} tokens to ${toAddress}`);
     
@@ -649,7 +658,7 @@ router.post('/transfer-from', async (req, res) => {
     }
     
     // Get token decimals
-    const amountBN = ethers.utils.parseEther(amount);
+    const amountBN = amount;
     
     // Check balances for all accounts
     const fromBalance = await token.balanceOf(fromAddress);
@@ -660,7 +669,7 @@ router.post('/transfer-from', async (req, res) => {
     console.log(`  From address (${fromAddress}): ${ethers.utils.formatEther(fromBalance)} tokens`);
     console.log(`  Agent (${agentAddress}): ${ethers.utils.formatEther(agentBalance)} tokens`);
     console.log(`  To address (${toAddress}): ${ethers.utils.formatEther(toBalance)} tokens`);
-    console.log(`  Amount to transfer: ${amount} tokens (${amountBN} wei)`);
+    console.log(`  Amount to transfer: ${ethers.utils.formatEther(amountBN)} tokens (${amountBN} wei)`);
     
     if (fromBalance.lt(amountBN)) {
       throw new Error(`Insufficient balance. Need ${amount} tokens, but ${fromAddress} only has ${ethers.utils.formatEther(fromBalance)}`);
@@ -679,20 +688,23 @@ router.post('/transfer-from', async (req, res) => {
     console.log(`🔍 Balance after Step 1:`);
     console.log(`  From address: ${ethers.utils.formatEther(fromBalanceAfterStep1)} tokens`);
     console.log(`  Agent: ${ethers.utils.formatEther(agentBalanceAfterStep1)} tokens`);
-    
+
     console.log(`🔍 Step 2: transfer from agent ${agentAddress} to ${toAddress}`);
     // Step 2: transfer from agent to destination
     const tx2 = await token.transfer(toAddress, amountBN);
     console.log(`✅ Step 2 transaction sent: ${tx2.hash}`);
     await tx2.wait();
     console.log(`✅ Step 2 transaction confirmed`);
-    
+    // Balance check after transfer-from
+    const toBalanceAfter = await token.balanceOf(toAddress);
+    console.log(`🔍 Balance of ${toAddress} after transfer-from: ${ethers.utils.formatEther(toBalanceAfter)} tokens`);
+
     console.log(`✅ TransferFrom completed successfully`);
     res.json({ 
       success: true, 
       transactionHash1: tx1.hash, 
       transactionHash2: tx2.hash,
-      message: `Successfully transferred ${amount} tokens from ${fromAddress} to ${toAddress} via agent`
+      message: `Successfully transferred ${ethers.utils.formatEther(amountBN)} tokens from ${fromAddress} to ${toAddress} via agent`
     });
   } catch (error) {
     console.error('❌ Error in transfer-from:', error);
@@ -700,4 +712,4 @@ router.post('/transfer-from', async (req, res) => {
   }
 });
 
-module.exports = router; 
+module.exports = router;

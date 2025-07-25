@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { ethers } from 'ethers';
 
 const FunctionManagementSubTab = ({
   deployedTokens = [],
@@ -123,7 +124,7 @@ const FunctionManagementSubTab = ({
           tokenAddress: selectedContracts.Token,
           fromAddress: transferFrom,
           toAddress: transferToAdvanced,
-          amount: transferAmountAdvanced
+          amount: ethers.utils.parseEther(transferAmountAdvanced)
         })
       });
       const data = await res.json();
