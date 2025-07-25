@@ -87,13 +87,42 @@ npm audit fix
 #or
 npm audit fix --force
 
+# Install required development dependencies
 npm install --save-dev @openzeppelin/hardhat-upgrades
 npm install --save-dev @xyrusworx/hardhat-solidity-json
 npm install --save-dev @nomiclabs/hardhat-solhint
 npm install --save-dev @primitivefi/hardhat-dodoc
 npm install --save-dev ts-node
+npm install --save-dev @types/node
+
+# Install runtime dependencies for environment variables
+npm install dotenv
 ```
-### 3. Start Local Blockchain
+### 3. Configure Environment
+
+Create and configure your environment file:
+
+```bash
+# Copy the example environment file
+cp .env.example .env
+
+# Edit the .env file to set your RPC URL
+nano .env
+
+# Example .env file:
+# RPC_URL=http://127.0.0.1:8545
+
+# Generate configuration files from environment variables
+npm run config:generate
+```
+
+**Environment Variables:**
+- `RPC_URL`: Your blockchain node URL (default: http://127.0.0.1:8545)
+
+> **Advanced:**
+> You may also set `PRIVATE_KEY` (for backend wallet) and `PORT` (for backend server) in `.env` if you need to customize these, but they are not required for normal operation.
+
+### 4. Start Local Blockchain
 
 Open a new terminal and start a local Hardhat node:
 
@@ -131,7 +160,7 @@ npm run start
 
 This starts a local blockchain on `http://127.0.0.1:8545` with pre-funded accounts.
 
-### 4. Start the Learning Platform
+### 5. Start the Learning Platform
 
 ```bash
 npm run start
@@ -288,6 +317,69 @@ T-REX Factory
 4. Verify claims on-chain
 5. Perform compliant transfers
 
+## ⚙️ Configuration Management
+
+### Environment Variables
+
+The platform uses environment variables for configuration. The main configuration file is `.env` in the root directory:
+
+```bash
+# T-REX Configuration
+RPC_URL=http://127.0.0.1:8545
+```
+
+> **Advanced:**
+> You may also set `PRIVATE_KEY` and `PORT` in `.env` if you need to customize backend wallet or server port, but these are not required for most users.
+
+### Updating Configuration
+
+To change the RPC URL or other settings:
+
+1. **Edit the `.env` file:**
+   ```bash
+   nano .env
+   ```
+
+2. **Regenerate configuration files:**
+   ```bash
+   npm run config:generate
+   ```
+
+3. **Restart the application:**
+   ```bash
+   npm run start
+   ```
+
+### Configuration Files
+
+The following files are automatically generated from environment variables:
+- `config.json` (root directory)
+- `trex-scaffold/packages/react-app/src/config.json`
+- `hardhat.config.ts` (uses RPC_URL directly)
+
+### Documentation Generation
+
+The project includes automatic documentation generation using dodoc:
+
+```bash
+# Generate documentation
+npm run generate:doc
+
+# Documentation will be created in the ./docgen directory
+```
+
+### Example Configurations
+
+**Local Development:**
+```bash
+RPC_URL=http://127.0.0.1:8545
+```
+
+**Remote Node:**
+```bash
+RPC_URL=http://54.255.237.252:8545
+```
+
 ## 🆘 Troubleshooting
 
 ### Common Issues
@@ -306,6 +398,15 @@ T-REX Factory
    - Verify user has proper identity
    - Check required claims are present
    - Ensure claim issuer is trusted
+
+4. **"Cannot find module" errors during compilation**
+   - Run `npm install` to ensure all dependencies are installed
+   - Clear cache: `rm -rf cache && npx hardhat compile`
+   - Check that all required dev dependencies are installed (see installation section)
+
+5. **TypeScript compilation errors**
+   - Ensure `@types/node` is installed: `npm install --save-dev @types/node`
+   - Check that `dotenv` is installed: `npm install dotenv`
 
 ### Debug Mode
 - Check browser console for detailed logs

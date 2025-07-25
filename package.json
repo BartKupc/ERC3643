@@ -35,12 +35,13 @@
     "accounts": "npx hardhat accounts",
     "balance": "npx hardhat balance",
     "send": "npx hardhat send",
-    "generate:doc": "npx hardhat docgen",
+    "generate:doc": "npx hardhat dodoc",
     "size-contracts": "npx hardhat size-contracts",
     "gas-report": "REPORT_GAS=true npx hardhat test",
     "coverage": "npx hardhat coverage",
     "coverage:report": "npx hardhat coverage && open coverage/index.html",
-    "stop": "node scripts/stop.js"
+    "stop": "node scripts/stop.js",
+    "config:generate": "node scripts/generate-config.js"
   },
   "keywords": [
     "ethereum",
@@ -57,17 +58,22 @@
   "author": "T-REX Team",
   "license": "MIT",
   "devDependencies": {
-    "@nomicfoundation/hardhat-toolbox": "^4.0.0",
-    "@nomicfoundation/hardhat-network-helpers": "^1.0.8",
     "@nomicfoundation/hardhat-chai-matchers": "^2.0.2",
     "@nomicfoundation/hardhat-ethers": "^3.0.4",
+    "@nomicfoundation/hardhat-network-helpers": "^1.0.8",
+    "@nomicfoundation/hardhat-toolbox": "^4.0.0",
     "@nomicfoundation/hardhat-verify": "^2.0.1",
+    "@nomiclabs/hardhat-solhint": "^4.1.0",
+    "@openzeppelin/hardhat-upgrades": "^3.9.1",
+    "@primitivefi/hardhat-dodoc": "^0.2.3",
     "@typechain/ethers-v6": "^0.5.0",
     "@typechain/hardhat": "^9.1.0",
     "@types/chai": "^4.3.5",
     "@types/mocha": "^10.0.1",
+    "@types/node": "^24.1.0",
     "@typescript-eslint/eslint-plugin": "^6.13.1",
     "@typescript-eslint/parser": "^6.13.1",
+    "@xyrusworx/hardhat-solidity-json": "^1.0.2",
     "chai": "^4.3.10",
     "concurrently": "^8.2.2",
     "eslint": "^8.54.0",
@@ -85,7 +91,8 @@
   "dependencies": {
     "@onchain-id/solidity": "^2.2.1",
     "@openzeppelin/contracts": "4.9.5",
-    "@openzeppelin/contracts-upgradeable": "4.9.5"
+    "@openzeppelin/contracts-upgradeable": "4.9.5",
+    "dotenv": "^17.2.1"
   },
   "engines": {
     "node": ">=16.0.0",

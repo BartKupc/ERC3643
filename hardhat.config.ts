@@ -5,6 +5,26 @@ import '@openzeppelin/hardhat-upgrades';
 import 'solidity-coverage';
 import '@nomiclabs/hardhat-solhint';
 import '@primitivefi/hardhat-dodoc';
+import * as dotenv from 'dotenv';
+
+// Extend HardhatUserConfig to include dodoc
+declare module 'hardhat/types/config' {
+  interface HardhatUserConfig {
+    dodoc?: {
+      include?: string[];
+      exclude?: string[];
+      runOnCompile?: boolean;
+      debugMode?: boolean;
+      templatePath?: string;
+      outputDir?: string;
+      keepFileStructure?: boolean;
+      freshOutput?: boolean;
+    };
+  }
+}
+
+// Load environment variables
+dotenv.config();
 
 const config: HardhatUserConfig = {
   solidity: {
@@ -49,7 +69,7 @@ const config: HardhatUserConfig = {
   },
   networks: {
     localhost: {
-      url: "http://54.255.237.252:8545",
+      url: process.env.RPC_URL || "http://127.0.0.1:8545",
       chainId: 31337,
     },
   },
