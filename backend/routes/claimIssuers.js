@@ -67,4 +67,39 @@ router.get('/identity-registries', async (req, res) => {
   }
 });
 
+// Get trusted issuers for a given IdentityRegistry address
+router.get('/trusted-issuers/:identityRegistryAddress', async (req, res) => {
+  try {
+    const { identityRegistryAddress } = req.params;
+    const provider = createProvider();
+    const wallet = new ethers.Wallet(process.env.PRIVATE_KEY || '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80', provider);
+    // Load IdentityRegistry ABI
+    const irArtifactsPath = path.join(__dirname, '../../trex-scaffold/packages/react-app/src/contracts/IdentityRegistry.json');
+    if (!fs.existsSync(irArtifactsPath)) throw new Error('IdentityRegistry artifacts not found. Please compile contracts first.');
+    const irArtifacts = JSON.parse(fs.readFileSync(irArtifactsPath, 'utf8'));
+    const ir = new ethers.Contract(identityRegistryAddress, irArtifacts.abi, wallet);
+    // Get TrustedIssuersRegistry address
+    const tirAddress = await ir.issuersRegistry();
+    // Load TrustedIssuersRegistry ABI
+    const tirArtifactsPath = path.join(__dirname, '../../trex-scaffold/packages/react-app/src/contracts/TrustedIssuersRegistry.json');
+    if (!fs.existsSync(tirArtifactsPath)) throw new Error('TrustedIssuersRegistry artifacts not found. Please compile contracts first.');
+    const tirArtifacts = JSON.parse(fs.readFileSync(tirArtifactsPath, 'utf8'));
+    const tir = new ethers.Contract(tirAddress, tirArtifacts.abi, wallet);
+    // Get all trusted issuers
+    const issuers = await tir.getTrustedIssuers();
+    const issuersWithTopics = await Promise.all(
+      issuers.map(async (issuer) => {
+        const topics = await tir.getTrustedIssuerClaimTopics(issuer);
+        return {
+          address: issuer,
+          topics: topics.map(t => t.toNumber())
+        };
+      })
+    );
+    res.json({ success: true, trustedIssuers: issuersWithTopics, tirAddress });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 module.exports = router; 
