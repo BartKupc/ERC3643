@@ -9,7 +9,7 @@ const TokenManagementTab = (props) => {
 
   return (
     <div>
-      <h3>Step 5: Token Management</h3>
+      <h3>Step 8: Token Management</h3>
       <p>Deploy and manage ERC-3643 tokens with comprehensive role and function management.</p>
       <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem', flexWrap: 'wrap' }}>
         <button

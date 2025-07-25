@@ -1208,23 +1208,23 @@ const DeploymentPhase = () => {
           </button>
         ))}
       </div>
-      {/* Message Display */}
-      {message && (
-        <div style={{
-          padding: '10px',
-          marginBottom: '20px',
-          backgroundColor: message.includes('Error') ? '#f8d7da' : '#d4edda',
-          border: `1px solid ${message.includes('Error') ? '#f5c6cb' : '#c3e6cb'}`,
-          borderRadius: '5px',
-          color: message.includes('Error') ? '#721c24' : '#222',
-          fontWeight: 'bold',
-        }}>
-          {message}
-        </div>
-      )}
       {/* Render current step */}
       <div style={{ marginBottom: '30px', color: '#222' }}>
         {steps[currentStep - 1].component}
+        {/* Message Display (moved below heading) */}
+        {message && (
+          <div style={{
+            padding: '10px',
+            marginTop: '20px',
+            backgroundColor: message.includes('Error') ? '#f8d7da' : '#d4edda',
+            border: `1px solid ${message.includes('Error') ? '#f5c6cb' : '#c3e6cb'}`,
+            borderRadius: '5px',
+            color: message.includes('Error') ? '#721c24' : '#222',
+            fontWeight: 'bold',
+          }}>
+            {message}
+          </div>
+        )}
       </div>
       {/* Logs */}
       <div style={{ marginTop: '30px' }}>
