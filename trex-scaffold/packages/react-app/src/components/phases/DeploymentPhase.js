@@ -568,31 +568,34 @@ const DeploymentPhase = () => {
       setMessage('Initializing contracts...');
       addLog('Starting contract initialization', "info");
 
-      // Initialize all deployed contracts (use selected if available, otherwise use latest deployed)
+      // Initialize only contracts that have been explicitly selected in the dropdown
       const contractsToInitialize = [
         'ClaimTopicsRegistry',
         'TrustedIssuersRegistry', 
         'IdentityRegistryStorage',
-        'IdentityRegistry'
+        'IdentityRegistry',
+        'ModularCompliance'
       ];
 
+      let initializedCount = 0;
       for (const contractName of contractsToInitialize) {
-        // Use selected contract if available, otherwise use the latest deployed
-        const hasSelected = selectedContracts[contractName];
-        const hasDeployed = deployedContracts[contractName] && deployedContracts[contractName].length > 0;
-        
-        if (hasSelected || hasDeployed) {
+        // Only initialize if the contract has been explicitly selected in the dropdown
+        if (selectedContracts[contractName]) {
+          addLog(`Initializing selected ${contractName} at ${selectedContracts[contractName]}`, "info");
           await initializeContract(contractName);
+          initializedCount++;
+        } else {
+          addLog(`Skipping ${contractName} - not selected in dropdown`, "info");
         }
       }
 
-      // Initialize ModularCompliance if it exists
-      if (selectedContracts.ModularCompliance || (deployedContracts.ModularCompliance && deployedContracts.ModularCompliance.length > 0)) {
-        await initializeContract('ModularCompliance');
+      if (initializedCount === 0) {
+        setMessage('No contracts selected for initialization. Please select contracts in the dropdowns first.');
+        addLog('No contracts selected for initialization. Please select contracts in the dropdowns first.', "warning");
+      } else {
+        setMessage(`Contract initialization completed. ${initializedCount} contracts initialized.`);
+        addLog(`Contract initialization completed. ${initializedCount} contracts initialized.`, "success");
       }
-
-      setMessage('Contract initialization completed');
-      addLog('Contract initialization completed', "success");
     } catch (error) {
       console.error('Error during contract initialization:', error);
       setMessage(`Error during contract initialization: ${error.message}`);
