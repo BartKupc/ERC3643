@@ -645,10 +645,34 @@ router.post('/transfer-from', async (req, res) => {
     const tokenArtifacts = JSON.parse(fs.readFileSync(tokenArtifactsPath, 'utf8'));
     const token = new ethers.Contract(tokenAddress, tokenArtifacts.abi, wallet);
     
+    // Check if signer is an agent
+    console.log(`🔍 Checking if ${agentAddress} is a token agent...`);
+    const isAgent = await token.isAgent(agentAddress);
+    console.log(`🔍 Is agent: ${isAgent}`);
+    
+    if (!isAgent) {
+      throw new Error(`${agentAddress} is not a token agent. Add the agent to the token first.`);
+    }
+    
     // Get token decimals
     const decimals = await token.decimals();
     const decimalsNumber = typeof decimals === 'object' && decimals.toNumber ? decimals.toNumber() : Number(decimals);
     const amountBN = ethers.utils.parseUnits(amount.toString(), decimalsNumber);
+    
+    // Check balances for all accounts
+    const fromBalance = await token.balanceOf(fromAddress);
+    const agentBalance = await token.balanceOf(agentAddress);
+    const toBalance = await token.balanceOf(toAddress);
+    
+    console.log(`🔍 Balance check:`);
+    console.log(`  From address (${fromAddress}): ${ethers.utils.formatUnits(fromBalance, decimalsNumber)} tokens`);
+    console.log(`  Agent (${agentAddress}): ${ethers.utils.formatUnits(agentBalance, decimalsNumber)} tokens`);
+    console.log(`  To address (${toAddress}): ${ethers.utils.formatUnits(toBalance, decimalsNumber)} tokens`);
+    console.log(`  Amount to transfer: ${amount} tokens (${amountBN} wei)`);
+    
+    if (fromBalance.lt(amountBN)) {
+      throw new Error(`Insufficient balance. Need ${amount} tokens, but ${fromAddress} only has ${ethers.utils.formatUnits(fromBalance, decimalsNumber)}`);
+    }
     
     console.log(`🔍 Step 1: forcedTransfer from ${fromAddress} to agent ${agentAddress}`);
     // Step 1: forcedTransfer from source to agent
@@ -656,6 +680,13 @@ router.post('/transfer-from', async (req, res) => {
     console.log(`✅ Step 1 transaction sent: ${tx1.hash}`);
     await tx1.wait();
     console.log(`✅ Step 1 transaction confirmed`);
+    
+    // Check balances after step 1
+    const fromBalanceAfterStep1 = await token.balanceOf(fromAddress);
+    const agentBalanceAfterStep1 = await token.balanceOf(agentAddress);
+    console.log(`🔍 Balance after Step 1:`);
+    console.log(`  From address: ${ethers.utils.formatUnits(fromBalanceAfterStep1, decimalsNumber)} tokens`);
+    console.log(`  Agent: ${ethers.utils.formatUnits(agentBalanceAfterStep1, decimalsNumber)} tokens`);
     
     console.log(`🔍 Step 2: transfer from agent ${agentAddress} to ${toAddress}`);
     // Step 2: transfer from agent to destination
